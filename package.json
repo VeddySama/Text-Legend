@@ -1,0 +1,15 @@
+{
+  "name": "text-legend-176",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "bcrypt": "^5.1.1",
+    "express": "^4.19.2",
+    "knex": "^3.1.0",
+    "mysql2": "^3.11.0",
+    "socket.io": "^4.7.5",
+    "sqlite3": "^5.1.7",
+    "uuid": "^9.0.1"
+  }
+}

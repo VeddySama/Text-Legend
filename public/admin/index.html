@@ -1,0 +1,72 @@
+﻿<!doctype html>
+<html lang="zh">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GM后台 - 文字传奇</title>
+  <link rel="stylesheet" href="admin.css">
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>GM 后台</h1>
+      <p>账号、角色、邮件、VIP 管理</p>
+    </header>
+
+    <section id="login" class="panel">
+      <h2>管理员登录</h2>
+      <input id="admin-user" type="text" placeholder="管理员账号">
+      <input id="admin-pass" type="password" placeholder="管理员密码">
+      <button id="admin-login-btn">登录</button>
+      <div id="login-msg" class="msg"></div>
+    </section>
+
+    <section id="dashboard" class="panel hidden">
+      <div class="row">
+        <h2>用户与权限</h2>
+        <button id="refresh-users">刷新列表</button>
+      </div>
+      <div id="users-list" class="list"></div>
+
+      <div class="divider"></div>
+
+      <h2>创建/取消 GM</h2>
+      <input id="promote-username" type="text" placeholder="用户名">
+      <select id="promote-flag">
+        <option value="true">设为 GM</option>
+        <option value="false">取消 GM</option>
+      </select>
+      <button id="promote-btn">提交</button>
+      <div id="promote-msg" class="msg"></div>
+
+      <div class="divider"></div>
+
+      <h2>角色修改</h2>
+      <input id="char-username" type="text" placeholder="用户名">
+      <input id="char-name" type="text" placeholder="角色名">
+      <textarea id="char-patch" placeholder='JSON Patch，例如: {"gold":5000,"level":40}'></textarea>
+      <button id="char-update-btn">更新角色</button>
+      <div id="char-msg" class="msg"></div>
+
+      <div class="divider"></div>
+
+      <h2>站内邮件</h2>
+      <input id="mail-username" type="text" placeholder="用户名">
+      <input id="mail-title" type="text" placeholder="标题">
+      <textarea id="mail-body" placeholder="内容"></textarea>
+      <button id="mail-send-btn">发送邮件</button>
+      <div id="mail-msg" class="msg"></div>
+
+      <div class="divider"></div>
+
+      <h2>VIP 激活码</h2>
+      <input id="vip-count" type="number" min="1" max="100" value="5">
+      <button id="vip-create-btn">生成激活码</button>
+      <button id="vip-list-btn">查看最近激活码</button>
+      <div id="vip-codes" class="list"></div>
+    </section>
+  </div>
+
+  <script src="admin.js"></script>
+</body>
+</html>

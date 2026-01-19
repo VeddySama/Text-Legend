@@ -1,0 +1,14 @@
+services:
+  game:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - DB_CLIENT=sqlite
+      - DB_FILENAME=/app/data/game.sqlite
+      - SESSION_TTL_MIN=120
+      - ADMIN_BOOTSTRAP_SECRET=change_me
+      - ADMIN_BOOTSTRAP_USER=admin_account
+    volumes:
+      - ./data:/app/data

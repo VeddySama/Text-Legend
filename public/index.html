@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>文字传奇 1.76</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="app">
+    <header>
+      <h1>文字传奇 1.76</h1>
+      <p>致敬 1.76 时代的网页文字版传奇。</p>
+    </header>
+
+    <section id="auth" class="panel">
+      <div class="auth-hero">
+        <div class="auth-copy">
+          <span class="badge">文字传奇 1.76</span>
+          <h2>踏入玛法</h2>
+          <p>创建角色，进入比奇城，与你的同伴一起探索沙巴克与赤月。</p>
+          <div class="auth-ornament"></div>
+        </div>
+        <div class="auth-cards">
+          <div class="auth-card">
+            <h3>登录</h3>
+            <input id="login-username" type="text" placeholder="账号">
+            <input id="login-password" type="password" placeholder="密码">
+            <button id="login-btn">进入世界</button>
+          </div>
+          <div class="auth-card">
+            <h3>注册</h3>
+            <input id="register-username" type="text" placeholder="账号">
+            <input id="register-password" type="password" placeholder="密码">
+            <button id="register-btn">创建账号</button>
+          </div>
+        </div>
+      </div>
+      <div id="auth-msg" class="msg"></div>
+      <div id="auth-toast" class="toast hidden"></div>
+    </section>
+
+    <section id="character" class="panel hidden">
+      <h2>角色列表</h2>
+      <div id="character-list"></div>
+      <div class="divider"></div>
+      <h3>创建角色</h3>
+      <input id="char-name" type="text" placeholder="角色名">
+      <select id="char-class">
+        <option value="warrior">战士</option>
+        <option value="mage">法师</option>
+        <option value="taoist">道士</option>
+      </select>
+      <button id="create-char-btn">创建</button>
+      <div id="char-msg" class="msg"></div>
+    </section>
+
+    <section id="game" class="panel hidden">
+      <div class="status-grid">
+        <div class="status-card">
+          <div class="status-title">角色信息</div>
+          <div class="status-row"><span>角色</span><strong id="ui-name">-</strong></div>
+          <div class="status-row"><span>职业/等级</span><strong id="ui-class">-</strong></div>
+          <div class="status-row"><span>行会</span><strong id="ui-guild">-</strong></div>
+          <div class="status-row"><span>PK/状态</span><strong id="ui-pk">-</strong></div>
+          <div class="status-row"><span>VIP</span><strong id="ui-vip">-</strong></div>
+        </div>
+        <div class="status-card">
+          <div class="status-title">状态条</div>
+          <div class="bar-label">生命</div>
+          <div class="bar"><div id="bar-hp" class="bar-fill hp"></div></div>
+          <div class="bar-label">魔法</div>
+          <div class="bar"><div id="bar-mp" class="bar-fill mp"></div></div>
+          <div class="bar-label">经验</div>
+          <div class="bar"><div id="bar-exp" class="bar-fill exp"></div></div>
+          <div class="status-row"><span>金币</span><strong id="ui-gold">0</strong></div>
+        </div>
+        <div class="status-card">
+          <div class="status-title">快捷按钮</div>
+          <div class="quick-grid">
+            <button class="quick-btn" data-cmd="look">观察</button>
+            <button class="quick-btn" data-cmd="stats">状态</button>
+            <button class="quick-btn" data-cmd="bag">背包</button>
+            <button class="quick-btn" data-cmd="quests">任务</button>
+            <button class="quick-btn" data-cmd="party">队伍</button>
+            <button class="quick-btn" data-cmd="guild">行会</button>
+            <button class="quick-btn" data-cmd="sabak status">沙巴克</button>
+            <button class="quick-btn" data-cmd="mail list">邮件</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="game-grid">
+        <div class="log-wrap">
+          <div class="log-header">
+            <span>战斗与系统日志</span>
+            <span class="tag">实时</span>
+          </div>
+          <div class="log" id="log"></div>
+        </div>
+        <div class="side">
+          <h3>行动面板</h3>
+          <div class="action-group">
+            <div class="action-title">方向</div>
+            <div id="exits-list" class="chip-grid"></div>
+          </div>
+          <div class="action-group">
+            <div class="action-title">目标</div>
+            <div id="target-label" class="target-label">未选择</div>
+            <div id="mobs-list" class="chip-grid"></div>
+          </div>
+          <div class="action-group">
+            <div class="action-title">技能</div>
+            <div id="skills-list" class="chip-grid"></div>
+          </div>
+          <div class="action-group">
+            <div class="action-title">物品</div>
+            <div id="items-list" class="chip-grid"></div>
+          </div>
+          <div class="divider"></div>
+          <h3>常用操作</h3>
+          <div id="actions-list" class="chip-grid"></div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

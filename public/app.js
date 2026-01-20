@@ -69,6 +69,7 @@ const shopUi = {
   subtitle: document.getElementById('shop-subtitle'),
   close: document.getElementById('shop-close')
 };
+const itemTooltip = document.getElementById('item-tooltip');
 let lastShopItems = [];
 
 const authSection = document.getElementById('auth');
@@ -96,6 +97,7 @@ function show(section) {
   characterSection.classList.add('hidden');
   gameSection.classList.add('hidden');
   section.classList.remove('hidden');
+  hideItemTooltip();
 }
 
 function appendLine(text) {
@@ -167,6 +169,7 @@ function promptModal({ title, text, placeholder, value }) {
 
 function showShopModal(items) {
   if (!shopUi.modal || !shopUi.list) return;
+  hideItemTooltip();
   shopUi.list.innerHTML = '';
   if (!items.length) {
     const empty = document.createElement('div');
@@ -254,15 +257,111 @@ function parseStats(line) {
   }
 }
 
+function positionTooltip(x, y) {
+  if (!itemTooltip) return;
+  const padding = 10;
+  const rect = itemTooltip.getBoundingClientRect();
+  let left = x + 16;
+  let top = y + 16;
+  if (left + rect.width > window.innerWidth - padding) {
+    left = window.innerWidth - rect.width - padding;
+  }
+  if (top + rect.height > window.innerHeight - padding) {
+    top = window.innerHeight - rect.height - padding;
+  }
+  itemTooltip.style.left = `${Math.max(padding, left)}px`;
+  itemTooltip.style.top = `${Math.max(padding, top)}px`;
+}
+
+function showItemTooltip(text, evt) {
+  if (!itemTooltip) return;
+  itemTooltip.textContent = text || '';
+  itemTooltip.classList.remove('hidden');
+  requestAnimationFrame(() => {
+    itemTooltip.classList.add('show');
+    if (evt) positionTooltip(evt.clientX, evt.clientY);
+  });
+}
+
+function hideItemTooltip() {
+  if (!itemTooltip) return;
+  itemTooltip.classList.remove('show');
+  itemTooltip.classList.add('hidden');
+}
+
 function renderChips(container, items, onClick, activeId) {
   container.innerHTML = '';
   items.forEach((item) => {
     const btn = document.createElement('div');
     btn.className = `chip${activeId && activeId === item.id ? ' active' : ''}`;
     btn.textContent = item.label;
+    if (item.tooltip) {
+      btn.addEventListener('mouseenter', (evt) => showItemTooltip(item.tooltip, evt));
+      btn.addEventListener('mousemove', (evt) => positionTooltip(evt.clientX, evt.clientY));
+      btn.addEventListener('mouseleave', hideItemTooltip);
+    }
     btn.addEventListener('click', () => onClick(item));
     container.appendChild(btn);
   });
+}
+
+const ITEM_TYPE_LABELS = {
+  consumable: '\u6d88\u8017\u54c1',
+  weapon: '\u6b66\u5668',
+  armor: '\u9632\u5177',
+  accessory: '\u9970\u54c1',
+  book: '\u6280\u80fd\u4e66',
+  material: '\u6750\u6599',
+  currency: '\u8d27\u5e01',
+  unknown: '\u672a\u77e5'
+};
+const RARITY_LABELS = {
+  legendary: '\u4f20\u8bf4',
+  epic: '\u53f2\u8bd7',
+  rare: '\u7a00\u6709',
+  uncommon: '\u9ad8\u7ea7',
+  common: '\u666e\u901a'
+};
+const ITEM_SLOT_LABELS = {
+  weapon: '\u6b66\u5668',
+  chest: '\u8863\u670d',
+  head: '\u5934\u76d4',
+  waist: '\u8170\u5e26',
+  feet: '\u9774\u5b50',
+  ring: '\u6212\u6307',
+  bracelet: '\u624b\u9556',
+  neck: '\u9879\u94fe'
+};
+
+function formatItemTooltip(item) {
+  if (!item) return '';
+  const lines = [];
+  lines.push(item.name || '');
+  if (item.is_set) lines.push('\u5957\u88c5');
+  if (item.rarity) {
+    lines.push(`\u7a00\u6709\u5ea6: ${RARITY_LABELS[item.rarity] || item.rarity}`);
+  }
+  const typeLabel = ITEM_TYPE_LABELS[item.type] || ITEM_TYPE_LABELS.unknown;
+  lines.push(`\u7c7b\u578b: ${typeLabel}`);
+  if (item.slot) {
+    const slotLabel = ITEM_SLOT_LABELS[item.slot] || item.slot;
+    lines.push(`\u90e8\u4f4d: ${slotLabel}`);
+  }
+  const stats = [];
+  if (item.atk) stats.push(`\u653b\u51fb+${item.atk}`);
+  if (item.def) stats.push(`\u9632\u5fa1+${item.def}`);
+  if (item.mag) stats.push(`\u9b54\u6cd5+${item.mag}`);
+  if (item.spirit) stats.push(`\u9053\u672f+${item.spirit}`);
+  if (item.dex) stats.push(`\u654f\u6377+${item.dex}`);
+  if (item.hp) stats.push(`\u751f\u547d+${item.hp}`);
+  if (item.mp) stats.push(`\u9b54\u6cd5\u503c+${item.mp}`);
+  if (stats.length) {
+    lines.push(stats.join(' '));
+  }
+  if (item.price) {
+    lines.push(`\u4ef7\u683c: ${item.price}\u91d1`);
+  }
+  return lines.filter(Boolean).join('\n');
 }
 
 function renderState(state) {
@@ -310,8 +409,26 @@ function renderState(state) {
     }
     itemTotals[i.id].qty += i.qty;
   });
-  const items = Object.values(itemTotals).map((i) => ({ id: i.id, label: `${i.name} x${i.qty}`, raw: i }));
-  renderChips(ui.items, items, (i) => {
+  const items = Object.values(itemTotals).map((i) => ({
+    id: i.id,
+    label: `${i.name} x${i.qty}`,
+    raw: i,
+    tooltip: formatItemTooltip(i)
+  }));
+  renderChips(ui.items, items, async (i) => {
+    if (shopUi.modal && !shopUi.modal.classList.contains('hidden')) {
+      const qtyText = await promptModal({
+        title: '\u51fa\u552e\u7269\u54c1',
+        text: `\u8bf7\u8f93\u5165\u51fa\u552e\u6570\u91cf: ${i.raw.name}`,
+        placeholder: '1',
+        value: '1'
+      });
+      if (!qtyText) return;
+      const qty = Math.max(1, Number(qtyText || 1));
+      if (Number.isNaN(qty) || qty <= 0) return;
+      socket.emit('cmd', { text: `sell ${i.raw.id} ${qty}` });
+      return;
+    }
     if (i.raw.type === 'consumable' || i.raw.type === 'book') {
       socket.emit('cmd', { text: `use ${i.raw.id}` });
     } else if (i.raw.slot) {
@@ -643,6 +760,7 @@ if (tradeUi.cancelBtn) {
 if (shopUi.close) {
   shopUi.close.addEventListener('click', () => {
     shopUi.modal.classList.add('hidden');
+    hideItemTooltip();
   });
 }
 document.querySelectorAll('.quick-btn').forEach((btn) => {

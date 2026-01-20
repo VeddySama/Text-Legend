@@ -437,12 +437,20 @@ export async function handleCommand({ player, players, input, send, partyApi, gu
     case 'sell': {
       if (!canShop(player)) return send('这里没有商店。');
       if (!args) return send('要卖什么？');
-      const item = Object.values(ITEM_TEMPLATES).find((i) => i.name.toLowerCase() === args.toLowerCase() || i.id === args);
+      const parts = args.split(' ').filter(Boolean);
+      let qty = 1;
+      if (parts.length > 1 && /^\d+$/.test(parts[parts.length - 1])) {
+        qty = Math.max(1, Number(parts.pop()));
+      }
+      const name = parts.join(' ');
+      const item = Object.values(ITEM_TEMPLATES).find((i) => i.name.toLowerCase() === name.toLowerCase() || i.id === name);
       if (!item) return send('未找到物品。');
-      if (!removeItem(player, item.id, 1)) return send('背包里没有该物品。');
+      if (item.type === 'currency') return send('金币无法出售。');
+      if (!removeItem(player, item.id, qty)) return send('背包里没有足够数量。');
       const price = Math.max(1, Math.floor((item.price || 10) * 0.5));
-      player.gold += price;
-      send(`卖出 ${item.name}，获得 ${price} 金币。`);
+      const total = price * qty;
+      player.gold += total;
+      send(`卖出 ${item.name} x${qty}，获得 ${total} 金币。`);
       return;
     }
     case 'quests': {

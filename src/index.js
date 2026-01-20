@@ -633,7 +633,23 @@ function buildState(player) {
   }));
   const items = player.inventory.map((i) => {
     const item = ITEM_TEMPLATES[i.id] || { id: i.id, name: i.id, type: 'unknown' };
-    return { id: i.id, name: item.name, qty: i.qty, type: item.type, slot: item.slot || null };
+    return {
+      id: i.id,
+      name: item.name,
+      qty: i.qty,
+      type: item.type,
+      slot: item.slot || null,
+      rarity: rarityByPrice(item),
+      is_set: isSetItem(item.id),
+      price: item.price || 0,
+      hp: item.hp || 0,
+      mp: item.mp || 0,
+      atk: item.atk || 0,
+      def: item.def || 0,
+      mag: item.mag || 0,
+      spirit: item.spirit || 0,
+      dex: item.dex || 0
+    };
   });
   return {
     player: {

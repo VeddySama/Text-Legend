@@ -616,6 +616,35 @@ button:hover {
   padding: 4px 8px;
 }
 
+.item-tooltip {
+  position: fixed;
+  left: 0;
+  top: 0;
+  max-width: 240px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(32, 18, 8, 0.96);
+  color: #f7e6d3;
+  border: 1px solid rgba(233, 194, 144, 0.5);
+  box-shadow: 0 12px 24px rgba(20, 12, 6, 0.4);
+  font-size: 0.85rem;
+  white-space: pre-line;
+  pointer-events: none;
+  z-index: 30;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 0.12s ease, transform 0.12s ease;
+}
+
+.item-tooltip.hidden {
+  display: none;
+}
+
+.item-tooltip.show {
+  opacity: 1;
+  transform: translateY(0);
+}
+
 .target-label {
   margin-bottom: 6px;
   padding: 6px 10px;

@@ -360,6 +360,11 @@ function isChatLine(text) {
   return !/^\d+$/.test(head);
 }
 
+function isAnnouncement(payload) {
+  if (!payload || typeof payload !== 'object') return false;
+  return payload.prefix === '公告' || payload.prefixColor === 'announce' || payload.color === 'announce';
+}
+
 function sendChatMessage() {
   if (!socket || !chat.input) return;
   const msg = chat.input.value.trim();
@@ -887,7 +892,7 @@ function enterGame(name) {
   socket.on('output', (payload) => {
     appendLine(payload);
     parseStats(payload.text);
-    if (isChatLine(payload.text)) {
+    if (isChatLine(payload.text) || isAnnouncement(payload)) {
       appendChatLine(payload);
     }
     const shopItems = parseShopLine(payload.text);

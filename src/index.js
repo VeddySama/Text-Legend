@@ -958,6 +958,7 @@ function updateRedNameAutoClear(player) {
     player.flags.pkValue = Math.max(0, pkValue - 100);
     player.flags.pkReduceAt = Date.now() + 60 * 60 * 1000;
     player.send('PK值降低 100。');
+    savePlayer(player);
   }
 }
 
@@ -1145,7 +1146,10 @@ function combatTick() {
       if (target.hp <= 0 && !tryRevive(target)) {
         const wasRed = isRedName(target);
         if (!player.flags) player.flags = {};
-        if (!wasRed) player.flags.pkValue = (player.flags.pkValue || 0) + 100;
+        if (!wasRed) {
+          player.flags.pkValue = (player.flags.pkValue || 0) + 100;
+          savePlayer(player);
+        }
         const droppedBag = wasRed ? dropAllInventory(target) : [];
         const droppedEquip = wasRed ? dropEquippedChance(target, 0.1) : [];
         target.send('你被击败，返回了城里。');

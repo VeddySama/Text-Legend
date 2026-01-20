@@ -557,6 +557,12 @@ button:hover {
   min-width: 90px;
 }
 
+#prompt-extra {
+  background: #f0c79e;
+  color: #3b2412;
+  box-shadow: inset 0 0 0 1px rgba(118, 70, 22, 0.25);
+}
+
 .shop-list {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

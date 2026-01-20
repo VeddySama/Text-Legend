@@ -1006,12 +1006,14 @@ function processMobDeath(player, mob, online) {
 
   const party = getPartyByMember(player.name);
   const partyMembers = party ? partyMembersInRoom(party, online, player.position.zone, player.position.room) : [player];
-  const eligibleCount = partyMembers.length || 1;
-  const bonus = eligibleCount > 1 ? Math.min(0.2 * eligibleCount, 1.0) : 0;
+  const inRoomCount = partyMembers.length || 1;
+  const allInRoom = party && partyMembers.length === party.members.length;
+  const eligibleCount = allInRoom ? 1 : inRoomCount;
+  const bonus = inRoomCount > 1 ? Math.min(0.2 * inRoomCount, 1.0) : 0;
   const totalExp = Math.floor(exp * (1 + bonus));
   const totalGold = Math.floor(gold * (1 + bonus));
-  const shareExp = Math.floor(totalExp / eligibleCount);
-  const shareGold = Math.floor(totalGold / eligibleCount);
+  const shareExp = allInRoom ? totalExp : Math.floor(totalExp / eligibleCount);
+  const shareGold = allInRoom ? totalGold : Math.floor(totalGold / eligibleCount);
 
   partyMembers.forEach((member) => {
     const sabakBonus = member.guild && sabakState.ownerGuildId && member.guild.id === sabakState.ownerGuildId ? 2 : 1;

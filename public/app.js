@@ -75,7 +75,8 @@ const promptUi = {
   text: document.getElementById('prompt-text'),
   input: document.getElementById('prompt-input'),
   ok: document.getElementById('prompt-ok'),
-  cancel: document.getElementById('prompt-cancel')
+  cancel: document.getElementById('prompt-cancel'),
+  extra: document.getElementById('prompt-extra')
 };
 const shopUi = {
   modal: document.getElementById('shop-modal'),
@@ -243,7 +244,7 @@ function setTradeStatus(text) {
   }
 }
 
-function promptModal({ title, text, placeholder, value }) {
+function promptModal({ title, text, placeholder, value, extra }) {
   if (!promptUi.modal || !promptUi.input) return Promise.resolve(null);
   return new Promise((resolve) => {
     const onCancel = () => {
@@ -255,6 +256,10 @@ function promptModal({ title, text, placeholder, value }) {
       cleanup();
       resolve(result || null);
     };
+    const onExtra = () => {
+      cleanup();
+      resolve('__extra__');
+    };
     const onKey = (e) => {
       if (e.key === 'Enter') onOk();
       if (e.key === 'Escape') onCancel();
@@ -264,12 +269,26 @@ function promptModal({ title, text, placeholder, value }) {
       promptUi.cancel.removeEventListener('click', onCancel);
       promptUi.input.removeEventListener('keydown', onKey);
       promptUi.modal.classList.add('hidden');
+      if (promptUi.extra) {
+        promptUi.extra.removeEventListener('click', onExtra);
+        promptUi.extra.classList.add('hidden');
+      }
     };
 
     promptUi.title.textContent = title || '输入';
     promptUi.text.textContent = text || '';
     promptUi.input.placeholder = placeholder || '';
     promptUi.input.value = value || '';
+    if (promptUi.extra) {
+      if (extra && extra.text) {
+        promptUi.extra.textContent = extra.text;
+        promptUi.extra.classList.remove('hidden');
+        promptUi.extra.addEventListener('click', onExtra);
+      } else {
+        promptUi.extra.classList.add('hidden');
+        promptUi.extra.textContent = '';
+      }
+    }
     promptUi.ok.addEventListener('click', onOk);
     promptUi.cancel.addEventListener('click', onCancel);
     promptUi.input.addEventListener('keydown', onKey);
@@ -980,8 +999,13 @@ if (chat.partyInviteBtn) {
     const name = await promptModal({
       title: '队伍邀请',
       text: '请输入玩家名',
-      placeholder: '玩家名'
+      placeholder: '玩家名',
+      extra: { text: '退出组队' }
     });
+    if (name === '__extra__') {
+      socket.emit('cmd', { text: 'party leave' });
+      return;
+    }
     if (!name) return;
     socket.emit('cmd', { text: `party invite ${name.trim()}` });
   });

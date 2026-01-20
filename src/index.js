@@ -822,7 +822,16 @@ function combatTick() {
       return;
     }
 
-    if (!player.combat) return;
+    if (!player.combat) {
+      if (player.flags?.autoSkillId) {
+        const mobs = getRoomMobs(player.position.zone, player.position.room);
+        const target = mobs[0];
+        if (target) {
+          player.combat = { targetId: target.id, targetType: 'mob', skillId: null };
+        }
+      }
+      if (!player.combat) return;
+    }
 
     tryAutoPotion(player);
 

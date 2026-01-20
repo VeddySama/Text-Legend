@@ -482,7 +482,7 @@ function renderConsignInventory(items) {
   if (!consignUi.inventoryList) return;
   consignUi.inventoryList.innerHTML = '';
   const equipItems = (items || []).filter((item) =>
-    item && ['weapon', 'armor', 'accessory'].includes(item.type)
+    item && ['weapon', 'armor', 'accessory', 'book'].includes(item.type)
   );
   if (!equipItems.length) {
     const empty = document.createElement('div');

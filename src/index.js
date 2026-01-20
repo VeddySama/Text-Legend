@@ -540,7 +540,7 @@ const tradeApi = {
   offerText
 };
 
-const CONSIGN_EQUIPMENT_TYPES = new Set(['weapon', 'armor', 'accessory']);
+const CONSIGN_EQUIPMENT_TYPES = new Set(['weapon', 'armor', 'accessory', 'book']);
 
 const consignApi = {
   async listMarket(player) {

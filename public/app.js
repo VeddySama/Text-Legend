@@ -349,7 +349,7 @@ function setTradeStatus(text) {
   }
 }
 
-function promptModal({ title, text, placeholder, value, extra }) {
+function promptModal({ title, text, placeholder, value, extra, allowEmpty }) {
   if (!promptUi.modal || !promptUi.input) return Promise.resolve(null);
   return new Promise((resolve) => {
     const onCancel = () => {
@@ -359,7 +359,8 @@ function promptModal({ title, text, placeholder, value, extra }) {
     const onOk = () => {
       const result = promptUi.input.value.trim();
       cleanup();
-      resolve(result || null);
+      if (result) return resolve(result);
+      resolve(allowEmpty ? '' : null);
     };
     const onExtra = () => {
       cleanup();
@@ -1420,14 +1421,16 @@ function enterGame(name) {
         title: '交易请求',
         text: `${tradeFrom} 请求交易，是否接受？`,
         placeholder: '',
-        extra: { text: '拒绝' }
+        extra: { text: '拒绝' },
+        allowEmpty: true
       }).then((res) => {
         if (res === '__extra__') {
           socket.emit('cmd', { text: `trade cancel` });
           return;
         }
         if (res === null) return;
-        socket.emit('cmd', { text: `trade accept ${tradeFrom}` });
+        const targetName = res || tradeFrom;
+        socket.emit('cmd', { text: `trade accept ${targetName}` });
       });
     }
     const shopItems = parseShopLine(payload.text);

@@ -1472,6 +1472,17 @@ function combatTick() {
     refreshBuffs(player);
     processPotionRegen(player);
     updateRedNameAutoClear(player);
+    const poisonSource = player.status?.poison?.sourceName;
+    const playerPoisonTick = tickStatus(player);
+    if (playerPoisonTick && playerPoisonTick.type === 'poison') {
+      player.send(`你受到 ${playerPoisonTick.dmg} 点中毒伤害。`);
+      if (poisonSource) {
+        const source = playersByName(poisonSource);
+        if (source) {
+          source.send(`你的施毒对 ${player.name} 造成 ${playerPoisonTick.dmg} 点伤害。`);
+        }
+      }
+    }
 
     if (!player.combat) {
       regenOutOfCombat(player);
@@ -1555,6 +1566,8 @@ function combatTick() {
         if (!target.status) target.status = {};
         applyPoison(target, 30, calcPoisonTickDamage(target), player.name);
         applyPoisonDebuff(target);
+        player.send('施毒成功。');
+        target.send('你中了施毒术。');
       }
       if (skill && skill.id === 'firestrike') {
         if (!player.status) player.status = {};
@@ -1572,6 +1585,9 @@ function combatTick() {
     } else {
       player.send(`${target.name} 躲过了你的攻击。`);
       target.send(`你躲过了 ${player.name} 的攻击。`);
+      if (skill && skill.type === 'dot') {
+        player.send('施毒失败。');
+      }
       if (!target.combat || target.combat.targetType !== 'player' || target.combat.targetId !== player.name) {
         target.combat = { targetId: player.name, targetType: 'player', skillId: 'slash' };
       }
@@ -1679,6 +1695,7 @@ function combatTick() {
         if (!mob.status) mob.status = {};
         applyPoison(mob, 30, calcPoisonTickDamage(mob), player.name);
         applyPoisonDebuff(mob);
+        player.send(`施毒成功：${mob.name} 中毒。`);
       }
       if (skill && skill.id === 'firestrike') {
         if (!player.status) player.status = {};
@@ -1694,6 +1711,9 @@ function combatTick() {
       }
     } else {
       player.send(`${mob.name} 躲过了你的攻击。`);
+      if (skill && skill.type === 'dot') {
+        player.send('施毒失败。');
+      }
     }
 
     const statusTick = tickStatus(mob);
@@ -1702,6 +1722,10 @@ function combatTick() {
       const sourceName = mob.status?.poison?.sourceName;
       if (sourceName) {
         recordMobDamage(mob, sourceName, statusTick.dmg);
+        const source = playersByName(sourceName);
+        if (source && source.name !== player.name) {
+          source.send(`你的施毒对 ${mob.name} 造成 ${statusTick.dmg} 点伤害。`);
+        }
       }
     }
 

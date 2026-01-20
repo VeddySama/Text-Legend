@@ -378,8 +378,8 @@ const TRAINING_OPTIONS = [
   { id: 'spirit', label: '\u9053\u672f', inc: 1 }
 ];
 
-function trainingCost(level, current, inc) {
-  const base = 10000 + level * 500;
+function trainingCost(current, inc) {
+  const base = 10000;
   const steps = Math.floor((current || 0) / inc);
   return Math.max(1, Math.floor(base + steps * (base * 0.2)));
 }
@@ -504,10 +504,9 @@ function renderState(state) {
 
   if (ui.training) {
     const training = state.training || { hp: 0, mp: 0, atk: 0, mag: 0, spirit: 0 };
-    const level = state.player ? state.player.level : 1;
     const trainingButtons = TRAINING_OPTIONS.map((opt) => {
       const current = training[opt.id] || 0;
-      const cost = trainingCost(level, current, opt.inc);
+      const cost = trainingCost(current, opt.inc);
       return {
         id: opt.id,
         label: `${opt.label} +${opt.inc} (${cost}金)`,

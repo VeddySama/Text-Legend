@@ -197,10 +197,9 @@ function skillByName(player, name) {
 }
 
 function trainingCost(player, key) {
-  const level = player.level || 1;
   const training = player.flags?.training || {};
   const current = Number(training[key] || 0);
-  const base = 10000 + level * 500;
+  const base = 10000;
   const steps = Math.floor(current / TRAINING_OPTIONS[key].inc);
   return Math.max(1, Math.floor(base + steps * (base * 0.2)));
 }

@@ -50,7 +50,8 @@ const TRAINING_OPTIONS = {
   def: { label: '防御', inc: 1 },
   mag: { label: '魔法', inc: 1 },
   mdef: { label: '魔御', inc: 1 },
-  spirit: { label: '道术', inc: 1 }
+  spirit: { label: '道术', inc: 1 },
+  dex: { label: '躲闪', inc: 1 }
 };
 const TRAINING_ALIASES = {
   hp: 'hp',
@@ -67,7 +68,10 @@ const TRAINING_ALIASES = {
   魔御: 'mdef',
   mdef: 'mdef',
   道术: 'spirit',
-  spirit: 'spirit'
+  spirit: 'spirit',
+  dex: 'dex',
+  敏捷: 'dex',
+  躲闪: 'dex'
 };
 
 function dirLabel(dir) {
@@ -863,7 +867,7 @@ export async function handleCommand({ player, players, input, send, partyApi, gu
     case 'train': {
       if (!player.flags) player.flags = {};
       if (!player.flags.training) {
-        player.flags.training = { hp: 0, mp: 0, atk: 0, def: 0, mag: 0, mdef: 0, spirit: 0 };
+        player.flags.training = { hp: 0, mp: 0, atk: 0, def: 0, mag: 0, mdef: 0, spirit: 0, dex: 0 };
       }
       if (!args) {
         send('修炼指令: train <属性>');
@@ -877,7 +881,7 @@ export async function handleCommand({ player, players, input, send, partyApi, gu
       }
       const raw = args.trim();
       const key = TRAINING_ALIASES[raw] || TRAINING_ALIASES[raw.toLowerCase()];
-      if (!key || !TRAINING_OPTIONS[key]) return send('可修炼属性: 生命, 魔法值, 攻击, 防御, 魔法, 魔御, 道术');
+      if (!key || !TRAINING_OPTIONS[key]) return send('可修炼属性: 生命, 魔法值, 攻击, 防御, 魔法, 魔御, 道术, 躲闪');
       const cost = trainingCost(player, key);
       if (player.gold < cost) return send('金币不足。');
       player.gold -= cost;

@@ -824,7 +824,8 @@ const TRAINING_OPTIONS = [
   { id: 'def', label: '\u9632\u5fa1', inc: 1 },
   { id: 'mag', label: '\u9b54\u6cd5', inc: 1 },
   { id: 'mdef', label: '\u9b54\u5fa1', inc: 1 },
-  { id: 'spirit', label: '\u9053\u672f', inc: 1 }
+  { id: 'spirit', label: '\u9053\u672f', inc: 1 },
+  { id: 'dex', label: '\u8e32\u95ea', inc: 1 }
 ];
 
 function trainingCost(current, inc) {
@@ -1017,7 +1018,7 @@ function renderState(state) {
   }
 
   if (ui.training) {
-    const training = state.training || { hp: 0, mp: 0, atk: 0, mag: 0, spirit: 0 };
+    const training = state.training || { hp: 0, mp: 0, atk: 0, mag: 0, spirit: 0, dex: 0 };
     const trainingButtons = TRAINING_OPTIONS.map((opt) => {
       const current = training[opt.id] || 0;
       const cost = trainingCost(current, opt.inc);

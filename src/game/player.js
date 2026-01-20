@@ -48,7 +48,7 @@ export function newCharacter(name, classId) {
       autoSkillId: null,
       autoHpPct: null,
       autoMpPct: null,
-      training: { hp: 0, mp: 0, atk: 0, mag: 0, spirit: 0 }
+      training: { hp: 0, mp: 0, atk: 0, mag: 0, spirit: 0, dex: 0 }
     },
     status: {}
   };
@@ -57,7 +57,7 @@ export function newCharacter(name, classId) {
 export function computeDerived(player) {
   if (!player.flags) player.flags = {};
   if (!player.flags.training) {
-    player.flags.training = { hp: 0, mp: 0, atk: 0, def: 0, mag: 0, mdef: 0, spirit: 0 };
+    player.flags.training = { hp: 0, mp: 0, atk: 0, def: 0, mag: 0, mdef: 0, spirit: 0, dex: 0 };
   }
   const cls = CLASSES[player.classId];
   const base = cls.base;
@@ -69,13 +69,14 @@ export function computeDerived(player) {
   const stats = { ...base };
   for (const item of bonus) {
     stats.str += item.atk ? Math.floor(item.atk / 2) : 0;
-    stats.dex += item.dex || 0;
+  stats.dex += item.dex || 0;
     stats.int += item.mag ? Math.floor(item.mag / 2) : 0;
     stats.con += item.def ? Math.floor(item.def / 2) : 0;
     stats.spirit += item.spirit || 0;
   }
   const training = player.flags.training;
   stats.spirit += training.spirit || 0;
+  stats.dex += training.dex || 0;
 
   player.stats = stats;
   player.max_hp = base.con * 10 + cls.hpPerLevel * level + stats.con * 2 + (training.hp || 0);

@@ -898,7 +898,7 @@ function buildState(player) {
       : null,
     guild: player.guild?.name || null,
     party: party ? { size: party.members.length, members: partyMembers } : null,
-    training: player.flags?.training || { hp: 0, mp: 0, atk: 0, def: 0, mag: 0, mdef: 0, spirit: 0 },
+    training: player.flags?.training || { hp: 0, mp: 0, atk: 0, def: 0, mag: 0, mdef: 0, spirit: 0, dex: 0 },
     online: { count: onlineCount },
     players: roomPlayers
   };

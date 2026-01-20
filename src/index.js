@@ -230,6 +230,12 @@ const ITEM_POOLS = (() => {
   return pools;
 })();
 
+function isSetItem(itemId) {
+  const item = ITEM_TEMPLATES[itemId];
+  if (!item || !item.name) return false;
+  return item.name.includes('(套)');
+}
+
 function isBossMob(mobTemplate) {
   const id = mobTemplate.id;
   return (
@@ -241,10 +247,14 @@ function isBossMob(mobTemplate) {
 }
 
 function rollRarityDrop(mobTemplate) {
-  const table = isBossMob(mobTemplate) ? RARITY_BOSS : RARITY_NORMAL;
+  if (!isBossMob(mobTemplate)) return null;
+  const table = RARITY_BOSS;
+  const allowSet = true;
   for (const rarity of RARITY_ORDER) {
     if (Math.random() <= table[rarity]) {
-      const pool = ITEM_POOLS[rarity];
+      const pool = allowSet
+        ? ITEM_POOLS[rarity]
+        : ITEM_POOLS[rarity].filter((id) => !isSetItem(id));
       if (!pool.length) return null;
       return pool[randInt(0, pool.length - 1)];
     }

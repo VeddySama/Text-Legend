@@ -477,6 +477,13 @@ button:hover {
 #trade-item {
   flex: 1;
   min-width: 0;
+  background: #fffaf1;
+  color: #2b1d0e;
+}
+
+#trade-item option {
+  background: #fffaf1;
+  color: #2b1d0e;
 }
 
 #trade-qty,
@@ -487,6 +494,49 @@ button:hover {
 .trade-status {
   font-size: 0.85rem;
   color: #6b4a2a;
+}
+
+.modal {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(32, 20, 10, 0.45);
+  z-index: 10;
+}
+
+.modal-card {
+  width: min(420px, 90vw);
+  background: #fff7ea;
+  border-radius: 16px;
+  border: 1px solid #e7caa6;
+  padding: 16px;
+  box-shadow: 0 18px 40px rgba(20, 12, 6, 0.35);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.modal-title {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+}
+
+.modal-text {
+  font-size: 0.9rem;
+  color: #5b3a1c;
+  white-space: pre-wrap;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.modal-actions button {
+  min-width: 90px;
 }
 
 .log p {

@@ -115,7 +115,7 @@
               <input id="chat-input" type="text" placeholder="&#x8BF4;&#x70B9;&#x4EC0;&#x4E48;">
               <button id="chat-send">&#x53D1;&#x9001;</button>
             </div>
-            <div class="trade-panel">
+            <div id="trade-panel" class="trade-panel hidden">
               <div class="trade-title">&#x4EA4;&#x6613;&#x9762;&#x677F;</div>
               <div class="trade-row">
                 <select id="trade-item"></select>
@@ -160,6 +160,18 @@
         </div>
       </div>
     </section>
+  </div>
+
+  <div id="prompt-modal" class="modal hidden">
+    <div class="modal-card">
+      <div class="modal-title" id="prompt-title">&#x8F93;&#x5165;</div>
+      <div class="modal-text" id="prompt-text"></div>
+      <input id="prompt-input" type="text" placeholder="">
+      <div class="modal-actions">
+        <button id="prompt-cancel">&#x53D6;&#x6D88;</button>
+        <button id="prompt-ok">&#x786E;&#x5B9A;</button>
+      </div>
+    </div>
   </div>
 
   <script src="/socket.io/socket.io.js"></script>

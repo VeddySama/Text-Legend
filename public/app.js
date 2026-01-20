@@ -52,7 +52,16 @@ const tradeUi = {
   lockBtn: document.getElementById('trade-lock'),
   confirmBtn: document.getElementById('trade-confirm'),
   cancelBtn: document.getElementById('trade-cancel'),
-  status: document.getElementById('trade-status')
+  status: document.getElementById('trade-status'),
+  panel: document.getElementById('trade-panel')
+};
+const promptUi = {
+  modal: document.getElementById('prompt-modal'),
+  title: document.getElementById('prompt-title'),
+  text: document.getElementById('prompt-text'),
+  input: document.getElementById('prompt-input'),
+  ok: document.getElementById('prompt-ok'),
+  cancel: document.getElementById('prompt-cancel')
 };
 
 const authSection = document.getElementById('auth');
@@ -100,6 +109,53 @@ function appendChatLine(text) {
 function setTradeStatus(text) {
   if (!tradeUi.status) return;
   tradeUi.status.textContent = text;
+  if (!tradeUi.panel) return;
+  if (!text) return;
+  if (text.includes('交易建立')) {
+    tradeUi.panel.classList.remove('hidden');
+  } else if (
+    text.includes('交易完成') ||
+    text.includes('交易已取消') ||
+    text.includes('交易失败') ||
+    text.includes('未在交易中')
+  ) {
+    tradeUi.panel.classList.add('hidden');
+  }
+}
+
+function promptModal({ title, text, placeholder, value }) {
+  if (!promptUi.modal || !promptUi.input) return Promise.resolve(null);
+  return new Promise((resolve) => {
+    const onCancel = () => {
+      cleanup();
+      resolve(null);
+    };
+    const onOk = () => {
+      const result = promptUi.input.value.trim();
+      cleanup();
+      resolve(result || null);
+    };
+    const onKey = (e) => {
+      if (e.key === 'Enter') onOk();
+      if (e.key === 'Escape') onCancel();
+    };
+    const cleanup = () => {
+      promptUi.ok.removeEventListener('click', onOk);
+      promptUi.cancel.removeEventListener('click', onCancel);
+      promptUi.input.removeEventListener('keydown', onKey);
+      promptUi.modal.classList.add('hidden');
+    };
+
+    promptUi.title.textContent = title || '输入';
+    promptUi.text.textContent = text || '';
+    promptUi.input.placeholder = placeholder || '';
+    promptUi.input.value = value || '';
+    promptUi.ok.addEventListener('click', onOk);
+    promptUi.cancel.addEventListener('click', onCancel);
+    promptUi.input.addEventListener('keydown', onKey);
+    promptUi.modal.classList.remove('hidden');
+    setTimeout(() => promptUi.input.focus(), 0);
+  });
 }
 
 function isChatLine(text) {
@@ -255,44 +311,39 @@ function renderState(state) {
   if (state.stats && state.stats.vip) {
     actions.push({ id: 'afk', label: '\u6302\u673a' });
   }
-  renderChips(ui.actions, actions, (a) => {
+  renderChips(ui.actions, actions, async (a) => {
     if (a.id === 'vip activate') {
-      const code = window.prompt('\u8f93\u5165VIP\u6fc0\u6d3b\u7801');
+      const code = await promptModal({
+        title: 'VIP\u6fc0\u6d3b',
+        text: '\u8bf7\u8f93\u5165VIP\u6fc0\u6d3b\u7801',
+        placeholder: 'VIPXXXX'
+      });
       if (!code) return;
       socket.emit('cmd', { text: `vip activate ${code.trim()}` });
       return;
     }
     if (a.id === 'afk') {
-      const skillList = (state.skills || []).map((s) => `${s.name}(${s.id})`).join(', ');
-      const skillInput = window.prompt(`\u8f93\u5165\u81ea\u52a8\u6280\u80fd(\u8f93\u5165all\u5168\u90e8\u6280\u80fd, off\u5173\u95ed)\n\u53ef\u9009: ${skillList}`);
-      if (skillInput === null) return;
-      const skillValue = skillInput.trim();
-      if (skillValue) {
-        if (skillValue.toLowerCase() === 'off') {
-          socket.emit('cmd', { text: 'autoskill off' });
-        } else {
-          socket.emit('cmd', { text: `autoskill ${skillValue}` });
-        }
-      }
-      const potionInput = window.prompt('\u81ea\u52a8\u559d\u836f\u9608\u503c: \u8f93\u5165 "HP MP" (5-95) \u6216 off \u5173\u95ed');
-      if (potionInput === null) return;
-      const potionValue = potionInput.trim();
-      if (potionValue) {
-        if (potionValue.toLowerCase() === 'off') {
-          socket.emit('cmd', { text: 'autopotion off' });
-        } else {
-          socket.emit('cmd', { text: `autopotion ${potionValue}` });
-        }
-      }
+      socket.emit('cmd', { text: 'autoskill all' });
       return;
     }
     socket.emit('cmd', { text: a.id });
   });
 }
-
 const remembered = localStorage.getItem('rememberedUser');
 if (remembered) {
   loginUserInput.value = remembered;
+}
+const savedToken = localStorage.getItem('savedToken');
+if (savedToken) {
+  token = savedToken;
+  let savedChars = [];
+  try {
+    savedChars = JSON.parse(localStorage.getItem('savedCharacters') || '[]');
+  } catch {
+    savedChars = [];
+  }
+  renderCharacters(savedChars);
+  show(characterSection);
 }
 
 async function apiPost(path, body) {
@@ -316,6 +367,8 @@ async function login() {
     const data = await apiPost('/api/login', { username, password });
     localStorage.setItem('rememberedUser', username);
     token = data.token;
+    localStorage.setItem('savedToken', token);
+    localStorage.setItem('savedCharacters', JSON.stringify(data.characters || []));
     renderCharacters(data.characters || []);
     show(characterSection);
     showToast('登录成功');
@@ -384,6 +437,8 @@ async function createCharacter() {
       password: document.getElementById('login-password').value.trim()
     });
     token = loginData.token;
+    localStorage.setItem('savedToken', token);
+    localStorage.setItem('savedCharacters', JSON.stringify(loginData.characters || []));
     renderCharacters(loginData.characters || []);
     charMsg.textContent = '角色已创建。';
   } catch (err) {
@@ -443,15 +498,23 @@ if (chat.input) {
   });
 }
 if (chat.partyInviteBtn) {
-  chat.partyInviteBtn.addEventListener('click', () => {
-    const name = window.prompt('\u8F93\u5165\u8981\u9080\u8BF7\u7684\u73A9\u5BB6\u540D');
+  chat.partyInviteBtn.addEventListener('click', async () => {
+    const name = await promptModal({
+      title: '\u961F\u4F0D\u9080\u8BF7',
+      text: '\u8BF7\u8F93\u5165\u73A9\u5BB6\u540D',
+      placeholder: '\u73A9\u5BB6\u540D'
+    });
     if (!name || !socket) return;
     socket.emit('cmd', { text: `party invite ${name.trim()}` });
   });
 }
 if (chat.guildInviteBtn) {
-  chat.guildInviteBtn.addEventListener('click', () => {
-    const name = window.prompt('\u8F93\u5165\u8981\u9080\u8BF7\u7684\u73A9\u5BB6\u540D');
+  chat.guildInviteBtn.addEventListener('click', async () => {
+    const name = await promptModal({
+      title: '\u884C\u4F1A\u9080\u8BF7',
+      text: '\u8BF7\u8F93\u5165\u73A9\u5BB6\u540D',
+      placeholder: '\u73A9\u5BB6\u540D'
+    });
     if (!name || !socket) return;
     socket.emit('cmd', { text: `guild invite ${name.trim()}` });
   });
@@ -467,16 +530,24 @@ if (chat.locationBtn) {
   });
 }
 if (tradeUi.requestBtn) {
-  tradeUi.requestBtn.addEventListener('click', () => {
-    const name = window.prompt('\u8bf7\u8f93\u5165\u4ea4\u6613\u5bf9\u8c61');
+  tradeUi.requestBtn.addEventListener('click', async () => {
+    const name = await promptModal({
+      title: '\u53D1\u8D77\u4EA4\u6613',
+      text: '\u8BF7\u8F93\u5165\u4EA4\u6613\u5BF9\u8C61',
+      placeholder: '\u73A9\u5BB6\u540D'
+    });
     if (!name || !socket) return;
     socket.emit('cmd', { text: `trade request ${name.trim()}` });
     setTradeStatus('\u4ea4\u6613\u8bf7\u6c42\u5df2\u53d1\u9001');
   });
 }
 if (tradeUi.acceptBtn) {
-  tradeUi.acceptBtn.addEventListener('click', () => {
-    const name = window.prompt('\u8bf7\u8f93\u5165\u5bf9\u65b9\u540d\u5b57');
+  tradeUi.acceptBtn.addEventListener('click', async () => {
+    const name = await promptModal({
+      title: '\u63A5\u53D7\u4EA4\u6613',
+      text: '\u8BF7\u8F93\u5165\u5BF9\u65B9\u540D\u5B57',
+      placeholder: '\u73A9\u5BB6\u540D'
+    });
     if (!name || !socket) return;
     socket.emit('cmd', { text: `trade accept ${name.trim()}` });
   });

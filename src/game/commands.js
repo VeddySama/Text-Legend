@@ -472,15 +472,26 @@ export async function handleCommand({ player, players, input, send, partyApi, gu
       const quest = Object.values(QUESTS).find((q) => q.id === args || q.name === args);
       const state = quest ? player.quests[quest.id] : null;
       if (!quest || !state) return send('该任务未接受。');
+      if (state.completed) return send('任务已完成。');
       const goals = quest.goals.kill || {};
       const progress = state.progress.kill || {};
       const done = Object.keys(goals).every((k) => (progress[k] || 0) >= goals[k]);
       if (!done) return send('任务尚未完成。');
       state.completed = true;
-      gainExp(player, quest.rewards.exp || 0);
-      player.gold += quest.rewards.gold || 0;
-      if (quest.rewards.items) quest.rewards.items.forEach((id) => addItem(player, id, 1));
+      const expGain = quest.rewards.exp || 0;
+      const goldGain = quest.rewards.gold || 0;
+      const leveled = expGain ? gainExp(player, expGain) : false;
+      player.gold += goldGain;
+      const rewardItems = quest.rewards.items || [];
+      rewardItems.forEach((id) => addItem(player, id, 1));
       send(`任务完成: ${quest.name}`);
+      if (expGain || goldGain) {
+        send(`获得奖励: 经验 ${expGain}，金币 ${goldGain}`);
+      }
+      if (rewardItems.length) {
+        send(`获得物品: ${rewardItems.map((id) => ITEM_TEMPLATES[id]?.name || id).join(', ')}`);
+      }
+      if (leveled) send('你升级了！');
       return;
     }
     case 'party': {

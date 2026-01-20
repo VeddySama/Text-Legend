@@ -39,6 +39,8 @@ const chat = {
   sendBtn: document.getElementById('chat-send'),
   partyInviteBtn: document.getElementById('chat-party-invite'),
   guildInviteBtn: document.getElementById('chat-guild-invite'),
+  partyToggleBtn: document.getElementById('chat-party-toggle'),
+  sabakRegisterBtn: document.getElementById('chat-sabak-register'),
   locationBtn: document.getElementById('chat-send-location')
 };
 const tradeUi = {
@@ -67,6 +69,7 @@ const shopUi = {
   modal: document.getElementById('shop-modal'),
   list: document.getElementById('shop-list'),
   subtitle: document.getElementById('shop-subtitle'),
+  sellList: document.getElementById('shop-sell-list'),
   close: document.getElementById('shop-close')
 };
 const itemTooltip = document.getElementById('item-tooltip');
@@ -186,7 +189,39 @@ function showShopModal(items) {
       shopUi.list.appendChild(card);
     });
   }
+  renderShopSellList(lastState ? lastState.items : []);
   shopUi.modal.classList.remove('hidden');
+}
+
+function renderShopSellList(items) {
+  if (!shopUi.sellList) return;
+  shopUi.sellList.innerHTML = '';
+  if (!items || !items.length) {
+    const empty = document.createElement('div');
+    empty.textContent = '\u80cc\u5305\u7a7a\u7a7a';
+    shopUi.sellList.appendChild(empty);
+    return;
+  }
+  items.forEach((item) => {
+    if (item.type === 'currency') return;
+    const btn = document.createElement('div');
+    btn.className = 'shop-sell-item';
+    btn.textContent = `${item.name} x${item.qty}`;
+    btn.addEventListener('click', async () => {
+      const qtyText = await promptModal({
+        title: '\u51fa\u552e\u7269\u54c1',
+        text: `\u8bf7\u8f93\u5165\u51fa\u552e\u6570\u91cf: ${item.name}`,
+        placeholder: '1',
+        value: '1'
+      });
+      if (!qtyText) return;
+      const qty = Math.max(1, Number(qtyText || 1));
+      if (Number.isNaN(qty) || qty <= 0) return;
+      if (!socket) return;
+      socket.emit('cmd', { text: `sell ${item.id} ${qty}` });
+    });
+    shopUi.sellList.appendChild(btn);
+  });
 }
 
 function parseShopLine(text) {
@@ -379,6 +414,14 @@ function renderState(state) {
     ui.pk.textContent = `${state.stats.pk} (${state.stats.pk >= 100 ? '红名' : '正常'})`;
     ui.vip.textContent = state.stats.vip ? '是' : '否';
     ui.guild.textContent = state.guild || '无';
+    if (chat.sabakRegisterBtn) {
+      const hasGuild = Boolean(state.guild);
+      chat.sabakRegisterBtn.classList.toggle('hidden', !hasGuild);
+    }
+  }
+  if (chat.partyToggleBtn) {
+    const inParty = Boolean(state.party && state.party.size > 0);
+    chat.partyToggleBtn.textContent = inParty ? '退出组队' : '组队';
   }
 
   if (selectedMob && !(state.mobs || []).some((m) => m.id === selectedMob.id)) {
@@ -415,26 +458,16 @@ function renderState(state) {
     raw: i,
     tooltip: formatItemTooltip(i)
   }));
-  renderChips(ui.items, items, async (i) => {
-    if (shopUi.modal && !shopUi.modal.classList.contains('hidden')) {
-      const qtyText = await promptModal({
-        title: '\u51fa\u552e\u7269\u54c1',
-        text: `\u8bf7\u8f93\u5165\u51fa\u552e\u6570\u91cf: ${i.raw.name}`,
-        placeholder: '1',
-        value: '1'
-      });
-      if (!qtyText) return;
-      const qty = Math.max(1, Number(qtyText || 1));
-      if (Number.isNaN(qty) || qty <= 0) return;
-      socket.emit('cmd', { text: `sell ${i.raw.id} ${qty}` });
-      return;
-    }
+  renderChips(ui.items, items, (i) => {
     if (i.raw.type === 'consumable' || i.raw.type === 'book') {
       socket.emit('cmd', { text: `use ${i.raw.id}` });
     } else if (i.raw.slot) {
       socket.emit('cmd', { text: `equip ${i.raw.id}` });
     }
   });
+  if (shopUi.modal && !shopUi.modal.classList.contains('hidden')) {
+    renderShopSellList(state.items || []);
+  }
   if (tradeUi.itemSelect) {
     tradeUi.itemSelect.innerHTML = '';
     if (!items.length) {
@@ -684,6 +717,19 @@ if (chat.guildInviteBtn) {
     });
     if (!name || !socket) return;
     socket.emit('cmd', { text: `guild invite ${name.trim()}` });
+  });
+}
+if (chat.partyToggleBtn) {
+  chat.partyToggleBtn.addEventListener('click', () => {
+    if (!socket) return;
+    const inParty = Boolean(lastState && lastState.party && lastState.party.size > 0);
+    socket.emit('cmd', { text: inParty ? 'party leave' : 'party create' });
+  });
+}
+if (chat.sabakRegisterBtn) {
+  chat.sabakRegisterBtn.addEventListener('click', () => {
+    if (!socket) return;
+    socket.emit('cmd', { text: 'sabak register' });
   });
 }
 if (chat.locationBtn) {

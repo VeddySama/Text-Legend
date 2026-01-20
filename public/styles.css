@@ -563,6 +563,37 @@ button:hover {
   filter: brightness(1.03);
 }
 
+.shop-sell-title {
+  margin-top: 8px;
+  font-weight: 600;
+}
+
+.shop-sell-tip {
+  font-size: 0.82rem;
+  color: #6b4a2a;
+}
+
+.shop-sell-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.shop-sell-item {
+  border-radius: 999px;
+  border: 1px solid rgba(118, 70, 22, 0.25);
+  background: #f7e2c6;
+  padding: 6px 10px;
+  font-size: 0.85rem;
+  text-align: center;
+  cursor: pointer;
+  line-height: 1.2;
+}
+
+.shop-sell-item:hover {
+  filter: brightness(1.03);
+}
+
 .log p {
   margin: 0 0 8px;
   white-space: pre-wrap;

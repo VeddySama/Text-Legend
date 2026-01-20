@@ -651,6 +651,7 @@ function buildState(player) {
       dex: item.dex || 0
     };
   });
+  const party = getPartyByMember(player.name);
   return {
     player: {
       name: player.name,
@@ -677,7 +678,8 @@ function buildState(player) {
       vip: Boolean(player.flags?.vip),
       autoSkillId: player.flags?.autoSkillId || null
     },
-    guild: player.guild?.name || null
+    guild: player.guild?.name || null,
+    party: party ? { size: party.members.length } : null
   };
 }
 

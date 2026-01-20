@@ -57,7 +57,7 @@ export function newCharacter(name, classId) {
 export function computeDerived(player) {
   if (!player.flags) player.flags = {};
   if (!player.flags.training) {
-    player.flags.training = { hp: 0, mp: 0, atk: 0, mag: 0, spirit: 0 };
+    player.flags.training = { hp: 0, mp: 0, atk: 0, def: 0, mag: 0, mdef: 0, spirit: 0 };
   }
   const cls = CLASSES[player.classId];
   const base = cls.base;
@@ -84,11 +84,11 @@ export function computeDerived(player) {
   player.mp = clamp(player.mp, 0, player.max_mp);
 
   player.atk = stats.str * 1.6 + level * 1.2 + (training.atk || 0);
-  player.def = stats.con * 1.1 + level * 0.8;
+  player.def = stats.con * 1.1 + level * 0.8 + (training.def || 0);
   player.dex = stats.dex;
   player.mag = stats.int * 1.4 + stats.spirit * 0.6 + (training.mag || 0);
   player.spirit = stats.spirit;
-  player.mdef = stats.spirit * 1.1 + level * 0.8;
+  player.mdef = stats.spirit * 1.1 + level * 0.8 + (training.mdef || 0);
 }
 
 export function gainExp(player, amount) {

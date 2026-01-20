@@ -495,9 +495,11 @@ const ITEM_SLOT_LABELS = {
 };
 const TRAINING_OPTIONS = [
   { id: 'hp', label: '\u751f\u547d', inc: 10 },
-  { id: 'mp', label: '\u9b54\u6cd5', inc: 10 },
+  { id: 'mp', label: '\u9b54\u6cd5\u503c', inc: 10 },
   { id: 'atk', label: '\u653b\u51fb', inc: 1 },
-  { id: 'mag', label: '\u9b54\u6cd5\u503c', inc: 1 },
+  { id: 'def', label: '\u9632\u5fa1', inc: 1 },
+  { id: 'mag', label: '\u9b54\u6cd5', inc: 1 },
+  { id: 'mdef', label: '\u9b54\u5fa1', inc: 1 },
   { id: 'spirit', label: '\u9053\u672f', inc: 1 }
 ];
 

@@ -709,10 +709,24 @@ function buildState(player) {
     };
   });
   const party = getPartyByMember(player.name);
+  const partyMembers = party
+    ? party.members.map((name) => ({
+        name,
+        online: Boolean(playersByName(name))
+      }))
+    : null;
   const sabakBonus = Boolean(
     player.guild && sabakState.ownerGuildId && player.guild.id === sabakState.ownerGuildId
   );
   const onlineCount = players.size;
+  const roomPlayers = listOnlinePlayers()
+    .filter((p) => p.position.zone === player.position.zone && p.position.room === player.position.room)
+    .map((p) => ({
+      name: p.name,
+      classId: p.classId,
+      level: p.level,
+      guild: p.guild?.name || null
+    }));
   return {
     player: {
       name: player.name,
@@ -735,15 +749,21 @@ function buildState(player) {
       exp: player.exp,
       exp_next: expForLevel(player.level),
       gold: player.gold,
+      atk: Math.floor(player.atk || 0),
+      def: Math.floor(player.def || 0),
+      mag: Math.floor(player.mag || 0),
+      spirit: Math.floor(player.spirit || 0),
+      mdef: Math.floor(player.mdef || 0),
       pk: player.flags?.pkValue || 0,
       vip: Boolean(player.flags?.vip),
       autoSkillId: player.flags?.autoSkillId || null,
       sabak_bonus: sabakBonus
     },
     guild: player.guild?.name || null,
-    party: party ? { size: party.members.length } : null,
+    party: party ? { size: party.members.length, members: partyMembers } : null,
     training: player.flags?.training || { hp: 0, mp: 0, atk: 0, mag: 0, spirit: 0 },
-    online: { count: onlineCount }
+    online: { count: onlineCount },
+    players: roomPlayers
   };
 }
 
@@ -882,7 +902,6 @@ io.on('connection', (socket) => {
     if (player) {
       if (!player.flags) player.flags = {};
       player.flags.offlineAt = Date.now();
-      removeFromParty(player.name);
       const trade = getTradeByPlayer(player.name);
       if (trade) {
         clearTrade(trade, `交易已取消（${player.name} 离线）。`);

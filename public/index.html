@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
@@ -66,16 +66,24 @@
           <div class="status-row"><span>VIP</span><strong id="ui-vip">-</strong></div>
           <div class="status-row"><span>沙巴克加成</span><strong id="ui-sabak-bonus">-</strong></div>
           <div class="status-row"><span>在线人数</span><strong id="ui-online">-</strong></div>
+          <div class="status-row"><span>队伍成员</span><strong id="ui-party">-</strong></div>
         </div>
         <div class="status-card">
           <div class="status-title">状态条</div>
           <div class="bar-label">生命</div>
           <div class="bar"><div id="bar-hp" class="bar-fill hp"></div></div>
+          <div class="status-row"><span>生命值</span><strong id="ui-hp">0/0</strong></div>
           <div class="bar-label">魔法</div>
           <div class="bar"><div id="bar-mp" class="bar-fill mp"></div></div>
+          <div class="status-row"><span>魔法值</span><strong id="ui-mp">0/0</strong></div>
           <div class="bar-label">经验</div>
           <div class="bar"><div id="bar-exp" class="bar-fill exp"></div></div>
           <div class="status-row"><span>金币</span><strong id="ui-gold">0</strong></div>
+          <div class="status-row"><span>攻击</span><strong id="ui-atk">0</strong></div>
+          <div class="status-row"><span>防御</span><strong id="ui-def">0</strong></div>
+          <div class="status-row"><span>魔法</span><strong id="ui-mag">0</strong></div>
+          <div class="status-row"><span>道术</span><strong id="ui-spirit">0</strong></div>
+          <div class="status-row"><span>魔御</span><strong id="ui-mdef">0</strong></div>
         </div>
         <div class="status-card">
           <div class="status-title">快捷按钮</div>
@@ -148,7 +156,8 @@
           </div>
           <div class="action-group">
             <div class="action-title">&#x76EE;&#x6807;</div>
-            <div id="target-label" class="target-label">&#x672A;&#x9009;&#x62E9;</div>
+            <div id="target-label" class="target-label"></div>
+            <div id="players-list" class="chip-grid"></div>
             <div id="mobs-list" class="chip-grid"></div>
           </div>
           <div class="action-group">
@@ -210,9 +219,25 @@
     </div>
   </div>
 
+  <div id="player-modal" class="modal hidden">
+    <div class="modal-card">
+      <div class="modal-title">玩家信息</div>
+      <div class="modal-text" id="player-info"></div>
+      <div class="modal-actions">
+        <button id="player-attack">攻击</button>
+        <button id="player-trade">交易</button>
+        <button id="player-party">组队</button>
+        <button id="player-close">关闭</button>
+      </div>
+    </div>
+  </div>
+
   <div id="item-tooltip" class="item-tooltip hidden"></div>
 
   <script src="/socket.io/socket.io.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
+
+
+

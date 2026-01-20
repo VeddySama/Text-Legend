@@ -87,6 +87,8 @@ export function computeDerived(player) {
   player.def = stats.con * 1.1 + level * 0.8;
   player.dex = stats.dex;
   player.mag = stats.int * 1.4 + stats.spirit * 0.6 + (training.mag || 0);
+  player.spirit = stats.spirit;
+  player.mdef = stats.spirit * 1.1 + level * 0.8;
 }
 
 export function gainExp(player, amount) {

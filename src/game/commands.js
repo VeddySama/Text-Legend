@@ -197,7 +197,19 @@ function canShop(player) {
 function getShopStock(player) {
   const shopId = shopForRoom(player.position.room);
   if (!shopId) return [];
-  return SHOP_STOCKS[shopId].map((id) => ITEM_TEMPLATES[id]);
+  return SHOP_STOCKS[shopId]
+    .map((id) => ITEM_TEMPLATES[id])
+    .filter((item) => item && rarityByPrice(item) === 'common');
+}
+
+function rarityByPrice(item) {
+  if (item.rarity) return item.rarity;
+  const price = Number(item.price || 0);
+  if (price >= 80000) return 'legendary';
+  if (price >= 30000) return 'epic';
+  if (price >= 10000) return 'rare';
+  if (price >= 2000) return 'uncommon';
+  return 'common';
 }
 
 function skillByName(player, name) {

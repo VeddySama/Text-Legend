@@ -625,6 +625,10 @@ button:hover {
   border-color: #b35a1a;
 }
 
+#player-info {
+  white-space: pre-line;
+}
+
 .log p {
   margin: 0 0 8px;
   white-space: pre-wrap;

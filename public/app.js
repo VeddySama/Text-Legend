@@ -1,4 +1,4 @@
-let token = null;
+﻿let token = null;
 let socket = null;
 let activeChar = null;
 const classNames = { warrior: '战士', mage: '法师', taoist: '道士' };
@@ -24,12 +24,21 @@ const ui = {
   vip: document.getElementById('ui-vip'),
   sabakBonus: document.getElementById('ui-sabak-bonus'),
   online: document.getElementById('ui-online'),
+  party: document.getElementById('ui-party'),
   gold: document.getElementById('ui-gold'),
+  hpValue: document.getElementById('ui-hp'),
+  mpValue: document.getElementById('ui-mp'),
+  atk: document.getElementById('ui-atk'),
+  def: document.getElementById('ui-def'),
+  mag: document.getElementById('ui-mag'),
+  spirit: document.getElementById('ui-spirit'),
+  mdef: document.getElementById('ui-mdef'),
   hp: document.getElementById('bar-hp'),
   mp: document.getElementById('bar-mp'),
   exp: document.getElementById('bar-exp'),
   exits: document.getElementById('exits-list'),
   mobs: document.getElementById('mobs-list'),
+  players: document.getElementById('players-list'),
   skills: document.getElementById('skills-list'),
   items: document.getElementById('items-list'),
   training: document.getElementById('training-list'),
@@ -82,6 +91,14 @@ const afkUi = {
   start: document.getElementById('afk-start'),
   auto: document.getElementById('afk-auto'),
   close: document.getElementById('afk-close')
+};
+const playerUi = {
+  modal: document.getElementById('player-modal'),
+  info: document.getElementById('player-info'),
+  attack: document.getElementById('player-attack'),
+  trade: document.getElementById('player-trade'),
+  party: document.getElementById('player-party'),
+  close: document.getElementById('player-close')
 };
 const itemTooltip = document.getElementById('item-tooltip');
 let lastShopItems = [];
@@ -280,6 +297,19 @@ function showAfkModal(skills, activeIds) {
     });
   }
   afkUi.modal.classList.remove('hidden');
+}
+
+function showPlayerModal(player) {
+  if (!playerUi.modal || !playerUi.info) return;
+  const lines = [
+    `姓名: ${player.name}`,
+    `职业: ${classNames[player.classId] || player.classId}`,
+    `等级: Lv ${player.level}`,
+    `行会: ${player.guild || '无'}`
+  ];
+  playerUi.info.textContent = lines.join('\n');
+  playerUi.selected = player;
+  playerUi.modal.classList.remove('hidden');
 }
 
 function renderShopSellList(items) {
@@ -523,6 +553,13 @@ function renderState(state) {
     setBar(ui.mp, state.stats.mp, state.stats.max_mp);
     setBar(ui.exp, state.stats.exp, state.stats.exp_next);
     ui.gold.textContent = state.stats.gold;
+    if (ui.hpValue) ui.hpValue.textContent = `${state.stats.hp}/${state.stats.max_hp}`;
+    if (ui.mpValue) ui.mpValue.textContent = `${state.stats.mp}/${state.stats.max_mp}`;
+    if (ui.atk) ui.atk.textContent = state.stats.atk ?? '-';
+    if (ui.def) ui.def.textContent = state.stats.def ?? '-';
+    if (ui.mag) ui.mag.textContent = state.stats.mag ?? '-';
+    if (ui.spirit) ui.spirit.textContent = state.stats.spirit ?? '-';
+    if (ui.mdef) ui.mdef.textContent = state.stats.mdef ?? '-';
     ui.pk.textContent = `${state.stats.pk} (${state.stats.pk >= 100 ? '红名' : '正常'})`;
     ui.vip.textContent = state.stats.vip ? '是' : '否';
     if (ui.sabakBonus) {
@@ -530,6 +567,14 @@ function renderState(state) {
     }
     if (ui.online) {
       ui.online.textContent = state.online ? String(state.online.count || 0) : '0';
+    }
+    if (ui.party) {
+      if (state.party && Array.isArray(state.party.members) && state.party.members.length) {
+        const names = state.party.members.map((m) => m.online ? m.name : `${m.name}(离线)`);
+        ui.party.textContent = names.join('、');
+      } else {
+        ui.party.textContent = '无';
+      }
     }
     ui.guild.textContent = state.guild || '无';
     if (chat.sabakRegisterBtn) {
@@ -558,10 +603,19 @@ function renderState(state) {
   if (selectedMob && !(state.mobs || []).some((m) => m.id === selectedMob.id)) {
     selectedMob = null;
   }
-  ui.target.textContent = selectedMob ? `目标: ${selectedMob.name}` : '未选择';
+  ui.target.textContent = selectedMob ? `目标: ${selectedMob.name}` : '';
 
   const exits = (state.exits || []).map((e) => ({ id: e.dir, label: e.label || directionLabels[e.dir] || e.dir }));
   renderChips(ui.exits, exits, (e) => socket.emit('cmd', { text: `go ${e.id}` }));
+
+  const players = (state.players || [])
+    .filter((p) => p.name && (!state.player || p.name !== state.player.name))
+    .map((p) => ({
+      id: p.name,
+      label: `${p.name} Lv${p.level} ${classNames[p.classId] || p.classId}`,
+      raw: p
+    }));
+  renderChips(ui.players, players, (p) => showPlayerModal(p.raw));
 
   const mobs = (state.mobs || []).map((m) => ({ id: m.id, label: `${m.name}(${m.hp})`, raw: m }));
   renderChips(ui.mobs, mobs, (m) => {
@@ -1009,9 +1063,36 @@ if (afkUi.close) {
     if (afkUi.modal) afkUi.modal.classList.add('hidden');
   });
 }
+if (playerUi.close) {
+  playerUi.close.addEventListener('click', () => {
+    if (playerUi.modal) playerUi.modal.classList.add('hidden');
+  });
+}
+if (playerUi.attack) {
+  playerUi.attack.addEventListener('click', () => {
+    if (!socket || !playerUi.selected) return;
+    socket.emit('cmd', { text: `attack ${playerUi.selected.name}` });
+    if (playerUi.modal) playerUi.modal.classList.add('hidden');
+  });
+}
+if (playerUi.trade) {
+  playerUi.trade.addEventListener('click', () => {
+    if (!socket || !playerUi.selected) return;
+    socket.emit('cmd', { text: `trade request ${playerUi.selected.name}` });
+    if (playerUi.modal) playerUi.modal.classList.add('hidden');
+  });
+}
+if (playerUi.party) {
+  playerUi.party.addEventListener('click', () => {
+    if (!socket || !playerUi.selected) return;
+    socket.emit('cmd', { text: `party invite ${playerUi.selected.name}` });
+    if (playerUi.modal) playerUi.modal.classList.add('hidden');
+  });
+}
 document.querySelectorAll('.quick-btn').forEach((btn) => {
   btn.addEventListener('click', () => {
     const cmd = btn.getAttribute('data-cmd');
     if (cmd && socket) socket.emit('cmd', { text: cmd });
   });
 });
+

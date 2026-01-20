@@ -556,6 +556,18 @@ function tryRevive(player) {
   }
   return false;
 }
+
+function regenOutOfCombat(player) {
+  if (player.hp <= 0) return;
+  const now = Date.now();
+  if (!player.flags) player.flags = {};
+  const lastCombatAt = player.flags.lastCombatAt || 0;
+  if (now - lastCombatAt < 5000) return;
+  const hpRegen = Math.max(1, Math.floor(player.max_hp * 0.01));
+  const mpRegen = Math.max(1, Math.floor(player.max_mp * 0.015));
+  player.hp = clamp(player.hp + hpRegen, 1, player.max_hp);
+  player.mp = clamp(player.mp + mpRegen, 0, player.max_mp);
+}
 function applyOfflineRewards(player) {
   if (!player.flags) player.flags = {};
   const offlineAt = player.flags.offlineAt;
@@ -834,6 +846,7 @@ function combatTick() {
     }
 
     if (!player.combat) {
+      regenOutOfCombat(player);
       if (player.flags?.autoSkillId) {
         const mobs = getRoomMobs(player.position.zone, player.position.room);
         const target = mobs[0];
@@ -843,6 +856,8 @@ function combatTick() {
       }
       if (!player.combat) return;
     }
+    if (!player.flags) player.flags = {};
+    player.flags.lastCombatAt = Date.now();
 
     tryAutoPotion(player);
 
@@ -859,6 +874,8 @@ function combatTick() {
         player.send('目标已消失。');
         return;
       }
+      if (!target.flags) target.flags = {};
+      target.flags.lastCombatAt = Date.now();
 
     let chosenSkillId = player.combat.skillId;
     if (!chosenSkillId && player.flags?.autoSkillId) {
@@ -885,6 +902,7 @@ function combatTick() {
       }
 
       applyDamageToPlayer(target, dmg);
+      target.flags.lastCombatAt = Date.now();
       player.send(`你对 ${target.name} 造成 ${dmg} 点伤害。`);
       target.send(`${player.name} 对你造成 ${dmg} 点伤害。`);
       if (!target.combat) {

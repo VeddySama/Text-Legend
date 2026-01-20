@@ -1404,14 +1404,32 @@ function combatTick() {
       return;
     }
 
-    const mobHitChance = calcHitChance(mob, player);
-      if (Math.random() <= mobHitChance) {
-        const dmg = calcDamage(mob, player, 1);
+    const mobTarget = player.summon && player.summon.hp > 0 ? player.summon : player;
+    const mobHitChance = calcHitChance(mob, mobTarget);
+    if (Math.random() <= mobHitChance) {
+      const dmg = calcDamage(mob, mobTarget, 1);
+      if (mobTarget === player) {
         applyDamageToPlayer(player, dmg);
         player.send(`${mob.name} 对你造成 ${dmg} 点伤害。`);
       } else {
-        player.send(`${mob.name} 攻击落空。`);
+        applyDamage(mobTarget, dmg);
+        player.send(`${mob.name} 对 ${mobTarget.name} 造成 ${dmg} 点伤害。`);
+        if (mobTarget.hp <= 0) {
+          player.send(`${mobTarget.name} 被击败。`);
+          player.summon = null;
+          const followChance = calcHitChance(mob, player);
+          if (Math.random() <= followChance) {
+            const followDmg = calcDamage(mob, player, 1);
+            applyDamageToPlayer(player, followDmg);
+            player.send(`${mob.name} 追击你，造成 ${followDmg} 点伤害。`);
+          } else {
+            player.send(`${mob.name} 追击落空。`);
+          }
+        }
       }
+    } else {
+      player.send(`${mob.name} 攻击落空。`);
+    }
 
     if (player.hp <= 0 && !tryRevive(player)) {
       handleDeath(player);

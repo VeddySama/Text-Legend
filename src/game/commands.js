@@ -523,6 +523,7 @@ export async function handleCommand({ player, players, input, send, partyApi, gu
       if (skill.type === 'heal') {
         if (player.mp < skill.mp) return send('魔法不足。');
         let target = player;
+        const summon = player.summon ? { ...player.summon, isSummon: true } : null;
         if (targetName) {
           const nameLower = targetName.toLowerCase();
           const candidate = players.find(
@@ -544,20 +545,28 @@ export async function handleCommand({ player, players, input, send, partyApi, gu
                 p.position.zone === player.position.zone &&
                 p.position.room === player.position.room
             );
+            if (summon) candidates.push(summon);
             if (candidates.length) {
               candidates.sort((a, b) => (a.hp / a.max_hp) - (b.hp / b.max_hp));
               target = candidates[0];
             }
+          } else if (summon) {
+            target = summon;
           }
         }
         player.mp -= skill.mp;
         const heal = Math.floor(player.mag * 0.8 * power + player.level * 4);
-        target.hp = clamp(target.hp + heal, 1, target.max_hp);
-        if (target.name === player.name) {
-          send(`你施放了 ${skill.name}，恢复 ${heal} 点生命。`);
+        if (target.isSummon) {
+          player.summon.hp = clamp(player.summon.hp + heal, 1, player.summon.max_hp);
+          send(`你为 ${player.summon.name} 施放了 ${skill.name}，恢复 ${heal} 点生命。`);
         } else {
-          send(`你为 ${target.name} 施放了 ${skill.name}，恢复 ${heal} 点生命。`);
-          target.send(`${player.name} 为你施放了 ${skill.name}，恢复 ${heal} 点生命。`);
+          target.hp = clamp(target.hp + heal, 1, target.max_hp);
+          if (target.name === player.name) {
+          send(`你施放了 ${skill.name}，恢复 ${heal} 点生命。`);
+          } else {
+            send(`你为 ${target.name} 施放了 ${skill.name}，恢复 ${heal} 点生命。`);
+            target.send(`${player.name} 为你施放了 ${skill.name}，恢复 ${heal} 点生命。`);
+          }
         }
         notifyMastery(player, skill);
         return;

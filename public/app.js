@@ -57,7 +57,6 @@ const chat = {
 };
 const tradeUi = {
   requestBtn: document.getElementById('chat-trade-request'),
-  acceptBtn: document.getElementById('chat-trade-accept'),
   itemSelect: document.getElementById('trade-item'),
   qtyInput: document.getElementById('trade-qty'),
   goldInput: document.getElementById('trade-gold'),
@@ -215,6 +214,13 @@ function appendChatLine(payload) {
   chat.log.appendChild(p);
   chat.log.scrollTop = chat.log.scrollHeight;
   if (activeChar) cacheChatLine(activeChar, payload);
+}
+
+function parseTradeRequest(text) {
+  if (!text) return null;
+  const match = text.match(/^(.+?) 请求交易/);
+  if (!match) return null;
+  return match[1];
 }
 
 function chatCacheKey(name) {
@@ -1028,6 +1034,22 @@ function enterGame(name) {
     if (isChatLine(payload.text) || isAnnouncement(payload)) {
       appendChatLine(payload);
     }
+    const tradeFrom = parseTradeRequest(payload.text);
+    if (tradeFrom && socket) {
+      promptModal({
+        title: '交易请求',
+        text: `${tradeFrom} 请求交易，是否接受？`,
+        placeholder: '',
+        extra: { text: '拒绝' }
+      }).then((res) => {
+        if (res === '__extra__') {
+          socket.emit('cmd', { text: `trade cancel` });
+          return;
+        }
+        if (res === null) return;
+        socket.emit('cmd', { text: `trade accept ${tradeFrom}` });
+      });
+    }
     const shopItems = parseShopLine(payload.text);
     if (shopItems) {
       lastShopItems = shopItems;
@@ -1127,17 +1149,6 @@ if (tradeUi.requestBtn) {
     if (!name || !socket) return;
     socket.emit('cmd', { text: `trade request ${name.trim()}` });
     setTradeStatus('\u4ea4\u6613\u8bf7\u6c42\u5df2\u53d1\u9001');
-  });
-}
-if (tradeUi.acceptBtn) {
-  tradeUi.acceptBtn.addEventListener('click', async () => {
-    const name = await promptModal({
-      title: '\u63A5\u53D7\u4EA4\u6613',
-      text: '\u8BF7\u8F93\u5165\u5BF9\u65B9\u540D\u5B57',
-      placeholder: '\u73A9\u5BB6\u540D'
-    });
-    if (!name || !socket) return;
-    socket.emit('cmd', { text: `trade accept ${name.trim()}` });
   });
 }
 if (tradeUi.addItemBtn) {

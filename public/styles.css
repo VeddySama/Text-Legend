@@ -656,21 +656,22 @@ button:hover {
   align-items: center;
   padding: 1px 8px;
   border-radius: 999px;
-  background: rgba(217, 108, 26, 0.2);
-  color: #f7d9b6;
+  background: rgba(120, 64, 20, 0.85);
+  color: #fff3df;
   font-weight: 600;
   font-size: 0.78rem;
+  border: 1px solid rgba(255, 210, 150, 0.4);
 }
 
 .prefix-announce {
-  background: rgba(219, 146, 36, 0.25);
-  color: #ffd9a6;
+  background: #9b4b10;
+  color: #fff0d4;
 }
 
-.line-rare { color: #79c2ff; }
-.line-epic { color: #ff8bd1; }
-.line-legendary { color: #f7d27a; }
-.line-announce { color: #f0c07a; }
+.line-rare { color: #69b6ff; }
+.line-epic { color: #ff7fc8; }
+.line-legendary { color: #f2c464; }
+.line-announce { color: #f7e6c6; }
 
 .chip.rarity-common { border-color: rgba(118, 70, 22, 0.25); }
 .chip.rarity-uncommon { border-color: rgba(60, 130, 70, 0.45); color: #2f6b3b; }

@@ -113,6 +113,7 @@ const charMsg = document.getElementById('char-msg');
 const characterList = document.getElementById('character-list');
 const loginUserInput = document.getElementById('login-username');
 let lastSavedLevel = null;
+const CHAT_CACHE_LIMIT = 200;
 
 function showToast(message) {
   authToast.textContent = message;
@@ -184,6 +185,45 @@ function appendChatLine(payload) {
   const p = buildLine(payload);
   chat.log.appendChild(p);
   chat.log.scrollTop = chat.log.scrollHeight;
+  if (activeChar) cacheChatLine(activeChar, payload);
+}
+
+function chatCacheKey(name) {
+  return `chat_cache_${name}`;
+}
+
+function cacheChatLine(name, payload) {
+  try {
+    const key = chatCacheKey(name);
+    const raw = localStorage.getItem(key);
+    const list = raw ? JSON.parse(raw) : [];
+    list.push(normalizePayload(payload));
+    if (list.length > CHAT_CACHE_LIMIT) {
+      list.splice(0, list.length - CHAT_CACHE_LIMIT);
+    }
+    localStorage.setItem(key, JSON.stringify(list));
+  } catch {
+    // Ignore cache failures.
+  }
+}
+
+function loadChatCache(name) {
+  if (!chat.log) return;
+  chat.log.innerHTML = '';
+  try {
+    const key = chatCacheKey(name);
+    const raw = localStorage.getItem(key);
+    const list = raw ? JSON.parse(raw) : [];
+    if (Array.isArray(list)) {
+      list.forEach((entry) => {
+        const p = buildLine(entry);
+        chat.log.appendChild(p);
+      });
+      chat.log.scrollTop = chat.log.scrollHeight;
+    }
+  } catch {
+    // Ignore cache failures.
+  }
 }
 
 function setTradeStatus(text) {
@@ -604,6 +644,10 @@ function renderState(state) {
   if (chat.partyToggleBtn) {
     const inParty = Boolean(state.party && state.party.size > 0);
     chat.partyToggleBtn.textContent = inParty ? '退出组队' : '组队';
+    chat.partyToggleBtn.classList.toggle('hidden', true);
+    if (chat.partyInviteBtn) {
+      chat.partyInviteBtn.textContent = inParty ? '队伍邀请' : '组队';
+    }
   }
 
   if (selectedMob && !(state.mobs || []).some((m) => m.id === selectedMob.id)) {
@@ -870,7 +914,9 @@ function enterGame(name) {
   lastSavedLevel = null;
   show(gameSection);
   log.innerHTML = '';
-  if (chat.log) chat.log.innerHTML = '';
+  if (chat.log) {
+    loadChatCache(name);
+  }
   setTradeStatus('\u672a\u5728\u4ea4\u6613\u4e2d');
   if (shopUi.modal) shopUi.modal.classList.add('hidden');
   appendLine('正在连接...');
@@ -925,12 +971,18 @@ if (chat.input) {
 }
 if (chat.partyInviteBtn) {
   chat.partyInviteBtn.addEventListener('click', async () => {
+    if (!socket) return;
+    const inParty = Boolean(lastState && lastState.party && lastState.party.size > 0);
+    if (!inParty) {
+      socket.emit('cmd', { text: 'party create' });
+      return;
+    }
     const name = await promptModal({
-      title: '\u961F\u4F0D\u9080\u8BF7',
-      text: '\u8BF7\u8F93\u5165\u73A9\u5BB6\u540D',
-      placeholder: '\u73A9\u5BB6\u540D'
+      title: '队伍邀请',
+      text: '请输入玩家名',
+      placeholder: '玩家名'
     });
-    if (!name || !socket) return;
+    if (!name) return;
     socket.emit('cmd', { text: `party invite ${name.trim()}` });
   });
 }
@@ -957,11 +1009,7 @@ if (chat.guildCreateBtn) {
   });
 }
 if (chat.partyToggleBtn) {
-  chat.partyToggleBtn.addEventListener('click', () => {
-    if (!socket) return;
-    const inParty = Boolean(lastState && lastState.party && lastState.party.size > 0);
-    socket.emit('cmd', { text: inParty ? 'party leave' : 'party create' });
-  });
+  chat.partyToggleBtn.addEventListener('click', () => {});
 }
 if (chat.sabakRegisterBtn) {
   chat.sabakRegisterBtn.addEventListener('click', () => {
@@ -1098,4 +1146,5 @@ document.querySelectorAll('.quick-btn').forEach((btn) => {
     if (cmd && socket) socket.emit('cmd', { text: cmd });
   });
 });
+
 

@@ -31,20 +31,24 @@ export function getDurabilityMax(item) {
   return 100;
 }
 
-export function getRepairCost(item, missing) {
+export function getRepairCost(item, missing, player = null) {
   if (!item || missing <= 0) return 0;
-  const base = item.type === 'weapon' ? 12 : item.type === 'armor' ? 10 : 8;
+  const base = item.type === 'weapon' ? 200 : item.type === 'armor' ? 180 : 160;
   const rarity = rarityByPrice(item);
   const mult = rarity === 'legendary'
-    ? 1.7
+    ? 5.0
     : rarity === 'epic'
-      ? 1.45
+      ? 4.2
       : rarity === 'rare'
-        ? 1.25
+        ? 3.4
         : rarity === 'uncommon'
-          ? 1.1
-          : 1.0;
-  return Math.max(1, Math.floor(base * mult * missing));
+          ? 2.6
+          : 2.0;
+  let cost = Math.min(50000, Math.max(1, Math.floor(base * mult * missing)));
+  if (player?.flags?.vip) {
+    cost = Math.max(1, Math.floor(cost * 0.5));
+  }
+  return cost;
 }
 
 export function newCharacter(name, classId) {

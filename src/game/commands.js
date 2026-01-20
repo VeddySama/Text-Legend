@@ -872,7 +872,7 @@ export async function handleCommand({ player, players, input, send, partyApi, gu
             const maxDur = equipped.max_durability || getDurabilityMax(item);
             const cur = equipped.durability == null ? maxDur : equipped.durability;
             const missing = Math.max(0, maxDur - cur);
-            const cost = missing > 0 ? getRepairCost(item, missing) : 0;
+            const cost = missing > 0 ? getRepairCost(item, missing, player) : 0;
             return `${slot}: ${item.name} (${cur}/${maxDur}) 费用 ${cost}`;
           })
           .filter(Boolean);
@@ -891,7 +891,7 @@ export async function handleCommand({ player, players, input, send, partyApi, gu
         const cur = equipped.durability == null ? maxDur : equipped.durability;
         const missing = Math.max(0, maxDur - cur);
         if (missing <= 0) return;
-        const cost = getRepairCost(item, missing);
+        const cost = getRepairCost(item, missing, player);
         total += cost;
         targets.push({ slot, item, maxDur });
       });

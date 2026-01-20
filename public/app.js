@@ -576,6 +576,14 @@ function renderChips(container, items, onClick, activeId) {
     btn.addEventListener('click', () => onClick(item));
     container.appendChild(btn);
   });
+  if (container === ui.items) {
+    container.onclick = (evt) => {
+      if (!evt.target || evt.target !== container) return;
+      if (bagItems.length > BAG_PAGE_SIZE) {
+        renderBagModal();
+      }
+    };
+  }
 }
 
 function renderBagModal() {

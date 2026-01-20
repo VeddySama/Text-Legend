@@ -63,6 +63,13 @@ const promptUi = {
   ok: document.getElementById('prompt-ok'),
   cancel: document.getElementById('prompt-cancel')
 };
+const shopUi = {
+  modal: document.getElementById('shop-modal'),
+  list: document.getElementById('shop-list'),
+  subtitle: document.getElementById('shop-subtitle'),
+  close: document.getElementById('shop-close')
+};
+let lastShopItems = [];
 
 const authSection = document.getElementById('auth');
 const characterSection = document.getElementById('character');
@@ -156,6 +163,38 @@ function promptModal({ title, text, placeholder, value }) {
     promptUi.modal.classList.remove('hidden');
     setTimeout(() => promptUi.input.focus(), 0);
   });
+}
+
+function showShopModal(items) {
+  if (!shopUi.modal || !shopUi.list) return;
+  shopUi.list.innerHTML = '';
+  if (!items.length) {
+    const empty = document.createElement('div');
+    empty.textContent = '\u5546\u5E97\u65E0\u5546\u54C1';
+    shopUi.list.appendChild(empty);
+  } else {
+    items.forEach((item) => {
+      const card = document.createElement('div');
+      card.className = 'shop-item';
+      card.textContent = `${item.name} (${item.price}\u91D1)`;
+      card.addEventListener('click', () => {
+        if (socket) socket.emit('cmd', { text: `buy ${item.name}` });
+      });
+      shopUi.list.appendChild(card);
+    });
+  }
+  shopUi.modal.classList.remove('hidden');
+}
+
+function parseShopLine(text) {
+  if (!text.startsWith('\u5546\u5E97\u5546\u54C1:')) return null;
+  const list = [];
+  const regex = /([^,]+)\((\d+)\u91D1\)/g;
+  let match;
+  while ((match = regex.exec(text)) !== null) {
+    list.push({ name: match[1].trim(), price: Number(match[2]) });
+  }
+  return list;
 }
 
 function isChatLine(text) {
@@ -457,6 +496,7 @@ function enterGame(name) {
   log.innerHTML = '';
   if (chat.log) chat.log.innerHTML = '';
   setTradeStatus('\u672a\u5728\u4ea4\u6613\u4e2d');
+  if (shopUi.modal) shopUi.modal.classList.add('hidden');
   appendLine('正在连接...');
   ui.name.textContent = name;
   ui.classLevel.textContent = '-';
@@ -480,6 +520,11 @@ function enterGame(name) {
     parseStats(payload.text);
     if (isChatLine(payload.text)) {
       appendChatLine(payload.text);
+    }
+    const shopItems = parseShopLine(payload.text);
+    if (shopItems) {
+      lastShopItems = shopItems;
+      showShopModal(shopItems);
     }
     if (payload.text.startsWith('\u4ea4\u6613')) {
       appendChatLine(payload.text);
@@ -593,6 +638,11 @@ if (tradeUi.cancelBtn) {
     if (!socket) return;
     socket.emit('cmd', { text: 'trade cancel' });
     setTradeStatus('\u4ea4\u6613\u5df2\u53d6\u6d88');
+  });
+}
+if (shopUi.close) {
+  shopUi.close.addEventListener('click', () => {
+    shopUi.modal.classList.add('hidden');
   });
 }
 document.querySelectorAll('.quick-btn').forEach((btn) => {

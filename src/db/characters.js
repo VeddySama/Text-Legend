@@ -33,6 +33,7 @@ export async function loadCharacter(userId, name) {
     inventory: parseJson(row.inventory_json, []),
     equipment: parseJson(row.equipment_json, {}),
     quests: parseJson(row.quests_json, {}),
+    skills: parseJson(row.skills_json, []),
     flags: parseJson(row.flags_json, {}),
     status: {}
   };
@@ -59,6 +60,7 @@ export async function saveCharacter(userId, player) {
     inventory_json: JSON.stringify(player.inventory || []),
     equipment_json: JSON.stringify(player.equipment || {}),
     quests_json: JSON.stringify(player.quests || {}),
+    skills_json: JSON.stringify(player.skills || []),
     flags_json: JSON.stringify(player.flags || {})
   };
 

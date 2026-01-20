@@ -273,7 +273,7 @@ function renderState(state) {
   });
   const items = Object.values(itemTotals).map((i) => ({ id: i.id, label: `${i.name} x${i.qty}`, raw: i }));
   renderChips(ui.items, items, (i) => {
-    if (i.raw.type === 'consumable') {
+    if (i.raw.type === 'consumable' || i.raw.type === 'book') {
       socket.emit('cmd', { text: `use ${i.raw.id}` });
     } else if (i.raw.slot) {
       socket.emit('cmd', { text: `equip ${i.raw.id}` });

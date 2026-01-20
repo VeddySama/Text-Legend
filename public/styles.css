@@ -307,6 +307,16 @@ button:hover {
   margin: 6px 0;
 }
 
+.status-row.compact {
+  margin: 4px 0;
+}
+
+.status-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
 .status-row strong {
   font-weight: 600;
 }

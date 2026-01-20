@@ -136,7 +136,7 @@
   ring_coral: { id: 'ring_coral', name: '珊瑚戒指', type: 'accessory', slot: 'ring', atk: 3, price: 2800 },
   ring_ruby: { id: 'ring_ruby', name: '红宝石戒指', type: 'accessory', slot: 'ring', mag: 3, price: 3800 },
   ring_dodge: { id: 'ring_dodge', name: '躲避戒指', type: 'accessory', slot: 'ring', dex: 3, price: 4200 },
-  ring_tiger: { id: 'ring_tiger', name: '骑士手镯', type: 'accessory', slot: 'ring', atk: 4, price: 6800 },
+  ring_tiger: { id: 'ring_tiger', name: '骑士手镯', type: 'accessory', slot: 'bracelet', atk: 4, price: 6800 },
   ring_strength: { id: 'ring_strength', name: '力量戒指', type: 'accessory', slot: 'ring', atk: 6, price: 26000 },
   ring_bone: { id: 'ring_bone', name: '紫碧螺', type: 'accessory', slot: 'ring', mag: 6, price: 26000 },
   ring_tao: { id: 'ring_tao', name: '泰坦戒指', type: 'accessory', slot: 'ring', spirit: 6, price: 26000 },

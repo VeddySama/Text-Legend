@@ -646,7 +646,8 @@ function buildState(player) {
       exp_next: expForLevel(player.level),
       gold: player.gold,
       pk: player.flags?.pkValue || 0,
-      vip: Boolean(player.flags?.vip)
+      vip: Boolean(player.flags?.vip),
+      autoSkillId: player.flags?.autoSkillId || null
     },
     guild: player.guild?.name || null
   };

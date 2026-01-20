@@ -92,8 +92,10 @@ function formatEquipment(player) {
     head: '头盔',
     waist: '腰带',
     feet: '靴子',
-    ring: '戒指',
-    bracelet: '手镯',
+    ring_left: '戒指(左)',
+    ring_right: '戒指(右)',
+    bracelet_left: '手镯(左)',
+    bracelet_right: '手镯(右)',
     neck: '项链'
   };
   const entries = Object.entries(player.equipment);
@@ -188,7 +190,7 @@ export async function handleCommand({ player, players, input, send, partyApi, gu
 
   switch (cmd) {
     case 'help': {
-      send('指令: help, look, go <方向/地点>, say <内容>, who, stats, bag, equip <物品>, unequip <部位>, use <物品>, attack <怪物/玩家>, pk <玩家>, cast <技能> <怪物>, autoskill <技能/off>, autopotion <hp%> <mp%>, shop, buy <物品>, buy list, sell <物品>, quests, accept <id>, complete <id>, party, guild, gsay, sabak, vip, trade, mail, teleport。');
+      send('指令: help, look, go <方向/地点>, say <内容>, who, stats, bag, equip <物品>, unequip <部位>, use <物品>, attack <怪物/玩家>, pk <玩家>, cast <技能> <怪物>, autoskill <技能/off>, autopotion <hp%> <mp%>, shop, buy <物品>, buy list, sell <物品>, quests, accept <id>, complete <id>, party, guild, gsay, sabak, vip, trade, mail, teleport。部位示例: ring_left, ring_right, bracelet_left, bracelet_right。');
       return;
     }
     case 'look': {

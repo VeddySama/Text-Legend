@@ -30,11 +30,13 @@ export function newCharacter(name, classId) {
       weapon: null,
       chest: null,
       feet: null,
-      ring: null,
+      ring_left: null,
+      ring_right: null,
       neck: null,
       head: null,
       waist: null,
-      bracelet: null
+      bracelet_left: null,
+      bracelet_right: null
     },
     quests: {},
     skills: [DEFAULT_SKILLS[classId]].filter(Boolean),
@@ -115,6 +117,36 @@ export function normalizeInventory(player) {
   });
   player.inventory = Array.from(merged.values());
 }
+export function normalizeEquipment(player) {
+  if (!player.equipment) player.equipment = {};
+  if (player.equipment.ring && !player.equipment.ring_left && !player.equipment.ring_right) {
+    player.equipment.ring_left = player.equipment.ring;
+  }
+  if (player.equipment.bracelet && !player.equipment.bracelet_left && !player.equipment.bracelet_right) {
+    player.equipment.bracelet_left = player.equipment.bracelet;
+  }
+  delete player.equipment.ring;
+  delete player.equipment.bracelet;
+  player.equipment.ring_left = player.equipment.ring_left || null;
+  player.equipment.ring_right = player.equipment.ring_right || null;
+  player.equipment.bracelet_left = player.equipment.bracelet_left || null;
+  player.equipment.bracelet_right = player.equipment.bracelet_right || null;
+}
+
+function resolveEquipSlot(player, item) {
+  const slot = item.slot;
+  if (slot === 'ring') {
+    if (!player.equipment.ring_left) return 'ring_left';
+    if (!player.equipment.ring_right) return 'ring_right';
+    return 'ring_left';
+  }
+  if (slot === 'bracelet') {
+    if (!player.equipment.bracelet_left) return 'bracelet_left';
+    if (!player.equipment.bracelet_right) return 'bracelet_right';
+    return 'bracelet_left';
+  }
+  return slot;
+}
 
 export function removeItem(player, itemId, qty = 1) {
   const slot = player.inventory.find((i) => i.id === itemId);
@@ -129,25 +161,34 @@ export function removeItem(player, itemId, qty = 1) {
 
 export function equipItem(player, itemId) {
   const item = ITEM_TEMPLATES[itemId];
-  if (!item || !item.slot) return { ok: false, msg: '该物品无法装备。' };
+  if (!item || !item.slot) return { ok: false, msg: '\u8BE5\u7269\u54C1\u65E0\u6CD5\u88C5\u5907\u3002' };
   const has = player.inventory.find((i) => i.id === itemId);
-  if (!has) return { ok: false, msg: '背包里没有该物品。' };
+  if (!has) return { ok: false, msg: '\u80CC\u5305\u91CC\u6CA1\u6709\u8BE5\u7269\u54C1\u3002' };
 
-  if (player.equipment[item.slot]) {
-    addItem(player, player.equipment[item.slot].id, 1);
+  normalizeEquipment(player);
+  const slot = resolveEquipSlot(player, item);
+  if (player.equipment[slot]) {
+    addItem(player, player.equipment[slot].id, 1);
   }
 
-  player.equipment[item.slot] = { id: itemId };
+  player.equipment[slot] = { id: itemId };
   removeItem(player, itemId, 1);
   computeDerived(player);
-  return { ok: true, msg: `已装备 ${item.name}。` };
+  return { ok: true, msg: `\u5DF2\u88C5\u5907${item.name}\u3002` };
 }
 
 export function unequipItem(player, slot) {
+  normalizeEquipment(player);
+  if (slot === 'ring') {
+    slot = player.equipment.ring_left ? 'ring_left' : 'ring_right';
+  }
+  if (slot === 'bracelet') {
+    slot = player.equipment.bracelet_left ? 'bracelet_left' : 'bracelet_right';
+  }
   const current = player.equipment[slot];
-  if (!current) return { ok: false, msg: '该部位没有装备。' };
+  if (!current) return { ok: false, msg: '\u8BE5\u90E8\u4F4D\u6CA1\u6709\u88C5\u5907\u3002' };
   addItem(player, current.id, 1);
   player.equipment[slot] = null;
   computeDerived(player);
-  return { ok: true, msg: `已卸下 ${ITEM_TEMPLATES[current.id].name}。` };
+  return { ok: true, msg: `\u5DF2\u5378\u4E0B${ITEM_TEMPLATES[current.id].name}\u3002` };
 }

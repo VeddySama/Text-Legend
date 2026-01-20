@@ -309,7 +309,8 @@ function renderState(state) {
     { id: 'vip activate', label: 'VIP\u6fc0\u6d3b' }
   ];
   if (state.stats && state.stats.vip) {
-    actions.push({ id: 'afk', label: '\u6302\u673a' });
+    const afkLabel = state.stats.autoSkillId ? '\u505c\u6b62\u6302\u673a' : '\u6302\u673a';
+    actions.push({ id: 'afk', label: afkLabel });
   }
   renderChips(ui.actions, actions, async (a) => {
     if (a.id === 'vip activate') {
@@ -323,7 +324,11 @@ function renderState(state) {
       return;
     }
     if (a.id === 'afk') {
-      socket.emit('cmd', { text: 'autoskill all' });
+      if (state.stats && state.stats.autoSkillId) {
+        socket.emit('cmd', { text: 'autoskill off' });
+      } else {
+        socket.emit('cmd', { text: 'autoskill all' });
+      }
       return;
     }
     socket.emit('cmd', { text: a.id });

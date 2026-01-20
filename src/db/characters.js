@@ -1,5 +1,5 @@
 import knex from './index.js';
-import { normalizeInventory } from '../game/player.js';
+import { normalizeInventory, normalizeEquipment } from '../game/player.js';
 
 function parseJson(value, fallback) {
   try {
@@ -37,6 +37,7 @@ export async function loadCharacter(userId, name) {
     status: {}
   };
   normalizeInventory(player);
+  normalizeEquipment(player);
   return player;
 }
 

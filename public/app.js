@@ -127,17 +127,38 @@ function updateSavedCharacters(player) {
   }
 }
 
-function appendLine(text) {
+function normalizePayload(payload) {
+  if (payload && typeof payload === 'object') return payload;
+  return { text: String(payload || '') };
+}
+
+function buildLine(payload) {
+  const data = normalizePayload(payload);
   const p = document.createElement('p');
-  p.textContent = text;
+  p.classList.add('log-line');
+  if (data.color) p.classList.add(`line-${data.color}`);
+  if (data.prefix) {
+    const prefix = document.createElement('span');
+    prefix.classList.add('line-prefix');
+    if (data.prefixColor) prefix.classList.add(`prefix-${data.prefixColor}`);
+    prefix.textContent = data.prefix;
+    p.appendChild(prefix);
+  }
+  const text = document.createElement('span');
+  text.textContent = data.text || '';
+  p.appendChild(text);
+  return p;
+}
+
+function appendLine(payload) {
+  const p = buildLine(payload);
   log.appendChild(p);
   log.scrollTop = log.scrollHeight;
 }
 
-function appendChatLine(text) {
+function appendChatLine(payload) {
   if (!chat.log) return;
-  const p = document.createElement('p');
-  p.textContent = text;
+  const p = buildLine(payload);
   chat.log.appendChild(p);
   chat.log.scrollTop = chat.log.scrollHeight;
 }
@@ -353,6 +374,9 @@ function renderChips(container, items, onClick, activeId) {
   items.forEach((item) => {
     const btn = document.createElement('div');
     btn.className = `chip${activeId && activeId === item.id ? ' active' : ''}`;
+    if (item.className) {
+      item.className.split(' ').filter(Boolean).forEach((name) => btn.classList.add(name));
+    }
     btn.textContent = item.label;
     if (item.tooltip) {
       btn.addEventListener('mouseenter', (evt) => showItemTooltip(item.tooltip, evt));
@@ -502,8 +526,16 @@ function renderState(state) {
     socket.emit('cmd', { text: `attack ${m.raw.name}` });
   }, selectedMob ? selectedMob.id : null);
 
-  const skills = (state.skills || []).map((s) => ({ id: s.id, label: s.name, raw: s }));
+  const skills = (state.skills || []).map((s) => ({
+    id: s.id,
+    label: s.level ? `${s.name} Lv${s.level}` : s.name,
+    raw: s
+  }));
   renderChips(ui.skills, skills, (s) => {
+    if (s.raw.type === 'heal') {
+      socket.emit('cmd', { text: `cast ${s.raw.id}` });
+      return;
+    }
     if (!selectedMob) return;
     socket.emit('cmd', { text: `cast ${s.raw.id} ${selectedMob.name}` });
   });
@@ -519,7 +551,8 @@ function renderState(state) {
     id: i.id,
     label: `${i.name} x${i.qty}`,
     raw: i,
-    tooltip: formatItemTooltip(i)
+    tooltip: formatItemTooltip(i),
+    className: `${i.rarity ? `rarity-${i.rarity}` : ''}${i.is_set ? ' item-set' : ''}`.trim()
   }));
   renderChips(ui.items, items, (i) => {
     if (i.raw.type === 'consumable' || i.raw.type === 'book') {
@@ -758,10 +791,10 @@ function enterGame(name) {
     appendLine(`认证失败: ${payload.error}`);
   });
   socket.on('output', (payload) => {
-    appendLine(payload.text);
+    appendLine(payload);
     parseStats(payload.text);
     if (isChatLine(payload.text)) {
-      appendChatLine(payload.text);
+      appendChatLine(payload);
     }
     const shopItems = parseShopLine(payload.text);
     if (shopItems) {
@@ -769,7 +802,7 @@ function enterGame(name) {
       showShopModal(shopItems);
     }
     if (payload.text.startsWith('\u4ea4\u6613')) {
-      appendChatLine(payload.text);
+      appendChatLine(payload);
       setTradeStatus(payload.text);
     }
   });

@@ -1,11 +1,21 @@
 ﻿import { WORLD, NPCS } from './world.js';
 import { ITEM_TEMPLATES, SHOP_STOCKS } from './items.js';
-import { BOOK_SKILLS, getSkill, getLearnedSkills, hasSkill, ensurePlayerSkills } from './skills.js';
+import {
+  BOOK_SKILLS,
+  getSkill,
+  getLearnedSkills,
+  getSkillLevel,
+  gainSkillMastery,
+  scaledSkillPower,
+  hasSkill,
+  ensurePlayerSkills
+} from './skills.js';
 import { QUESTS } from './quests.js';
 import { addItem, removeItem, equipItem, unequipItem, bagLimit, gainExp, computeDerived } from './player.js';
 import { CLASSES, expForLevel } from './constants.js';
 import { getRoom, getAliveMobs, spawnMobs } from './state.js';
 import { clamp } from './utils.js';
+import { applyDamage } from './combat.js';
 
 const PARTY_LIMIT = 5;
 const DIR_LABELS = {
@@ -205,6 +215,42 @@ function trainingCost(player, key) {
   return Math.max(1, Math.floor(base + steps * (base * 0.2)));
 }
 
+function summonStats(player, skill) {
+  const base = skill.summon;
+  const skillLevel = getSkillLevel(player, skill.id);
+  const summonLevel = base.level || 1;
+  const spirit = player.stats?.spirit || 0;
+  const level = skillLevel + summonLevel - 1;
+  const max_hp = Math.floor(base.baseHp + skillLevel * 40 + summonLevel * 30 + spirit * 2);
+  const atk = Math.floor(base.baseAtk + skillLevel * 3 + summonLevel * 2 + spirit * 0.2);
+  const def = Math.floor(base.baseDef + skillLevel * 2 + summonLevel * 2 + spirit * 0.2);
+  const dex = 8 + skillLevel;
+  return {
+    id: skill.id,
+    name: base.name,
+    level,
+    hp: max_hp,
+    max_hp,
+    atk,
+    def,
+    dex
+  };
+}
+
+function applyBuff(target, buff) {
+  if (!target.status) target.status = {};
+  if (!target.status.buffs) target.status.buffs = {};
+  target.status.buffs[buff.key] = buff;
+}
+
+function notifyMastery(player, skill) {
+  const levelUp = gainSkillMastery(player, skill.id, 1);
+  if (levelUp) {
+    const level = getSkillLevel(player, skill.id);
+    player.send(`技能熟练度提升: ${skill.name} Lv${level}`);
+  }
+}
+
 function partyStatus(party) {
   if (!party) return '你不在队伍中。';
   return `队伍成员: ${party.members.join(', ')}`;
@@ -269,9 +315,7 @@ export async function handleCommand({ player, players, input, send, partyApi, gu
     }
     case 'say': {
       if (!args) return;
-      players
-        .filter((p) => p.position.zone === player.position.zone && p.position.room === player.position.room)
-        .forEach((p) => p.send(`[${player.name}] ${args}`));
+      players.forEach((p) => p.send(`[${player.name}] ${args}`));
       return;
     }
     case 'who': {
@@ -326,12 +370,27 @@ export async function handleCommand({ player, players, input, send, partyApi, gu
         addItem(player, item.id, 1);
         return send('该物品无法使用。');
       }
-      if (item.hp) player.hp = clamp(player.hp + item.hp, 1, player.max_hp);
-      if (item.mp) player.mp = clamp(player.mp + item.mp, 0, player.max_mp);
-      if (item.teleport) {
+      if (item.teleport && !item.hp && !item.mp) {
         player.position = { ...item.teleport };
+        send(`使用了 ${item.name}。`);
+        return;
       }
-      send(`使用了 ${item.name}。`);
+      if (!player.status) player.status = {};
+      const now = Date.now();
+      if (player.status.potionUntil && player.status.potionUntil > now) {
+        addItem(player, item.id, 1);
+        return send('药效持续中，暂时无法再次使用药品。');
+      }
+      const ticks = 5;
+      const hpPerTick = item.hp ? Math.ceil(item.hp / ticks) : 0;
+      const mpPerTick = item.mp ? Math.ceil(item.mp / ticks) : 0;
+      player.status.regen = {
+        ticksRemaining: ticks,
+        hpPerTick,
+        mpPerTick
+      };
+      player.status.potionUntil = now + ticks * 1000;
+      send(`使用了 ${item.name}，将持续恢复 5 秒。`);
       return;
     }
     case 'attack':
@@ -371,12 +430,128 @@ export async function handleCommand({ player, players, input, send, partyApi, gu
       const targetName = parts.slice(1).join(' ');
       const skill = skillByName(player, skillName);
       if (!skill) return send('未找到技能。');
+      const skillLevel = getSkillLevel(player, skill.id);
+      const power = scaledSkillPower(skill, skillLevel);
       if (skill.type === 'heal') {
         if (player.mp < skill.mp) return send('魔法不足。');
+        let target = player;
+        if (targetName) {
+          const nameLower = targetName.toLowerCase();
+          const candidate = players.find(
+            (p) => p.name.toLowerCase() === nameLower &&
+              p.position.zone === player.position.zone &&
+              p.position.room === player.position.room
+          );
+          if (!candidate) return send('未找到目标。');
+          const myParty = partyApi?.getPartyByMember ? partyApi.getPartyByMember(player.name) : null;
+          const sameParty = myParty && myParty.members.includes(candidate.name);
+          if (candidate.name !== player.name && !sameParty) return send('只能治疗自己或队友。');
+          target = candidate;
+        } else if (partyApi?.getPartyByMember) {
+          const party = partyApi.getPartyByMember(player.name);
+          if (party && party.members.length) {
+            const candidates = players.filter(
+              (p) =>
+                party.members.includes(p.name) &&
+                p.position.zone === player.position.zone &&
+                p.position.room === player.position.room
+            );
+            if (candidates.length) {
+              candidates.sort((a, b) => (a.hp / a.max_hp) - (b.hp / b.max_hp));
+              target = candidates[0];
+            }
+          }
+        }
         player.mp -= skill.mp;
-        const heal = Math.floor(player.mag * 0.8 * skill.power + player.level * 4);
-        player.hp = clamp(player.hp + heal, 1, player.max_hp);
-        send(`你施放了 ${skill.name}，恢复 ${heal} 点生命。`);
+        const heal = Math.floor(player.mag * 0.8 * power + player.level * 4);
+        target.hp = clamp(target.hp + heal, 1, target.max_hp);
+        if (target.name === player.name) {
+          send(`你施放了 ${skill.name}，恢复 ${heal} 点生命。`);
+        } else {
+          send(`你为 ${target.name} 施放了 ${skill.name}，恢复 ${heal} 点生命。`);
+          target.send(`${player.name} 为你施放了 ${skill.name}，恢复 ${heal} 点生命。`);
+        }
+        notifyMastery(player, skill);
+        return;
+      }
+      if (skill.type === 'summon') {
+        if (player.mp < skill.mp) return send('魔法不足。');
+        player.mp -= skill.mp;
+        const summon = summonStats(player, skill);
+        player.summon = summon;
+        send(`你召唤了 ${summon.name} (等级 ${summon.level})。`);
+        notifyMastery(player, skill);
+        return;
+      }
+      if (skill.type === 'buff_shield') {
+        if (player.mp < skill.mp) return send('魔法不足。');
+        player.mp -= skill.mp;
+        const duration = 120 + skillLevel * 60;
+        applyBuff(player, {
+          key: 'magicShield',
+          expiresAt: Date.now() + duration * 1000,
+          ratio: 0.6 + (skillLevel - 1) * 0.1
+        });
+        send(`你施放了 ${skill.name}，护盾持续 ${duration} 秒。`);
+        notifyMastery(player, skill);
+        return;
+      }
+      if (skill.type === 'buff_def') {
+        if (player.mp < skill.mp) return send('魔法不足。');
+        player.mp -= skill.mp;
+        const duration = 120 + skillLevel * 60;
+        const base = skill.id === 'ghost' ? 4 : 6;
+        const defBonus = base + skillLevel * 2;
+        const party = partyApi?.getPartyByMember ? partyApi.getPartyByMember(player.name) : null;
+        const targets = party
+          ? players.filter(
+              (p) =>
+                party.members.includes(p.name) &&
+                p.position.zone === player.position.zone &&
+                p.position.room === player.position.room
+            )
+          : [player];
+        targets.forEach((p) => {
+          applyBuff(p, { key: 'defBuff', expiresAt: Date.now() + duration * 1000, defBonus });
+          p.send(`${player.name} 为你施放了 ${skill.name}。`);
+        });
+        send(`你施放了 ${skill.name}，持续 ${duration} 秒。`);
+        notifyMastery(player, skill);
+        return;
+      }
+      if (skill.type === 'stealth' || skill.type === 'stealth_group') {
+        if (player.mp < skill.mp) return send('魔法不足。');
+        player.mp -= skill.mp;
+        const duration = 90 + skillLevel * 45;
+        const party = partyApi?.getPartyByMember ? partyApi.getPartyByMember(player.name) : null;
+        const targets = skill.type === 'stealth_group' && party
+          ? players.filter(
+              (p) =>
+                party.members.includes(p.name) &&
+                p.position.zone === player.position.zone &&
+                p.position.room === player.position.room
+            )
+          : [player];
+        targets.forEach((p) => {
+          applyBuff(p, { key: 'invisible', expiresAt: Date.now() + duration * 1000 });
+          p.send(`${player.name} 为你施放了 ${skill.name}。`);
+        });
+        send(`你施放了 ${skill.name}，持续 ${duration} 秒。`);
+        notifyMastery(player, skill);
+        return;
+      }
+      if (skill.type === 'repel') {
+        if (player.mp < skill.mp) return send('魔法不足。');
+        player.mp -= skill.mp;
+        const mobs = getAliveMobs(player.position.zone, player.position.room);
+        if (!mobs.length) return send('这里没有怪物。');
+        mobs.forEach((mob) => {
+          const dmg = Math.max(1, Math.floor(player.mag * 0.6 * power));
+          applyDamage(mob, dmg);
+          mob.status.stunTurns = Math.max(mob.status.stunTurns || 0, 1);
+        });
+        send(`你施放了 ${skill.name}，震退了怪物。`);
+        notifyMastery(player, skill);
         return;
       }
       const mobs = getAliveMobs(player.position.zone, player.position.room);
@@ -394,14 +569,20 @@ export async function handleCommand({ player, players, input, send, partyApi, gu
       }
       const lower = args.toLowerCase();
       if (lower === 'off') {
-        if (player.flags) player.flags.autoSkillId = null;
-        send('已关闭自动技能。');
+        if (player.flags) {
+          player.flags.autoSkillId = null;
+          player.flags.autoHpPct = null;
+          player.flags.autoMpPct = null;
+        }
+        send('已关闭自动技能与自动喝药。');
         return;
       }
       if (lower === 'all') {
         if (!player.flags) player.flags = {};
         player.flags.autoSkillId = 'all';
-        send('已设置自动技能: 全部技能。');
+        if (player.flags.autoHpPct == null) player.flags.autoHpPct = 50;
+        if (player.flags.autoMpPct == null) player.flags.autoMpPct = 50;
+        send(`已设置自动技能: 全部技能。自动喝药阈值: HP ${player.flags.autoHpPct}% / MP ${player.flags.autoMpPct}%`);
         return;
       }
       const skill = skillByName(player, args);
@@ -566,24 +747,19 @@ export async function handleCommand({ player, players, input, send, partyApi, gu
         if (!targetName) return send('邀请谁加入队伍？');
         const target = players.find((p) => p.name === targetName);
         if (!target) return send('玩家不在线。');
+        if (partyApi.getPartyByMember(target.name)) {
+          return send('对方已有队伍，请先退出组队再邀请。');
+        }
         const myParty = party || partyApi.createParty(player.name);
         if (myParty.members.length >= PARTY_LIMIT) return send('队伍已满。');
         if (myParty.members.includes(target.name)) return send('对方已在队伍中。');
-        partyApi.invites.set(target.name, player.name);
-        send(`已邀请 ${target.name} 加入队伍。`);
-        target.send(`${player.name} 邀请你加入队伍，输入 party accept ${player.name} 接受。`);
+        myParty.members.push(target.name);
+        send(`${target.name} 已加入队伍。`);
+        target.send(`你已加入 ${player.name} 的队伍。`);
         return;
       }
       if (sub === 'accept') {
-        const inviterName = targetName;
-        if (!inviterName) return send('请输入邀请者名字。');
-        const inviteFrom = partyApi.invites.get(player.name);
-        if (inviteFrom !== inviterName) return send('没有该邀请。');
-        const inviterParty = partyApi.getPartyByMember(inviterName) || partyApi.createParty(inviterName);
-        if (inviterParty.members.length >= PARTY_LIMIT) return send('队伍已满。');
-        inviterParty.members.push(player.name);
-        partyApi.invites.delete(player.name);
-        send(`已加入 ${inviterName} 的队伍。`);
+        send('队伍邀请无需接受，邀请后会自动入队。');
         return;
       }
       if (sub === 'leave') {

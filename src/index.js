@@ -16,7 +16,16 @@ import { createVipCodes, listVipCodes, useVipCode } from './db/vip.js';
 import { runMigrations } from './db/migrate.js';
 import { newCharacter, computeDerived, gainExp, addItem, removeItem } from './game/player.js';
 import { handleCommand, awardKill } from './game/commands.js';
-import { DEFAULT_SKILLS, getLearnedSkills, getSkill, hasSkill, ensurePlayerSkills } from './game/skills.js';
+import {
+  DEFAULT_SKILLS,
+  getLearnedSkills,
+  getSkill,
+  getSkillLevel,
+  gainSkillMastery,
+  scaledSkillPower,
+  hasSkill,
+  ensurePlayerSkills
+} from './game/skills.js';
 import { MOB_TEMPLATES } from './game/mobs.js';
 import { ITEM_TEMPLATES } from './game/items.js';
 import { WORLD } from './game/world.js';
@@ -193,6 +202,10 @@ function sendTo(player, message) {
   player.socket.emit('output', { text: message });
 }
 
+function emitAnnouncement(text, color) {
+  io.emit('output', { text, prefix: '公告', prefixColor: 'announce', color });
+}
+
 const RARITY_ORDER = ['legendary', 'epic', 'rare', 'uncommon', 'common'];
 const RARITY_NORMAL = {
   legendary: 0.001,
@@ -207,6 +220,13 @@ const RARITY_BOSS = {
   rare: 0.08,
   uncommon: 0.18,
   common: 0.35
+};
+const RARITY_LABELS = {
+  legendary: '传说',
+  epic: '史诗',
+  rare: '稀有',
+  uncommon: '高级',
+  common: '普通'
 };
 
 function rarityByPrice(item) {
@@ -532,6 +552,17 @@ function hasEquipped(player, itemId) {
 }
 
 function applyDamageToPlayer(target, dmg) {
+  if (target.status?.buffs?.magicShield) {
+    const buff = target.status.buffs.magicShield;
+    if (buff.expiresAt && buff.expiresAt < Date.now()) {
+      delete target.status.buffs.magicShield;
+    } else if (target.mp > 0) {
+      const ratio = Math.max(0, Math.min(0.9, buff.ratio || 0.6));
+      const convert = Math.min(Math.floor(dmg * ratio), target.mp);
+      target.mp = Math.max(0, target.mp - convert);
+      dmg -= convert;
+    }
+  }
   if (hasEquipped(target, 'ring_protect') && target.mp > 0) {
     const convert = Math.min(Math.floor(dmg * 0.7), target.mp);
     target.mp = Math.max(0, target.mp - convert);
@@ -567,6 +598,31 @@ function regenOutOfCombat(player) {
   const mpRegen = Math.max(1, Math.floor(player.max_mp * 0.015));
   player.hp = clamp(player.hp + hpRegen, 1, player.max_hp);
   player.mp = clamp(player.mp + mpRegen, 0, player.max_mp);
+}
+
+function processPotionRegen(player) {
+  if (!player.status) return;
+  const regen = player.status.regen;
+  if (!regen) {
+    if (player.status.potionUntil && player.status.potionUntil <= Date.now()) {
+      delete player.status.potionUntil;
+    }
+    return;
+  }
+  if (regen.ticksRemaining <= 0) {
+    delete player.status.regen;
+    return;
+  }
+  if (regen.hpPerTick) {
+    player.hp = clamp(player.hp + regen.hpPerTick, 1, player.max_hp);
+  }
+  if (regen.mpPerTick) {
+    player.mp = clamp(player.mp + regen.mpPerTick, 0, player.max_mp);
+  }
+  regen.ticksRemaining -= 1;
+  if (regen.ticksRemaining <= 0) {
+    delete player.status.regen;
+  }
 }
 function applyOfflineRewards(player) {
   if (!player.flags) player.flags = {};
@@ -629,7 +685,8 @@ function buildState(player) {
     id: s.id,
     name: s.name,
     mp: s.mp,
-    type: s.type
+    type: s.type,
+    level: getSkillLevel(player, s.id)
   }));
   const items = player.inventory.map((i) => {
     const item = ITEM_TEMPLATES[i.id] || { id: i.id, name: i.id, type: 'unknown' };
@@ -706,6 +763,7 @@ function consumeItem(player, itemId) {
 }
 
 function tryAutoPotion(player) {
+  if (player.status?.potionUntil && player.status.potionUntil > Date.now()) return;
   const hpPct = player.flags?.autoHpPct;
   const mpPct = player.flags?.autoMpPct;
   if (!hpPct && !mpPct) return;
@@ -844,9 +902,28 @@ function skillForPlayer(player, skillId) {
   return getSkill(player.classId, fallbackId);
 }
 
+function notifyMastery(player, skill) {
+  const levelUp = gainSkillMastery(player, skill.id, 1);
+  if (levelUp) {
+    const level = getSkillLevel(player, skill.id);
+    player.send(`技能熟练度提升: ${skill.name} Lv${level}`);
+  }
+}
+
+function refreshBuffs(target) {
+  const buffs = target.status?.buffs;
+  if (!buffs) return;
+  const now = Date.now();
+  Object.entries(buffs).forEach(([key, buff]) => {
+    if (buff && buff.expiresAt && buff.expiresAt < now) {
+      delete buffs[key];
+    }
+  });
+}
+
 function selectAutoSkill(player) {
   const learned = getLearnedSkills(player).filter((skill) =>
-    ['attack', 'spell', 'cleave', 'dot'].includes(skill.type)
+    ['attack', 'spell', 'cleave', 'dot', 'aoe'].includes(skill.type)
   );
   const usable = learned.filter((skill) => player.mp >= skill.mp);
   if (!usable.length) return null;
@@ -862,6 +939,54 @@ function handleDeath(player) {
   player.send('你被击败，返回了城里。');
 }
 
+function processMobDeath(player, mob, online) {
+  const template = MOB_TEMPLATES[mob.templateId];
+  removeMob(player.position.zone, player.position.room, mob.id);
+  const exp = template.exp;
+  const gold = randInt(template.gold[0], template.gold[1]);
+
+  const party = getPartyByMember(player.name);
+  const partyMembers = party ? partyMembersInRoom(party, online, player.position.zone, player.position.room) : [player];
+  const eligibleCount = partyMembers.length || 1;
+  const bonus = eligibleCount > 1 ? Math.min(0.2 * eligibleCount, 1.0) : 0;
+  const totalExp = Math.floor(exp * (1 + bonus));
+  const totalGold = Math.floor(gold * (1 + bonus));
+  const shareExp = Math.floor(totalExp / eligibleCount);
+  const shareGold = Math.floor(totalGold / eligibleCount);
+
+  partyMembers.forEach((member) => {
+    const sabakBonus = member.guild && sabakState.ownerGuildId && member.guild.id === sabakState.ownerGuildId ? 2 : 1;
+    const vipBonus = member.flags?.vip ? 2 : 1;
+    const finalExp = Math.floor(shareExp * sabakBonus * vipBonus);
+    const finalGold = Math.floor(shareGold * sabakBonus * vipBonus);
+    member.gold += finalGold;
+    const leveled = gainExp(member, finalExp);
+    awardKill(member, mob.templateId);
+    member.send(`队伍分配: 获得 ${finalExp} 经验和 ${finalGold} 金币。`);
+    if (leveled) member.send('你升级了！');
+  });
+
+  const drops = dropLoot(player, template);
+  if (drops.length) {
+    if (party && partyMembers.length > 1) {
+      distributeLoot(party, partyMembers, drops);
+    } else {
+      drops.forEach((id) => {
+        addItem(player, id, 1);
+      });
+      player.send(`掉落: ${drops.map((id) => ITEM_TEMPLATES[id].name).join(', ')}`);
+    }
+    drops.forEach((id) => {
+      const item = ITEM_TEMPLATES[id];
+      if (!item) return;
+      const rarity = rarityByPrice(item);
+      if (['rare', 'epic', 'legendary'].includes(rarity)) {
+        emitAnnouncement(`${player.name} 击败 ${template.name} 获得${RARITY_LABELS[rarity] || '稀有'}装备 ${item.name}！`, rarity);
+      }
+    });
+  }
+}
+
 function combatTick() {
   const online = listOnlinePlayers();
   online.forEach((player) => {
@@ -869,6 +994,9 @@ function combatTick() {
       handleDeath(player);
       return;
     }
+
+    refreshBuffs(player);
+    processPotionRegen(player);
 
     if (!player.combat) {
       regenOutOfCombat(player);
@@ -916,11 +1044,17 @@ function combatTick() {
     const hitChance = calcHitChance(player, target);
     if (Math.random() <= hitChance) {
       let dmg = 0;
-      if (skill && (skill.type === 'attack' || skill.type === 'spell' || skill.type === 'cleave')) {
-        const power = skill.power || 1;
-        dmg = skill.type === 'spell'
-          ? Math.floor((player.mag + randInt(0, player.mag / 2)) * power)
-          : calcDamage(player, target, power);
+      let skillPower = 1;
+      if (skill && (skill.type === 'attack' || skill.type === 'spell' || skill.type === 'cleave' || skill.type === 'dot' || skill.type === 'aoe')) {
+        const skillLevel = getSkillLevel(player, skill.id);
+        skillPower = scaledSkillPower(skill, skillLevel);
+        if (skill.type === 'spell' || skill.type === 'aoe') {
+          dmg = Math.floor((player.mag + randInt(0, player.mag / 2)) * skillPower);
+        } else if (skill.type === 'dot') {
+          dmg = Math.max(1, Math.floor(player.mag * 0.5 * skillPower));
+        } else {
+          dmg = calcDamage(player, target, skillPower);
+        }
         if (skill.mp > 0) player.mp = clamp(player.mp - skill.mp, 0, player.max_mp);
       } else {
         dmg = calcDamage(player, target, 1);
@@ -930,6 +1064,13 @@ function combatTick() {
       target.flags.lastCombatAt = Date.now();
       player.send(`你对 ${target.name} 造成 ${dmg} 点伤害。`);
       target.send(`${player.name} 对你造成 ${dmg} 点伤害。`);
+      if (skill && skill.type === 'dot') {
+        if (!target.status) target.status = {};
+        applyPoison(target, 4, Math.max(2, Math.floor(player.mag * 0.3 * skillPower)));
+      }
+      if (skill && ['attack', 'spell', 'cleave', 'dot', 'aoe'].includes(skill.type)) {
+        notifyMastery(player, skill);
+      }
       if (!target.combat) {
         target.combat = { targetId: player.name, targetType: 'player', skillId: 'slash' };
       }
@@ -990,33 +1131,58 @@ function combatTick() {
     }
 
     const hitChance = calcHitChance(player, mob);
-      if (Math.random() <= hitChance) {
-        let power = 1;
-        let dmg = 0;
-      if (skill && (skill.type === 'attack' || skill.type === 'spell' || skill.type === 'cleave')) {
-        power = skill.power || 1;
-        dmg = skill.type === 'spell'
-          ? Math.floor((player.mag + randInt(0, player.mag / 2)) * power)
-          : calcDamage(player, mob, power);
+    if (Math.random() <= hitChance) {
+      let dmg = 0;
+      let skillPower = 1;
+      if (skill && (skill.type === 'attack' || skill.type === 'spell' || skill.type === 'cleave' || skill.type === 'dot' || skill.type === 'aoe')) {
+        const skillLevel = getSkillLevel(player, skill.id);
+        skillPower = scaledSkillPower(skill, skillLevel);
+        if (skill.type === 'spell' || skill.type === 'aoe') {
+          dmg = Math.floor((player.mag + randInt(0, player.mag / 2)) * skillPower);
+        } else if (skill.type === 'dot') {
+          dmg = Math.max(1, Math.floor(player.mag * 0.5 * skillPower));
+        } else {
+          dmg = calcDamage(player, mob, skillPower);
+        }
         if (skill.mp > 0) player.mp = clamp(player.mp - skill.mp, 0, player.max_mp);
       } else {
         dmg = calcDamage(player, mob, 1);
       }
 
-      applyDamage(mob, dmg);
-      player.send(`你对 ${mob.name} 造成 ${dmg} 点伤害。`);
+      if (skill && skill.type === 'aoe') {
+        mobs.forEach((target) => {
+          applyDamage(target, dmg);
+        });
+        player.send(`你施放了 ${skill.name}，造成范围伤害 ${dmg}。`);
+        const deadTargets = mobs.filter((target) => target.hp <= 0);
+        if (deadTargets.length) {
+          deadTargets.forEach((target) => processMobDeath(player, target, online));
+          if (deadTargets.some((target) => target.id === mob.id)) {
+            player.combat = null;
+          }
+          sendState(player);
+          return;
+        }
+      } else {
+        applyDamage(mob, dmg);
+        player.send(`你对 ${mob.name} 造成 ${dmg} 点伤害。`);
+      }
+
       if (hasEquipped(player, 'ring_magic') && Math.random() <= 0.1) {
         if (!mob.status) mob.status = {};
         mob.status.stunTurns = 2;
         player.send(`${mob.name} 被麻痹戒指定身。`);
       }
       if (skill && skill.type === 'dot') {
-        applyPoison(mob, 4, Math.max(2, Math.floor(player.mag * 0.3)));
+        applyPoison(mob, 4, Math.max(2, Math.floor(player.mag * 0.3 * skillPower)));
       }
       if (skill && skill.type === 'cleave') {
         mobs.filter((m) => m.id !== mob.id).forEach((other) => {
           applyDamage(other, Math.floor(dmg * 0.5));
         });
+      }
+      if (skill && ['attack', 'spell', 'cleave', 'dot', 'aoe'].includes(skill.type)) {
+        notifyMastery(player, skill);
       }
     } else {
       player.send(`${mob.name} 躲过了你的攻击。`);
@@ -1027,43 +1193,18 @@ function combatTick() {
       player.send(`${mob.name} 受到 ${statusTick.dmg} 点中毒伤害。`);
     }
 
-    if (mob.hp <= 0) {
-      const template = MOB_TEMPLATES[mob.templateId];
-      removeMob(player.position.zone, player.position.room, mob.id);
-      const exp = template.exp;
-      const gold = randInt(template.gold[0], template.gold[1]);
-
-      const party = getPartyByMember(player.name);
-      const partyMembers = party ? partyMembersInRoom(party, online, player.position.zone, player.position.room) : [player];
-      const eligibleCount = partyMembers.length || 1;
-      const bonus = eligibleCount > 1 ? Math.min(0.2 * eligibleCount, 1.0) : 0;
-      const totalExp = Math.floor(exp * (1 + bonus));
-      const totalGold = Math.floor(gold * (1 + bonus));
-      const shareExp = Math.floor(totalExp / eligibleCount);
-      const shareGold = Math.floor(totalGold / eligibleCount);
-
-      partyMembers.forEach((member) => {
-        const sabakBonus = member.guild && sabakState.ownerGuildId && member.guild.id === sabakState.ownerGuildId ? 2 : 1;
-        const finalExp = Math.floor(shareExp * sabakBonus);
-        const finalGold = Math.floor(shareGold * sabakBonus);
-        member.gold += finalGold;
-        const leveled = gainExp(member, finalExp);
-        awardKill(member, mob.templateId);
-        member.send(`队伍分配: 获得 ${finalExp} 经验和 ${finalGold} 金币。`);
-        if (leveled) member.send('你升级了！');
-      });
-
-      const drops = dropLoot(player, template);
-      if (drops.length) {
-        if (party && partyMembers.length > 1) {
-          distributeLoot(party, partyMembers, drops);
-        } else {
-          drops.forEach((id) => {
-            addItem(player, id, 1);
-          });
-          player.send(`掉落: ${drops.map((id) => ITEM_TEMPLATES[id].name).join(', ')}`);
-        }
+    if (player.summon && mob.hp > 0) {
+      const summon = player.summon;
+      const hitChance = calcHitChance(summon, mob);
+      if (Math.random() <= hitChance) {
+        const dmg = calcDamage(summon, mob, 1);
+        applyDamage(mob, dmg);
+        player.send(`${summon.name} 对 ${mob.name} 造成 ${dmg} 点伤害。`);
       }
+    }
+
+    if (mob.hp <= 0) {
+      processMobDeath(player, mob, online);
       player.combat = null;
       sendState(player);
       return;
@@ -1099,7 +1240,7 @@ async function sabakTick() {
     sabakState.captureGuildId = null;
     sabakState.captureGuildName = null;
     sabakState.captureStart = null;
-    io.emit('output', { text: '沙巴克攻城战开始！' });
+    emitAnnouncement('沙巴克攻城战开始！', 'announce');
   }
   if (!active && sabakState.active) {
     sabakState.active = false;
@@ -1107,7 +1248,7 @@ async function sabakTick() {
     sabakState.captureGuildName = null;
     sabakState.captureStart = null;
     await clearSabakRegistrations();
-    io.emit('output', { text: '沙巴克攻城战结束。' });
+    emitAnnouncement('沙巴克攻城战结束。', 'announce');
   }
 
   if (!sabakState.active) return;
@@ -1139,7 +1280,7 @@ async function sabakTick() {
     sabakState.captureGuildId = guildId;
     sabakState.captureGuildName = guildName;
     sabakState.captureStart = Date.now();
-    io.emit('output', { text: `沙巴克皇宫被 ${guildName} 占领，计时开始。` });
+    emitAnnouncement(`沙巴克皇宫被 ${guildName} 占领，计时开始。`, 'announce');
     return;
   }
 
@@ -1148,7 +1289,7 @@ async function sabakTick() {
     sabakState.ownerGuildId = guildId;
     sabakState.ownerGuildName = guildName;
     await setSabakOwner(guildId, guildName);
-    io.emit('output', { text: `沙巴克被 ${guildName} 占领！` });
+    emitAnnouncement(`沙巴克被 ${guildName} 占领！`, 'announce');
     sabakState.captureGuildId = null;
     sabakState.captureGuildName = null;
     sabakState.captureStart = null;

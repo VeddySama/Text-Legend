@@ -1414,43 +1414,38 @@ function processMobDeath(player, mob, online) {
     if (leveled) member.send('你升级了！');
   });
 
-  const dropTargets = [];
-  if (isWorldBoss && (!party || partyMembers.length === 0)) {
-    const top = entries
-      .map(([name]) => playersByName(name))
-      .filter(Boolean)
-      .slice(0, 3);
-    if (top.length) {
-      dropTargets.push(...top.map((p) => ({ player: p, bonus: rankDropBonus(rankMap[p.name]) })));
+    const dropTargets = [];
+    if (isWorldBoss) {
+      entries
+        .map(([name]) => playersByName(name))
+        .filter(Boolean)
+        .forEach((p) => dropTargets.push({ player: p, bonus: rankDropBonus(rankMap[p.name]) }));
+      if (!dropTargets.length) {
+        dropTargets.push({ player: lootOwner, bonus: 1 });
+      }
     } else {
-      dropTargets.push({ player: lootOwner, bonus: 1 });
+      const bonus = 1;
+      dropTargets.push({ player: lootOwner, bonus });
     }
-  } else {
-    const bestRank = isWorldBoss
-      ? Math.min(...partyMembers.map((m) => rankMap[m.name] || 9999))
-      : 0;
-    const bonus = isWorldBoss ? rankDropBonus(bestRank) : 1;
-    dropTargets.push({ player: lootOwner, bonus });
-  }
 
-  dropTargets.forEach(({ player: owner, bonus }) => {
-    const drops = dropLoot(template, bonus);
-    if (!drops.length) return;
-    if (party && partyMembers.length > 0) {
-      const distributed = distributeLoot(party, partyMembers, drops);
-      distributed.forEach(({ id, target }) => {
-        const item = ITEM_TEMPLATES[id];
-        if (!item) return;
+    dropTargets.forEach(({ player: owner, bonus }) => {
+      const drops = dropLoot(template, bonus);
+      if (!drops.length) return;
+      if (!isWorldBoss && party && partyMembers.length > 0) {
+        const distributed = distributeLoot(party, partyMembers, drops);
+        distributed.forEach(({ id, target }) => {
+          const item = ITEM_TEMPLATES[id];
+          if (!item) return;
         const rarity = rarityByPrice(item);
         if (['uncommon', 'rare', 'epic', 'legendary'].includes(rarity)) {
           emitAnnouncement(`${target.name} 击败 ${template.name} 获得${RARITY_LABELS[rarity] || '稀有'}装备 ${item.name}！`, rarity);
         }
       });
-    } else {
-      drops.forEach((id) => {
-        addItem(owner, id, 1);
-      });
-      owner.send(`掉落: ${drops.map((id) => ITEM_TEMPLATES[id].name).join(', ')}`);
+      } else {
+        drops.forEach((id) => {
+          addItem(owner, id, 1);
+        });
+        owner.send(`掉落: ${drops.map((id) => ITEM_TEMPLATES[id].name).join(', ')}`);
       drops.forEach((id) => {
         const item = ITEM_TEMPLATES[id];
         if (!item) return;

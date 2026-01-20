@@ -934,6 +934,8 @@ function tryAutoPotion(player) {
   const mpPct = player.flags?.autoMpPct;
   if (!hpPct && !mpPct) return;
   const now = Date.now();
+  const instantIds = new Set(['sun_water', 'snow_frost']);
+  const ticks = 5;
 
   const hpRate = player.hp / player.max_hp;
   const mpRate = player.mp / player.max_mp;
@@ -941,23 +943,50 @@ function tryAutoPotion(player) {
   const hpList = ['snow_frost', 'potion_super', 'potion_big', 'potion_mid', 'potion_small', 'sun_water'];
   const mpList = ['snow_frost', 'potion_mana_super', 'potion_mana_big', 'potion_mana_mid', 'potion_mana', 'sun_water'];
 
-  const potionLock = player.status?.potionLock || {};
-  if (hpPct && hpRate <= hpPct / 100 && (!potionLock.hp || potionLock.hp <= now)) {
-    const id = hpList.find((pid) => player.inventory.find((i) => i.id === pid));
+  if (!player.status) player.status = {};
+  if (!player.status.potionLock) player.status.potionLock = {};
+  const potionLock = player.status.potionLock;
+
+  if (hpPct && hpRate <= hpPct / 100) {
+    const lockActive = potionLock.hp && potionLock.hp > now;
+    const candidates = hpList.filter((pid) => player.inventory.find((i) => i.id === pid));
+    const id = (lockActive ? candidates.filter((pid) => instantIds.has(pid)) : candidates)[0];
     if (id && consumeItem(player, id)) {
       const item = ITEM_TEMPLATES[id];
-      if (item.hp) player.hp = clamp(player.hp + item.hp, 1, player.max_hp);
-      if (item.mp) player.mp = clamp(player.mp + item.mp, 0, player.max_mp);
+      const isInstant = instantIds.has(id);
+      if (isInstant) {
+        if (item.hp) player.hp = clamp(player.hp + item.hp, 1, player.max_hp);
+        if (item.mp) player.mp = clamp(player.mp + item.mp, 0, player.max_mp);
+      } else if (!lockActive) {
+        player.status.regen = {
+          ticksRemaining: ticks,
+          hpRemaining: item.hp || 0,
+          mpRemaining: item.mp || 0
+        };
+        potionLock.hp = now + ticks * 1000;
+      }
       player.send(`自动使用 ${item.name}。`);
     }
   }
 
-  if (mpPct && mpRate <= mpPct / 100 && (!potionLock.mp || potionLock.mp <= now)) {
-    const id = mpList.find((pid) => player.inventory.find((i) => i.id === pid));
+  if (mpPct && mpRate <= mpPct / 100) {
+    const lockActive = potionLock.mp && potionLock.mp > now;
+    const candidates = mpList.filter((pid) => player.inventory.find((i) => i.id === pid));
+    const id = (lockActive ? candidates.filter((pid) => instantIds.has(pid)) : candidates)[0];
     if (id && consumeItem(player, id)) {
       const item = ITEM_TEMPLATES[id];
-      if (item.hp) player.hp = clamp(player.hp + item.hp, 1, player.max_hp);
-      if (item.mp) player.mp = clamp(player.mp + item.mp, 0, player.max_mp);
+      const isInstant = instantIds.has(id);
+      if (isInstant) {
+        if (item.hp) player.hp = clamp(player.hp + item.hp, 1, player.max_hp);
+        if (item.mp) player.mp = clamp(player.mp + item.mp, 0, player.max_mp);
+      } else if (!lockActive) {
+        player.status.regen = {
+          ticksRemaining: ticks,
+          hpRemaining: item.hp || 0,
+          mpRemaining: item.mp || 0
+        };
+        potionLock.mp = now + ticks * 1000;
+      }
       player.send(`自动使用 ${item.name}。`);
     }
   }

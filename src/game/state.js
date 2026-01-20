@@ -83,7 +83,7 @@ export function removeMob(zoneId, roomId, mobId) {
       tpl.id.includes('demon') ||
       ['bug_queen', 'huangquan', 'evil_snake', 'pig_white'].includes(tpl.id)
     );
-    const delayMs = isBoss ? 10 * 60 * 1000 : 0;
+    const delayMs = isBoss ? 60 * 1000 : 0;
     mob.respawnAt = Date.now() + delayMs;
   }
 }

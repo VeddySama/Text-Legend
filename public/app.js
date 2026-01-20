@@ -42,8 +42,7 @@ const ui = {
   skills: document.getElementById('skills-list'),
   items: document.getElementById('items-list'),
   training: document.getElementById('training-list'),
-  actions: document.getElementById('actions-list'),
-  target: document.getElementById('target-label')
+  actions: document.getElementById('actions-list')
 };
 const chat = {
   log: document.getElementById('chat-log'),
@@ -603,8 +602,6 @@ function renderState(state) {
   if (selectedMob && !(state.mobs || []).some((m) => m.id === selectedMob.id)) {
     selectedMob = null;
   }
-  ui.target.textContent = selectedMob ? `目标: ${selectedMob.name}` : '';
-
   const exits = (state.exits || []).map((e) => ({ id: e.dir, label: e.label || directionLabels[e.dir] || e.dir }));
   renderChips(ui.exits, exits, (e) => socket.emit('cmd', { text: `go ${e.id}` }));
 
@@ -620,7 +617,6 @@ function renderState(state) {
   const mobs = (state.mobs || []).map((m) => ({ id: m.id, label: `${m.name}(${m.hp})`, raw: m }));
   renderChips(ui.mobs, mobs, (m) => {
     selectedMob = m.raw;
-    ui.target.textContent = `目标: ${m.raw.name}`;
     socket.emit('cmd', { text: `attack ${m.raw.name}` });
   }, selectedMob ? selectedMob.id : null);
 

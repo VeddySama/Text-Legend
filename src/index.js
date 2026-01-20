@@ -940,6 +940,27 @@ function refreshBuffs(target) {
   });
 }
 
+function updateRedNameAutoClear(player) {
+  if (!player.flags) player.flags = {};
+  const pkValue = player.flags.pkValue || 0;
+  if (pkValue <= 0) {
+    player.flags.pkReduceAt = null;
+    return;
+  }
+  if (!player.flags.autoSkillId) {
+    player.flags.pkReduceAt = null;
+    return;
+  }
+  if (!player.flags.pkReduceAt) {
+    player.flags.pkReduceAt = Date.now() + 60 * 60 * 1000;
+  }
+  if (Date.now() >= player.flags.pkReduceAt) {
+    player.flags.pkValue = Math.max(0, pkValue - 100);
+    player.flags.pkReduceAt = Date.now() + 60 * 60 * 1000;
+    player.send('PK值降低 100。');
+  }
+}
+
 function selectAutoSkill(player) {
   const learned = getLearnedSkills(player).filter((skill) =>
     ['attack', 'spell', 'cleave', 'dot', 'aoe'].includes(skill.type)
@@ -1034,6 +1055,7 @@ function combatTick() {
 
     refreshBuffs(player);
     processPotionRegen(player);
+    updateRedNameAutoClear(player);
 
     if (!player.combat) {
       regenOutOfCombat(player);
@@ -1096,15 +1118,15 @@ function combatTick() {
       target.flags.lastCombatAt = Date.now();
       player.send(`你对 ${target.name} 造成 ${dmg} 点伤害。`);
       target.send(`${player.name} 对你造成 ${dmg} 点伤害。`);
+      if (!target.combat || target.combat.targetType !== 'player' || target.combat.targetId !== player.name) {
+        target.combat = { targetId: player.name, targetType: 'player', skillId: 'slash' };
+      }
       if (skill && skill.type === 'dot') {
         if (!target.status) target.status = {};
         applyPoison(target, 4, Math.max(2, Math.floor(player.mag * 0.3 * skillPower)));
       }
       if (skill && ['attack', 'spell', 'cleave', 'dot', 'aoe'].includes(skill.type)) {
         notifyMastery(player, skill);
-      }
-      if (!target.combat) {
-        target.combat = { targetId: player.name, targetType: 'player', skillId: 'slash' };
       }
       if (hasEquipped(player, 'ring_magic') && Math.random() <= 0.1) {
         if (!target.status) target.status = {};
@@ -1115,7 +1137,10 @@ function combatTick() {
     } else {
       player.send(`${target.name} 躲过了你的攻击。`);
       target.send(`你躲过了 ${player.name} 的攻击。`);
+      if (!target.combat || target.combat.targetType !== 'player' || target.combat.targetId !== player.name) {
+        target.combat = { targetId: player.name, targetType: 'player', skillId: 'slash' };
       }
+    }
 
       if (target.hp <= 0 && !tryRevive(target)) {
         const wasRed = isRedName(target);

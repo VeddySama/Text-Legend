@@ -1302,6 +1302,20 @@ function consumeFirestrikeCrit(player, targetType, isNormalAttack) {
   return 1;
 }
 
+function autoResummon(player) {
+  if (!player || player.hp <= 0) return false;
+  const skills = getLearnedSkills(player).filter((skill) => skill.type === 'summon');
+  if (!skills.length) return false;
+  const summonSkill = skills.sort((a, b) => getSkillLevel(player, b.id) - getSkillLevel(player, a.id))[0];
+  if (!summonSkill || player.mp < summonSkill.mp) return false;
+  player.mp = clamp(player.mp - summonSkill.mp, 0, player.max_mp);
+  const skillLevel = getSkillLevel(player, summonSkill.id);
+  const summon = summonStats(player, summonSkill, skillLevel);
+  player.summon = { ...summon, exp: 0 };
+  player.send(`召唤物被击败，自动召唤 ${summon.name} (等级 ${summon.level})。`);
+  return true;
+}
+
 function handleDeath(player) {
   player.hp = Math.floor(player.max_hp * 0.5);
   player.mp = Math.floor(player.max_mp * 0.3);
@@ -1500,13 +1514,9 @@ function combatTick() {
         target.combat = { targetId: player.name, targetType: 'player', skillId: 'slash' };
       }
       if (skill && skill.type === 'dot') {
-        if (!tryConsumePoisonPowders(player)) {
-          player.send('施毒术需要绿色药粉和红色药粉。');
-        } else {
-          if (!target.status) target.status = {};
-          applyPoison(target, 30, calcPoisonTickDamage(target), player.name);
-          applyPoisonDebuff(target);
-        }
+        if (!target.status) target.status = {};
+        applyPoison(target, 30, calcPoisonTickDamage(target), player.name);
+        applyPoisonDebuff(target);
       }
       if (skill && skill.id === 'firestrike') {
         if (!player.status) player.status = {};
@@ -1626,13 +1636,9 @@ function combatTick() {
         player.send(`${mob.name} 被麻痹戒指定身。`);
       }
       if (skill && skill.type === 'dot') {
-        if (!tryConsumePoisonPowders(player)) {
-          player.send('施毒术需要绿色药粉和红色药粉。');
-        } else {
-          if (!mob.status) mob.status = {};
-          applyPoison(mob, 30, calcPoisonTickDamage(mob), player.name);
-          applyPoisonDebuff(mob);
-        }
+        if (!mob.status) mob.status = {};
+        applyPoison(mob, 30, calcPoisonTickDamage(mob), player.name);
+        applyPoisonDebuff(mob);
       }
       if (skill && skill.id === 'firestrike') {
         if (!player.status) player.status = {};
@@ -1694,6 +1700,7 @@ function combatTick() {
         if (mobTarget.hp <= 0) {
           player.send(`${mobTarget.name} 被击败。`);
           player.summon = null;
+          autoResummon(player);
           const followChance = calcHitChance(mob, player);
           if (Math.random() <= followChance) {
             const followDmg = calcDamage(mob, player, 1);

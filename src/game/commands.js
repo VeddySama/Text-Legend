@@ -247,20 +247,26 @@ function trainingCost(player, key) {
   return Math.max(1, Math.floor(base + steps * (base * 0.2)));
 }
 
-function summonStats(player, skill) {
+export function summonStats(player, skill, summonLevelOverride = null) {
   const base = skill.summon;
   const skillLevel = getSkillLevel(player, skill.id);
-  const summonLevel = base.level || 1;
-  const spirit = player.stats?.spirit || 0;
-  const level = skillLevel + summonLevel - 1;
-  const max_hp = Math.floor(base.baseHp + skillLevel * 40 + summonLevel * 30 + spirit * 2);
-  const atk = Math.floor(base.baseAtk + skillLevel * 3 + summonLevel * 2 + spirit * 0.2);
-  const def = Math.floor(base.baseDef + skillLevel * 2 + summonLevel * 2 + spirit * 0.2);
+  const spirit = player.spirit ?? player.stats?.spirit ?? 0;
+  const desiredLevel = summonLevelOverride ?? skillLevel ?? 1;
+  const summonLevel = Math.max(1, Math.min(8, Math.floor(desiredLevel)));
+  const level = summonLevel;
+  const spiritPart = spirit * 0.4;
+  const summonPart = summonLevel * 0.4;
+  const skillPart = skillLevel * 0.2;
+  const max_hp = Math.floor(base.baseHp + spiritPart * 2 + summonPart * 30 + skillPart * 40);
+  const atk = Math.floor(base.baseAtk + spiritPart * 0.2 + summonPart * 2 + skillPart * 3);
+  const def = Math.floor(base.baseDef + spiritPart * 0.2 + summonPart * 2 + skillPart * 2);
   const dex = 8 + skillLevel;
   return {
     id: skill.id,
     name: base.name,
     level,
+    summonLevel,
+    skillLevel,
     hp: max_hp,
     max_hp,
     atk,
@@ -574,8 +580,8 @@ export async function handleCommand({ player, players, input, send, partyApi, gu
       if (skill.type === 'summon') {
         if (player.mp < skill.mp) return send('魔法不足。');
         player.mp -= skill.mp;
-        const summon = summonStats(player, skill);
-        player.summon = summon;
+        const summon = summonStats(player, skill, skillLevel);
+        player.summon = { ...summon, exp: 0 };
         send(`你召唤了 ${summon.name} (等级 ${summon.level})。`);
         notifyMastery(player, skill);
         return;
@@ -651,6 +657,11 @@ export async function handleCommand({ player, players, input, send, partyApi, gu
         send(`你施放了 ${skill.name}，震退了怪物。`);
         notifyMastery(player, skill);
         return;
+      }
+      if (skill.type === 'dot') {
+        const hasGreen = player.inventory.find((i) => i.id === 'powder_green' && i.qty > 0);
+        const hasRed = player.inventory.find((i) => i.id === 'powder_red' && i.qty > 0);
+        if (!hasGreen || !hasRed) return send('施毒术需要绿色药粉和红色药粉。');
       }
       const mobs = getAliveMobs(player.position.zone, player.position.room);
       const target = mobs.find((m) => m.name.toLowerCase() === targetName.toLowerCase() || m.id === targetName);
@@ -739,13 +750,23 @@ export async function handleCommand({ player, players, input, send, partyApi, gu
         send(`商店商品: ${stock.map((i) => `${i.name}(${i.price}金)`).join(', ')}`);
         return;
       }
+      const parts = args.split(' ').filter(Boolean);
+      let qty = 1;
+      if (parts.length > 1 && /^\d+$/.test(parts[parts.length - 1])) {
+        qty = Math.max(1, Number(parts.pop()));
+      }
+      if (Number.isNaN(qty) || qty <= 0) return send('购买数量无效。');
+      const name = parts.join(' ');
       const stock = getShopStock(player);
-      const item = stock.find((i) => i.name.toLowerCase() === args.toLowerCase() || i.id === args);
+      const item = stock.find((i) => i.name.toLowerCase() === name.toLowerCase() || i.id === name);
       if (!item) return send('这里不卖该物品。');
-      if (player.gold < item.price) return send('金币不足。');
-      player.gold -= item.price;
-      addItem(player, item.id, 1);
-      send(`购买了 ${item.name}，花费 ${item.price} 金币。`);
+      const totalPrice = item.price * qty;
+      if (player.gold < totalPrice) return send('金币不足。');
+      player.gold -= totalPrice;
+      const unitQty = ['powder_green', 'powder_red'].includes(item.id) ? 100 : 1;
+      const totalQty = unitQty * qty;
+      addItem(player, item.id, totalQty);
+      send(`购买了 ${item.name} x${totalQty}，花费 ${totalPrice} 金币。`);
       return;
     }
     case 'shop': {
@@ -753,7 +774,7 @@ export async function handleCommand({ player, players, input, send, partyApi, gu
       const stock = getShopStock(player);
       if (!stock.length) return send('商店暂无商品。');
       send(`商店商品: ${stock.map((i) => `${i.name}(${i.price}金)`).join(', ')}`);
-      send('购买指令: buy <物品名> 或 buy list 查看。');
+      send('购买指令: buy <物品名> [数量] 或 buy list 查看。');
       return;
     }
     case 'sell': {

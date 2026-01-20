@@ -9,6 +9,16 @@ export function calcDamage(attacker, defender, power = 1) {
   const atk = attacker.atk + randInt(0, Math.max(1, attacker.atk / 2));
   let defBonus = 0;
   const buff = defender.status?.buffs?.defBuff;
+  const debuff = defender.status?.debuffs?.poison;
+  const now = Date.now();
+  let defMultiplier = 1;
+  if (debuff) {
+    if (debuff.expiresAt && debuff.expiresAt < now) {
+      delete defender.status.debuffs.poison;
+    } else {
+      defMultiplier = debuff.defMultiplier || 1;
+    }
+  }
   if (buff) {
     if (buff.expiresAt && buff.expiresAt < Date.now()) {
       delete defender.status.buffs.defBuff;
@@ -17,7 +27,7 @@ export function calcDamage(attacker, defender, power = 1) {
     }
   }
   const baseDef = (defender.def || 0) + defBonus;
-  const def = baseDef + randInt(0, Math.max(0, baseDef / 2));
+  const def = Math.floor(baseDef * defMultiplier) + randInt(0, Math.max(0, baseDef / 2));
   const dmg = Math.max(1, Math.floor((atk - def) * power));
   return dmg;
 }

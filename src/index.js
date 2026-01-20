@@ -13,9 +13,10 @@ import { addGuildMember, createGuild, getGuildByName, getGuildMember, getSabakOw
 import { createAdminSession, listUsers, verifyAdminSession } from './db/admin.js';
 import { sendMail, listMail, markMailRead } from './db/mail.js';
 import { createVipCodes, listVipCodes, useVipCode } from './db/vip.js';
+import { listMobRespawns, upsertMobRespawn, clearMobRespawn } from './db/mobs.js';
 import { runMigrations } from './db/migrate.js';
 import { newCharacter, computeDerived, gainExp, addItem, removeItem } from './game/player.js';
-import { handleCommand, awardKill } from './game/commands.js';
+import { handleCommand, awardKill, summonStats } from './game/commands.js';
 import {
   DEFAULT_SKILLS,
   getLearnedSkills,
@@ -29,7 +30,7 @@ import {
 import { MOB_TEMPLATES } from './game/mobs.js';
 import { ITEM_TEMPLATES } from './game/items.js';
 import { WORLD } from './game/world.js';
-import { getRoomMobs, getAliveMobs, spawnMobs, removeMob } from './game/state.js';
+import { getRoomMobs, getAliveMobs, spawnMobs, removeMob, seedRespawnCache, setRespawnStore } from './game/state.js';
 import { calcHitChance, calcDamage, applyDamage, applyPoison, tickStatus } from './game/combat.js';
 import { randInt, clamp } from './game/utils.js';
 import { expForLevel } from './game/constants.js';
@@ -203,7 +204,9 @@ function sendTo(player, message) {
 }
 
 function emitAnnouncement(text, color, location) {
-  io.emit('output', { text, prefix: '公告', prefixColor: 'announce', color, location });
+  const payload = { text, prefix: '公告', prefixColor: 'announce', color, location };
+  io.emit('output', payload);
+  io.emit('chat', payload);
 }
 
 const RARITY_ORDER = ['legendary', 'epic', 'rare', 'uncommon', 'common'];
@@ -766,6 +769,17 @@ function buildState(player) {
       autoSkillId: player.flags?.autoSkillId || null,
       sabak_bonus: sabakBonus
     },
+    summon: player.summon
+      ? {
+          name: player.summon.name,
+          level: player.summon.level,
+          levelMax: SUMMON_MAX_LEVEL,
+          hp: player.summon.hp,
+          max_hp: player.summon.max_hp,
+          atk: player.summon.atk,
+          def: player.summon.def
+        }
+      : null,
     guild: player.guild?.name || null,
     party: party ? { size: party.members.length, members: partyMembers } : null,
     training: player.flags?.training || { hp: 0, mp: 0, atk: 0, def: 0, mag: 0, mdef: 0, spirit: 0 },
@@ -786,6 +800,8 @@ function sendRoomState(zoneId, roomId) {
 }
 
 const WORLD_BOSS_ROOM = { zoneId: 'wb', roomId: 'lair' };
+const SUMMON_MAX_LEVEL = 8;
+const SUMMON_EXP_PER_LEVEL = 5;
 
 function checkWorldBossRespawn() {
   const { zoneId, roomId } = WORLD_BOSS_ROOM;
@@ -819,9 +835,69 @@ function recordMobDamage(mob, attackerName, dmg) {
   }
 }
 
+function gainSummonExp(player) {
+  if (!player.summon) return;
+  const skill = getSkill(player.classId, player.summon.id);
+  if (!skill) return;
+  const skillLevel = getSkillLevel(player, skill.id);
+  let summonLevel = player.summon.summonLevel || player.summon.level || skillLevel || 1;
+  let exp = player.summon.exp || 0;
+  exp += 1;
+  let leveled = false;
+  while (summonLevel < SUMMON_MAX_LEVEL && exp >= SUMMON_EXP_PER_LEVEL) {
+    exp -= SUMMON_EXP_PER_LEVEL;
+    summonLevel += 1;
+    leveled = true;
+  }
+  if (leveled) {
+    const ratio = player.summon.max_hp ? player.summon.hp / player.summon.max_hp : 1;
+    const nextSummon = summonStats(player, skill, summonLevel);
+    player.summon = { ...nextSummon, exp };
+    player.summon.hp = clamp(Math.floor(player.summon.max_hp * ratio), 1, player.summon.max_hp);
+    player.send(`${player.summon.name} 升到 ${summonLevel} 级。`);
+  } else {
+    player.summon.exp = exp;
+  }
+}
+
 function applyDamageToMob(mob, dmg, attackerName) {
   recordMobDamage(mob, attackerName, dmg);
   applyDamage(mob, dmg);
+}
+
+function getMagicDefenseMultiplier(target) {
+  const debuff = target.status?.debuffs?.poison;
+  if (!debuff) return 1;
+  if (debuff.expiresAt && debuff.expiresAt < Date.now()) {
+    delete target.status.debuffs.poison;
+    return 1;
+  }
+  return debuff.mdefMultiplier || 1;
+}
+
+function tryConsumePoisonPowders(player) {
+  const hasGreen = player.inventory.find((i) => i.id === 'powder_green' && i.qty > 0);
+  const hasRed = player.inventory.find((i) => i.id === 'powder_red' && i.qty > 0);
+  if (!hasGreen || !hasRed) return false;
+  removeItem(player, 'powder_green', 1);
+  removeItem(player, 'powder_red', 1);
+  return true;
+}
+
+function applyPoisonDebuff(target) {
+  if (!target.status) target.status = {};
+  if (!target.status.debuffs) target.status.debuffs = {};
+  target.status.debuffs.poison = {
+    defMultiplier: 0.8,
+    mdefMultiplier: 0.8,
+    expiresAt: Date.now() + 8000
+  };
+}
+
+function calcPoisonTickDamage(target) {
+  const maxHp = Math.max(1, target.max_hp || 1);
+  const total = Math.max(1, Math.floor(maxHp * 0.2));
+  return Math.max(1, Math.floor(total / 30));
 }
 
 function buildDamageRankMap(mob) {
@@ -1073,6 +1149,7 @@ function handleDeath(player) {
 function processMobDeath(player, mob, online) {
   const template = MOB_TEMPLATES[mob.templateId];
   removeMob(player.position.zone, player.position.room, mob.id);
+  gainSummonExp(player);
   const exp = template.exp;
   const gold = randInt(template.gold[0], template.gold[1]);
 
@@ -1228,7 +1305,10 @@ function combatTick() {
         const skillLevel = getSkillLevel(player, skill.id);
         skillPower = scaledSkillPower(skill, skillLevel);
         if (skill.type === 'spell' || skill.type === 'aoe') {
-          dmg = Math.floor((player.mag + randInt(0, player.mag / 2)) * skillPower);
+          const mdefMultiplier = getMagicDefenseMultiplier(target);
+          const mdef = Math.floor((target.mdef || 0) * mdefMultiplier);
+          dmg = Math.floor((player.mag + randInt(0, player.mag / 2)) * skillPower - mdef * 0.6);
+          if (dmg < 1) dmg = 1;
         } else if (skill.type === 'dot') {
           dmg = Math.max(1, Math.floor(player.mag * 0.5 * skillPower));
         } else {
@@ -1246,9 +1326,14 @@ function combatTick() {
       if (!target.combat || target.combat.targetType !== 'player' || target.combat.targetId !== player.name) {
         target.combat = { targetId: player.name, targetType: 'player', skillId: 'slash' };
       }
-  if (skill && skill.type === 'dot') {
-        if (!target.status) target.status = {};
-        applyPoison(target, 4, Math.max(2, Math.floor(player.mag * 0.3 * skillPower)), player.name);
+      if (skill && skill.type === 'dot') {
+        if (!tryConsumePoisonPowders(player)) {
+          player.send('施毒术需要绿色药粉和红色药粉。');
+        } else {
+          if (!target.status) target.status = {};
+          applyPoison(target, 30, calcPoisonTickDamage(target), player.name);
+          applyPoisonDebuff(target);
+        }
       }
       if (skill && ['attack', 'spell', 'cleave', 'dot', 'aoe'].includes(skill.type)) {
         notifyMastery(player, skill);
@@ -1318,7 +1403,10 @@ function combatTick() {
         const skillLevel = getSkillLevel(player, skill.id);
         skillPower = scaledSkillPower(skill, skillLevel);
         if (skill.type === 'spell' || skill.type === 'aoe') {
-          dmg = Math.floor((player.mag + randInt(0, player.mag / 2)) * skillPower);
+          const mdefMultiplier = getMagicDefenseMultiplier(mob);
+          const mdef = Math.floor((mob.mdef || 0) * mdefMultiplier);
+          dmg = Math.floor((player.mag + randInt(0, player.mag / 2)) * skillPower - mdef * 0.6);
+          if (dmg < 1) dmg = 1;
         } else if (skill.type === 'dot') {
           dmg = Math.max(1, Math.floor(player.mag * 0.5 * skillPower));
         } else {
@@ -1358,8 +1446,13 @@ function combatTick() {
         player.send(`${mob.name} 被麻痹戒指定身。`);
       }
       if (skill && skill.type === 'dot') {
-        if (!mob.status) mob.status = {};
-        applyPoison(mob, 4, Math.max(2, Math.floor(player.mag * 0.3 * skillPower)), player.name);
+        if (!tryConsumePoisonPowders(player)) {
+          player.send('施毒术需要绿色药粉和红色药粉。');
+        } else {
+          if (!mob.status) mob.status = {};
+          applyPoison(mob, 30, calcPoisonTickDamage(mob), player.name);
+          applyPoisonDebuff(mob);
+        }
       }
       if (skill && skill.type === 'cleave') {
         mobs.filter((m) => m.id !== mob.id).forEach((other) => {
@@ -1509,6 +1602,23 @@ async function start() {
     await mkdir(dir, { recursive: true });
   }
   await runMigrations();
+  setRespawnStore({
+    set: (zoneId, roomId, slotIndex, templateId, respawnAt) =>
+      upsertMobRespawn(zoneId, roomId, slotIndex, templateId, respawnAt),
+    clear: (zoneId, roomId, slotIndex) =>
+      clearMobRespawn(zoneId, roomId, slotIndex)
+  });
+  const respawnRows = await listMobRespawns();
+  const now = Date.now();
+  const activeRespawns = [];
+  for (const row of respawnRows) {
+    if (row.respawn_at && Number(row.respawn_at) > now) {
+      activeRespawns.push(row);
+    } else {
+      await clearMobRespawn(row.zone_id, row.room_id, row.slot_index);
+    }
+  }
+  seedRespawnCache(activeRespawns);
   await loadSabakState();
   checkWorldBossRespawn();
   setInterval(() => checkWorldBossRespawn(), 5000);

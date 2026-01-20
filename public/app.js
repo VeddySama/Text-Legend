@@ -40,6 +40,7 @@ const ui = {
   mobs: document.getElementById('mobs-list'),
   players: document.getElementById('players-list'),
   skills: document.getElementById('skills-list'),
+  summon: document.getElementById('summon-panel'),
   items: document.getElementById('items-list'),
   training: document.getElementById('training-list'),
   actions: document.getElementById('actions-list')
@@ -381,8 +382,17 @@ function showShopModal(items) {
       const card = document.createElement('div');
       card.className = 'shop-item';
       card.textContent = `${item.name} (${item.price}\u91D1)`;
-      card.addEventListener('click', () => {
-        if (socket) socket.emit('cmd', { text: `buy ${item.name}` });
+      card.addEventListener('click', async () => {
+        const qtyText = await promptModal({
+          title: '\u6279\u91cf\u8d2d\u4e70',
+          text: `\u8bf7\u8f93\u5165\u8d2d\u4e70\u6570\u91cf: ${item.name}`,
+          placeholder: '1',
+          value: '1'
+        });
+        if (!qtyText) return;
+        const qty = Math.max(1, Number(qtyText || 1));
+        if (Number.isNaN(qty) || qty <= 0) return;
+        if (socket) socket.emit('cmd', { text: `buy ${item.name} ${qty}` });
       });
       shopUi.list.appendChild(card);
     });
@@ -818,6 +828,21 @@ function renderState(state) {
     socket.emit('cmd', { text: `cast ${s.raw.id} ${selectedMob.name}` });
   });
 
+  if (ui.summon) {
+    if (state.summon) {
+      const levelMax = state.summon.levelMax || 8;
+      const summonEntry = [{
+        id: 'summon',
+        label: `${state.summon.name} Lv${state.summon.level}/${levelMax} ${state.summon.hp}/${state.summon.max_hp}`,
+        tooltip: `攻击: ${state.summon.atk} 防御: ${state.summon.def}`,
+        raw: state.summon
+      }];
+      renderChips(ui.summon, summonEntry, () => {});
+    } else {
+      ui.summon.textContent = '\u65e0';
+    }
+  }
+
   const itemTotals = {};
   (state.items || []).forEach((i) => {
     if (!itemTotals[i.id]) {
@@ -942,8 +967,14 @@ if (savedToken) {
   } catch {
     savedChars = [];
   }
-  renderCharacters(savedChars);
-  show(characterSection);
+  const lastChar = localStorage.getItem('lastCharacter');
+  const hasLastChar = lastChar && savedChars.some((c) => c.name === lastChar);
+  if (hasLastChar) {
+    enterGame(lastChar);
+  } else {
+    renderCharacters(savedChars);
+    show(characterSection);
+  }
 }
 
 async function apiPost(path, body) {
@@ -1048,6 +1079,7 @@ async function createCharacter() {
 
 function enterGame(name) {
   activeChar = name;
+  localStorage.setItem('lastCharacter', name);
   lastSavedLevel = null;
   show(gameSection);
   log.innerHTML = '';
@@ -1077,7 +1109,7 @@ function enterGame(name) {
   socket.on('output', (payload) => {
     appendLine(payload);
     parseStats(payload.text);
-    if (isChatLine(payload.text) || isAnnouncement(payload)) {
+    if (isChatLine(payload.text)) {
       appendChatLine(payload);
     }
     const tradeFrom = parseTradeRequest(payload.text);
@@ -1105,6 +1137,9 @@ function enterGame(name) {
       appendChatLine(payload);
       setTradeStatus(payload.text);
     }
+  });
+  socket.on('chat', (payload) => {
+    appendChatLine(payload);
   });
   socket.on('state', (payload) => {
     renderState(payload);

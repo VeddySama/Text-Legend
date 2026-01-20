@@ -15,6 +15,9 @@
   scroll_random: { id: 'scroll_random', name: '随机卷', type: 'consumable', teleport: { zone: 'bq_plains', room: 'plains' }, price: 220 },
   scroll_recall: { id: 'scroll_recall', name: '召唤卷', type: 'consumable', price: 380 },
 
+  powder_green: { id: 'powder_green', name: '绿色药粉', type: 'material', price: 2000 },
+  powder_red: { id: 'powder_red', name: '红色药粉', type: 'material', price: 2000 },
+
   oil_bless: { id: 'oil_bless', name: '祝福油', type: 'consumable', price: 1800 },
   woma_horn: { id: 'woma_horn', name: '沃玛号角', type: 'material', price: 3000 },
   gold_bar: { id: 'gold_bar', name: '金条', type: 'material', price: 100000 },
@@ -182,11 +185,11 @@
 };
 
 export const SHOP_STOCKS = {
-  bq_shop: ['potion_small', 'potion_mana', 'scroll_return', 'scroll_random', 'sword_wood', 'armor_cloth', 'boots_leather', 'ring_copper', 'bracelet_copper', 'helm_cloth', 'belt_cloth'],
+  bq_shop: ['potion_small', 'potion_mana', 'powder_green', 'powder_red', 'scroll_return', 'scroll_random', 'sword_wood', 'armor_cloth', 'boots_leather', 'ring_copper', 'bracelet_copper', 'helm_cloth', 'belt_cloth'],
   bq_blacksmith: ['sword_iron', 'sabre', 'armor_bronze', 'armor_chain', 'boots_iron', 'helm_iron', 'belt_iron'],
   bq_tao: ['talisman_bone', 'potion_mana', 'potion_mana_mid', 'scroll_return'],
   bq_mage: ['staff_apprentice', 'potion_mana', 'potion_mana_mid', 'scroll_return'],
-  mg_shop: ['potion_mid', 'potion_big', 'potion_mana_mid', 'potion_mana_big', 'sun_water', 'snow_frost', 'scroll_return', 'scroll_random'],
+  mg_shop: ['potion_mid', 'potion_big', 'potion_mana_mid', 'potion_mana_big', 'powder_green', 'powder_red', 'sun_water', 'snow_frost', 'scroll_return', 'scroll_random'],
   mg_blacksmith: ['moonblade', 'lianyu', 'armor_plate', 'armor_war', 'boots_war', 'helm_war', 'belt_war'],
   mg_magic: ['magestaff', 'bone_staff', 'necklace_evil', 'ring_ruby', 'bracelet_fashen', 'helm_mage', 'belt_mage'],
   mg_tao: ['silver_snake', 'wujigun', 'necklace_tao', 'ring_tao', 'bracelet_tianzun', 'helm_tao', 'belt_tao']

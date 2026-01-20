@@ -5,7 +5,7 @@ import { randInt } from './utils.js';
 const ROOM_MOBS = new Map();
 const RESPAWN_CACHE = new Map();
 let respawnStore = null;
-const BOSS_SCALE = { hp: 1.18, atk: 1.12, def: 1.12 };
+const BOSS_SCALE = { hp: 1.25, atk: 1.18, def: 1.18 };
 
 function respawnKey(zoneId, roomId, slotIndex) {
   return `${zoneId}:${roomId}:${slotIndex}`;

@@ -22,6 +22,7 @@ const ui = {
   guild: document.getElementById('ui-guild'),
   pk: document.getElementById('ui-pk'),
   vip: document.getElementById('ui-vip'),
+  sabakBonus: document.getElementById('ui-sabak-bonus'),
   gold: document.getElementById('ui-gold'),
   hp: document.getElementById('bar-hp'),
   mp: document.getElementById('bar-mp'),
@@ -30,6 +31,7 @@ const ui = {
   mobs: document.getElementById('mobs-list'),
   skills: document.getElementById('skills-list'),
   items: document.getElementById('items-list'),
+  training: document.getElementById('training-list'),
   actions: document.getElementById('actions-list'),
   target: document.getElementById('target-label')
 };
@@ -39,6 +41,7 @@ const chat = {
   sendBtn: document.getElementById('chat-send'),
   partyInviteBtn: document.getElementById('chat-party-invite'),
   guildInviteBtn: document.getElementById('chat-guild-invite'),
+  guildCreateBtn: document.getElementById('chat-guild-create'),
   partyToggleBtn: document.getElementById('chat-party-toggle'),
   sabakRegisterBtn: document.getElementById('chat-sabak-register'),
   locationBtn: document.getElementById('chat-send-location')
@@ -367,6 +370,19 @@ const ITEM_SLOT_LABELS = {
   bracelet: '\u624b\u9556',
   neck: '\u9879\u94fe'
 };
+const TRAINING_OPTIONS = [
+  { id: 'hp', label: '\u751f\u547d', inc: 10 },
+  { id: 'mp', label: '\u9b54\u6cd5', inc: 10 },
+  { id: 'atk', label: '\u653b\u51fb', inc: 1 },
+  { id: 'mag', label: '\u9b54\u6cd5\u503c', inc: 1 },
+  { id: 'spirit', label: '\u9053\u672f', inc: 1 }
+];
+
+function trainingCost(level, current, inc) {
+  const base = 10000 + level * 500;
+  const steps = Math.floor((current || 0) / inc);
+  return Math.max(1, Math.floor(base + steps * (base * 0.2)));
+}
 
 function formatItemTooltip(item) {
   if (!item) return '';
@@ -400,6 +416,7 @@ function formatItemTooltip(item) {
 }
 
 function renderState(state) {
+  const prevState = lastState;
   lastState = state;
   if (state.player) {
     ui.name.textContent = state.player.name || '-';
@@ -413,10 +430,26 @@ function renderState(state) {
     ui.gold.textContent = state.stats.gold;
     ui.pk.textContent = `${state.stats.pk} (${state.stats.pk >= 100 ? '红名' : '正常'})`;
     ui.vip.textContent = state.stats.vip ? '是' : '否';
+    if (ui.sabakBonus) {
+      ui.sabakBonus.textContent = state.stats.sabak_bonus ? '已生效' : '无';
+    }
     ui.guild.textContent = state.guild || '无';
     if (chat.sabakRegisterBtn) {
       const hasGuild = Boolean(state.guild);
       chat.sabakRegisterBtn.classList.toggle('hidden', !hasGuild);
+    }
+    if (chat.guildCreateBtn) {
+      const hasGuild = Boolean(state.guild);
+      chat.guildCreateBtn.classList.toggle('hidden', hasGuild);
+    }
+  }
+  if (state.stats) {
+    const hasSabakBonus = Boolean(state.stats.sabak_bonus);
+    const prevSabakBonus = Boolean(prevState && prevState.stats && prevState.stats.sabak_bonus);
+    if (hasSabakBonus && !prevSabakBonus) {
+      appendLine('沙巴克加成已生效。');
+    } else if (!hasSabakBonus && prevSabakBonus) {
+      appendLine('沙巴克加成已结束。');
     }
   }
   if (chat.partyToggleBtn) {
@@ -468,6 +501,24 @@ function renderState(state) {
   if (shopUi.modal && !shopUi.modal.classList.contains('hidden')) {
     renderShopSellList(state.items || []);
   }
+
+  if (ui.training) {
+    const training = state.training || { hp: 0, mp: 0, atk: 0, mag: 0, spirit: 0 };
+    const level = state.player ? state.player.level : 1;
+    const trainingButtons = TRAINING_OPTIONS.map((opt) => {
+      const current = training[opt.id] || 0;
+      const cost = trainingCost(level, current, opt.inc);
+      return {
+        id: opt.id,
+        label: `${opt.label} +${opt.inc} (${cost}金)`,
+        tooltip: `${opt.label} 当前 +${current}`,
+        raw: { id: opt.id }
+      };
+    });
+    renderChips(ui.training, trainingButtons, (opt) => {
+      socket.emit('cmd', { text: `train ${opt.raw.id}` });
+    });
+  }
   if (tradeUi.itemSelect) {
     tradeUi.itemSelect.innerHTML = '';
     if (!items.length) {
@@ -489,6 +540,7 @@ function renderState(state) {
     { id: 'look', label: '\u89c2\u5bdf' },
     { id: 'stats', label: '\u72b6\u6001' },
     { id: 'bag', label: '\u80cc\u5305' },
+    { id: 'train', label: '\u4fee\u70bc' },
     { id: 'quests', label: '\u4efb\u52a1' },
     { id: 'party', label: '\u961f\u4f0d' },
     { id: 'guild', label: '\u884c\u4f1a' },
@@ -510,6 +562,16 @@ function renderState(state) {
       });
       if (!code) return;
       socket.emit('cmd', { text: `vip activate ${code.trim()}` });
+      return;
+    }
+    if (a.id === 'train') {
+      const stat = await promptModal({
+        title: '\u4fee\u70bc',
+        text: '\u53ef\u4fee\u70bc: \u751f\u547d/\u9b54\u6cd5/\u653b\u51fb/\u9b54\u6cd5\u503c/\u9053\u672f',
+        placeholder: '\u8bf7\u8f93\u5165\u5c5e\u6027'
+      });
+      if (!stat) return;
+      socket.emit('cmd', { text: `train ${stat.trim()}` });
       return;
     }
     if (a.id === 'afk') {
@@ -717,6 +779,17 @@ if (chat.guildInviteBtn) {
     });
     if (!name || !socket) return;
     socket.emit('cmd', { text: `guild invite ${name.trim()}` });
+  });
+}
+if (chat.guildCreateBtn) {
+  chat.guildCreateBtn.addEventListener('click', async () => {
+    const name = await promptModal({
+      title: '\u521B\u5EFA\u884C\u4F1A',
+      text: '\u8BF7\u8F93\u5165\u884C\u4F1A\u540D\u79F0',
+      placeholder: '\u884C\u4F1A\u540D'
+    });
+    if (!name || !socket) return;
+    socket.emit('cmd', { text: `guild create ${name.trim()}` });
   });
 }
 if (chat.partyToggleBtn) {

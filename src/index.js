@@ -652,6 +652,9 @@ function buildState(player) {
     };
   });
   const party = getPartyByMember(player.name);
+  const sabakBonus = Boolean(
+    player.guild && sabakState.ownerGuildId && player.guild.id === sabakState.ownerGuildId
+  );
   return {
     player: {
       name: player.name,
@@ -676,10 +679,12 @@ function buildState(player) {
       gold: player.gold,
       pk: player.flags?.pkValue || 0,
       vip: Boolean(player.flags?.vip),
-      autoSkillId: player.flags?.autoSkillId || null
+      autoSkillId: player.flags?.autoSkillId || null,
+      sabak_bonus: sabakBonus
     },
     guild: player.guild?.name || null,
-    party: party ? { size: party.members.length } : null
+    party: party ? { size: party.members.length } : null,
+    training: player.flags?.training || { hp: 0, mp: 0, atk: 0, mag: 0, spirit: 0 }
   };
 }
 
@@ -1036,10 +1041,13 @@ function combatTick() {
       const shareGold = Math.floor(totalGold / eligibleCount);
 
       partyMembers.forEach((member) => {
-        member.gold += shareGold;
-        const leveled = gainExp(member, shareExp);
+        const sabakBonus = member.guild && sabakState.ownerGuildId && member.guild.id === sabakState.ownerGuildId ? 2 : 1;
+        const finalExp = Math.floor(shareExp * sabakBonus);
+        const finalGold = Math.floor(shareGold * sabakBonus);
+        member.gold += finalGold;
+        const leveled = gainExp(member, finalExp);
         awardKill(member, mob.templateId);
-        member.send(`队伍分配: 获得 ${shareExp} 经验和 ${shareGold} 金币。`);
+        member.send(`队伍分配: 获得 ${finalExp} 经验和 ${finalGold} 金币。`);
         if (leveled) member.send('你升级了！');
       });
 

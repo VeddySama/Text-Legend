@@ -40,12 +40,25 @@ export function newCharacter(name, classId) {
     },
     quests: {},
     skills: [DEFAULT_SKILLS[classId]].filter(Boolean),
-    flags: { tutorial: true, pkValue: 0, vip: false, offlineAt: null, autoSkillId: null, autoHpPct: null, autoMpPct: null },
+    flags: {
+      tutorial: true,
+      pkValue: 0,
+      vip: false,
+      offlineAt: null,
+      autoSkillId: null,
+      autoHpPct: null,
+      autoMpPct: null,
+      training: { hp: 0, mp: 0, atk: 0, mag: 0, spirit: 0 }
+    },
     status: {}
   };
 }
 
 export function computeDerived(player) {
+  if (!player.flags) player.flags = {};
+  if (!player.flags.training) {
+    player.flags.training = { hp: 0, mp: 0, atk: 0, mag: 0, spirit: 0 };
+  }
   const cls = CLASSES[player.classId];
   const base = cls.base;
   const level = player.level;
@@ -61,17 +74,19 @@ export function computeDerived(player) {
     stats.con += item.def ? Math.floor(item.def / 2) : 0;
     stats.spirit += item.spirit || 0;
   }
+  const training = player.flags.training;
+  stats.spirit += training.spirit || 0;
 
   player.stats = stats;
-  player.max_hp = base.con * 10 + cls.hpPerLevel * level + stats.con * 2;
-  player.max_mp = base.spirit * 8 + cls.mpPerLevel * level + stats.spirit * 2;
+  player.max_hp = base.con * 10 + cls.hpPerLevel * level + stats.con * 2 + (training.hp || 0);
+  player.max_mp = base.spirit * 8 + cls.mpPerLevel * level + stats.spirit * 2 + (training.mp || 0);
   player.hp = clamp(player.hp, 1, player.max_hp);
   player.mp = clamp(player.mp, 0, player.max_mp);
 
-  player.atk = stats.str * 1.6 + level * 1.2;
+  player.atk = stats.str * 1.6 + level * 1.2 + (training.atk || 0);
   player.def = stats.con * 1.1 + level * 0.8;
   player.dex = stats.dex;
-  player.mag = stats.int * 1.4 + stats.spirit * 0.6;
+  player.mag = stats.int * 1.4 + stats.spirit * 0.6 + (training.mag || 0);
 }
 
 export function gainExp(player, amount) {

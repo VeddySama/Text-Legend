@@ -32,6 +32,26 @@ const DIR_ALIASES = {
   上: 'up',
   下: 'down'
 };
+const TRAINING_OPTIONS = {
+  hp: { label: '生命', inc: 10 },
+  mp: { label: '魔法', inc: 10 },
+  atk: { label: '攻击', inc: 1 },
+  mag: { label: '魔法值', inc: 1 },
+  spirit: { label: '道术', inc: 1 }
+};
+const TRAINING_ALIASES = {
+  hp: 'hp',
+  生命: 'hp',
+  mp: 'mp',
+  魔法: 'mp',
+  魔法值: 'mag',
+  攻击: 'atk',
+  atk: 'atk',
+  mag: 'mag',
+  法术: 'mag',
+  道术: 'spirit',
+  spirit: 'spirit'
+};
 
 function dirLabel(dir) {
   return DIR_LABELS[dir] || dir;
@@ -176,6 +196,15 @@ function skillByName(player, name) {
   return list.find((s) => s.id === target || s.name.toLowerCase() === target);
 }
 
+function trainingCost(player, key) {
+  const level = player.level || 1;
+  const training = player.flags?.training || {};
+  const current = Number(training[key] || 0);
+  const base = 10000 + level * 500;
+  const steps = Math.floor(current / TRAINING_OPTIONS[key].inc);
+  return Math.max(1, Math.floor(base + steps * (base * 0.2)));
+}
+
 function partyStatus(party) {
   if (!party) return '你不在队伍中。';
   return `队伍成员: ${party.members.join(', ')}`;
@@ -190,7 +219,7 @@ export async function handleCommand({ player, players, input, send, partyApi, gu
 
   switch (cmd) {
     case 'help': {
-      send('指令: help, look, go <方向/地点>, say <内容>, who, stats, bag, equip <物品>, unequip <部位>, use <物品>, attack <怪物/玩家>, pk <玩家>, cast <技能> <怪物>, autoskill <技能/off>, autopotion <hp%> <mp%>, shop, buy <物品>, buy list, sell <物品>, quests, accept <id>, complete <id>, party, guild, gsay, sabak, vip, trade, mail, teleport。部位示例: ring_left, ring_right, bracelet_left, bracelet_right。');
+      send('指令: help, look, go <方向/地点>, say <内容>, who, stats, bag, equip <物品>, unequip <部位>, use <物品>, attack <怪物/玩家>, pk <玩家>, cast <技能> <怪物>, autoskill <技能/off>, autopotion <hp%> <mp%>, shop, buy <物品>, buy list, sell <物品>, train <属性>, quests, accept <id>, complete <id>, party, guild, gsay, sabak, vip, trade, mail, teleport。部位示例: ring_left, ring_right, bracelet_left, bracelet_right。');
       return;
     }
     case 'look': {
@@ -458,6 +487,33 @@ export async function handleCommand({ player, players, input, send, partyApi, gu
       send(list.join('\n'));
       return;
     }
+    case 'train': {
+      if (!player.flags) player.flags = {};
+      if (!player.flags.training) {
+        player.flags.training = { hp: 0, mp: 0, atk: 0, mag: 0, spirit: 0 };
+      }
+      if (!args) {
+        send('修炼指令: train <属性>');
+        Object.keys(TRAINING_OPTIONS).forEach((key) => {
+          const info = TRAINING_OPTIONS[key];
+          const cost = trainingCost(player, key);
+          const current = player.flags.training[key] || 0;
+          send(`${info.label}: 当前 +${current}, 消耗 ${cost} 金币, 提升 +${info.inc}`);
+        });
+        return;
+      }
+      const raw = args.trim();
+      const key = TRAINING_ALIASES[raw] || TRAINING_ALIASES[raw.toLowerCase()];
+      if (!key || !TRAINING_OPTIONS[key]) return send('可修炼属性: 生命, 魔法, 攻击, 魔法值, 道术');
+      const cost = trainingCost(player, key);
+      if (player.gold < cost) return send('金币不足。');
+      player.gold -= cost;
+      player.flags.training[key] = (player.flags.training[key] || 0) + TRAINING_OPTIONS[key].inc;
+      computeDerived(player);
+      send(`修炼成功: ${TRAINING_OPTIONS[key].label} +${TRAINING_OPTIONS[key].inc} (累计 +${player.flags.training[key]})。`);
+      send(`消耗 ${cost} 金币。`);
+      return;
+    }
     case 'accept': {
       if (!args) return send('要接受哪个任务？');
       const quest = Object.values(QUESTS).find((q) => q.id === args || q.name === args);
@@ -551,10 +607,8 @@ export async function handleCommand({ player, players, input, send, partyApi, gu
         const exists = await guildApi.getGuildByName(nameArg);
         if (exists) return send('行会名已存在。');
         const hasHorn = player.inventory.find((i) => i.id === 'woma_horn' && i.qty >= 1);
-        const hasBar = player.inventory.find((i) => i.id === 'gold_bar' && i.qty >= 1);
-        if (!hasHorn || !hasBar) return send('创建行会需要沃玛号角和金条。');
+        if (!hasHorn) return send('创建行会需要沃玛号角。');
         removeItem(player, 'woma_horn', 1);
-        removeItem(player, 'gold_bar', 1);
         const guildId = await guildApi.createGuild(nameArg, player.userId, player.name);
         player.guild = { id: guildId, name: nameArg, role: 'leader' };
         send(`行会创建成功: ${nameArg}`);

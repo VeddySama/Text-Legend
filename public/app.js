@@ -76,6 +76,13 @@ const shopUi = {
   sellList: document.getElementById('shop-sell-list'),
   close: document.getElementById('shop-close')
 };
+const afkUi = {
+  modal: document.getElementById('afk-modal'),
+  list: document.getElementById('afk-skill-list'),
+  start: document.getElementById('afk-start'),
+  auto: document.getElementById('afk-auto'),
+  close: document.getElementById('afk-close')
+};
 const itemTooltip = document.getElementById('item-tooltip');
 let lastShopItems = [];
 
@@ -236,6 +243,43 @@ function showShopModal(items) {
   }
   renderShopSellList(lastState ? lastState.items : []);
   shopUi.modal.classList.remove('hidden');
+}
+
+function showAfkModal(skills, activeIds) {
+  if (!afkUi.modal || !afkUi.list) return;
+  hideItemTooltip();
+  afkUi.selected = new Set();
+  if (Array.isArray(activeIds)) {
+    activeIds.forEach((id) => afkUi.selected.add(id));
+  } else if (typeof activeIds === 'string' && activeIds) {
+    afkUi.selected.add(activeIds);
+  }
+  afkUi.list.innerHTML = '';
+  if (!skills.length) {
+    const empty = document.createElement('div');
+    empty.textContent = '暂无可用技能';
+    afkUi.list.appendChild(empty);
+  } else {
+    skills.forEach((skill) => {
+      const btn = document.createElement('div');
+      btn.className = 'afk-skill-item';
+      btn.textContent = skill.name;
+      if (afkUi.selected.has(skill.id)) {
+        btn.classList.add('selected');
+      }
+      btn.addEventListener('click', () => {
+        if (afkUi.selected.has(skill.id)) {
+          afkUi.selected.delete(skill.id);
+          btn.classList.remove('selected');
+        } else {
+          afkUi.selected.add(skill.id);
+          btn.classList.add('selected');
+        }
+      });
+      afkUi.list.appendChild(btn);
+    });
+  }
+  afkUi.modal.classList.remove('hidden');
 }
 
 function renderShopSellList(items) {
@@ -639,9 +683,9 @@ function renderState(state) {
     if (a.id === 'afk') {
       if (state.stats && state.stats.autoSkillId) {
         socket.emit('cmd', { text: 'autoskill off' });
-      } else {
-        socket.emit('cmd', { text: 'autoskill all' });
+        return;
       }
+      showAfkModal(state.skills || [], state.stats ? state.stats.autoSkillId : null);
       return;
     }
     socket.emit('cmd', { text: a.id });
@@ -943,6 +987,26 @@ if (shopUi.close) {
   shopUi.close.addEventListener('click', () => {
     shopUi.modal.classList.add('hidden');
     hideItemTooltip();
+  });
+}
+if (afkUi.start) {
+  afkUi.start.addEventListener('click', () => {
+    if (!socket || !afkUi.selected) return;
+    const ids = Array.from(afkUi.selected);
+    if (!ids.length) return;
+    socket.emit('cmd', { text: `autoskill set ${ids.join(',')}` });
+    if (afkUi.modal) afkUi.modal.classList.add('hidden');
+  });
+}
+if (afkUi.auto) {
+  afkUi.auto.addEventListener('click', () => {
+    if (socket) socket.emit('cmd', { text: 'autoskill all' });
+    if (afkUi.modal) afkUi.modal.classList.add('hidden');
+  });
+}
+if (afkUi.close) {
+  afkUi.close.addEventListener('click', () => {
+    if (afkUi.modal) afkUi.modal.classList.add('hidden');
   });
 }
 document.querySelectorAll('.quick-btn').forEach((btn) => {

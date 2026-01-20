@@ -598,6 +598,33 @@ button:hover {
   filter: brightness(1.03);
 }
 
+.afk-skill-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.afk-skill-item {
+  border-radius: 999px;
+  border: 1px solid rgba(118, 70, 22, 0.25);
+  background: #f7e2c6;
+  padding: 6px 10px;
+  font-size: 0.85rem;
+  text-align: center;
+  cursor: pointer;
+  line-height: 1.2;
+}
+
+.afk-skill-item:hover {
+  filter: brightness(1.03);
+}
+
+.afk-skill-item.selected {
+  background: #c56b2a;
+  color: #fff7ea;
+  border-color: #b35a1a;
+}
+
 .log p {
   margin: 0 0 8px;
   white-space: pre-wrap;

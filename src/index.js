@@ -931,6 +931,24 @@ function selectAutoSkill(player) {
   return usable[0].id;
 }
 
+function pickCombatSkillId(player, combatSkillId) {
+  if (player.flags?.autoSkillId) {
+    const autoSkill = player.flags.autoSkillId;
+    if (Array.isArray(autoSkill)) {
+      const choices = autoSkill
+        .map((id) => getSkill(player.classId, id))
+        .filter((skill) => skill && player.mp >= skill.mp);
+      if (!choices.length) return combatSkillId;
+      return choices[randInt(0, choices.length - 1)].id;
+    }
+    const autoId = autoSkill === 'all'
+      ? selectAutoSkill(player)
+      : autoSkill;
+    return autoId || combatSkillId;
+  }
+  return combatSkillId;
+}
+
 function handleDeath(player) {
   player.hp = Math.floor(player.max_hp * 0.5);
   player.mp = Math.floor(player.max_mp * 0.3);
@@ -980,7 +998,7 @@ function processMobDeath(player, mob, online) {
       const item = ITEM_TEMPLATES[id];
       if (!item) return;
       const rarity = rarityByPrice(item);
-      if (['rare', 'epic', 'legendary'].includes(rarity)) {
+      if (['uncommon', 'rare', 'epic', 'legendary'].includes(rarity)) {
         emitAnnouncement(`${player.name} 击败 ${template.name} 获得${RARITY_LABELS[rarity] || '稀有'}装备 ${item.name}！`, rarity);
       }
     });
@@ -1002,7 +1020,7 @@ function combatTick() {
       regenOutOfCombat(player);
       if (player.flags?.autoSkillId) {
         const mobs = getAliveMobs(player.position.zone, player.position.room);
-        const target = mobs[0];
+        const target = mobs.length ? mobs[randInt(0, mobs.length - 1)] : null;
         if (target) {
           player.combat = { targetId: target.id, targetType: 'mob', skillId: null };
         }
@@ -1030,12 +1048,7 @@ function combatTick() {
       if (!target.flags) target.flags = {};
       target.flags.lastCombatAt = Date.now();
 
-    let chosenSkillId = player.combat.skillId;
-    if (!chosenSkillId && player.flags?.autoSkillId) {
-      chosenSkillId = player.flags.autoSkillId === 'all'
-        ? selectAutoSkill(player)
-        : player.flags.autoSkillId;
-    }
+    let chosenSkillId = pickCombatSkillId(player, player.combat.skillId);
     let skill = skillForPlayer(player, chosenSkillId);
     if (skill && player.mp < skill.mp) {
       skill = skillForPlayer(player, DEFAULT_SKILLS[player.classId]);
@@ -1118,12 +1131,7 @@ function combatTick() {
     if (mob.status && mob.status.stunTurns > 0) {
       mob.status.stunTurns -= 1;
     }
-    let chosenSkillId = player.combat.skillId;
-    if (!chosenSkillId && player.flags?.autoSkillId) {
-      chosenSkillId = player.flags.autoSkillId === 'all'
-        ? selectAutoSkill(player)
-        : player.flags.autoSkillId;
-    }
+    let chosenSkillId = pickCombatSkillId(player, player.combat.skillId);
     let skill = skillForPlayer(player, chosenSkillId);
     if (skill && player.mp < skill.mp) {
       player.send('魔法不足，改用普通攻击。');

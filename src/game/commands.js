@@ -585,10 +585,24 @@ export async function handleCommand({ player, players, input, send, partyApi, gu
         send(`已设置自动技能: 全部技能。自动喝药阈值: HP ${player.flags.autoHpPct}% / MP ${player.flags.autoMpPct}%`);
         return;
       }
-      const skill = skillByName(player, args);
+      const listText = lower.startsWith('set ') ? args.slice(4) : args;
+      if (listText.includes(',')) {
+        const parts = listText.split(',').map((s) => s.trim()).filter(Boolean);
+        const skills = parts.map((name) => skillByName(player, name)).filter(Boolean);
+        if (skills.length !== parts.length) return send('未找到部分技能。');
+        if (!player.flags) player.flags = {};
+        player.flags.autoSkillId = skills.map((s) => s.id);
+        if (player.flags.autoHpPct == null) player.flags.autoHpPct = 50;
+        if (player.flags.autoMpPct == null) player.flags.autoMpPct = 50;
+        send(`已设置自动技能: ${skills.map((s) => s.name).join('、')}。`);
+        return;
+      }
+      const skill = skillByName(player, listText);
       if (!skill) return send('未找到技能。');
       if (!player.flags) player.flags = {};
       player.flags.autoSkillId = skill.id;
+      if (player.flags.autoHpPct == null) player.flags.autoHpPct = 50;
+      if (player.flags.autoMpPct == null) player.flags.autoMpPct = 50;
       send(`已设置自动技能: ${skill.name}。`);
       return;
     }

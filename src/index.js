@@ -314,9 +314,11 @@ function rollRarityDrop(mobTemplate, bonus = 1) {
   return null;
 }
 
+const WORLD_BOSS_DROP_BONUS = 1.5;
+
 function dropLoot(mobTemplate, bonus = 1) {
   const loot = [];
-  const finalBonus = bonus;
+  const finalBonus = mobTemplate.worldBoss ? bonus * WORLD_BOSS_DROP_BONUS : bonus;
   if (mobTemplate.drops) {
     mobTemplate.drops.forEach((drop) => {
       const chance = Math.min(1, (drop.chance || 0) * finalBonus);
@@ -1485,6 +1487,8 @@ function combatTick() {
       }
       if (player.summon && player.summon.hp <= 0) {
         player.summon = null;
+        if (!player.flags) player.flags = {};
+        player.flags.summonAggro = true;
         autoResummon(player);
       }
 
@@ -1516,19 +1520,21 @@ function combatTick() {
       return;
     }
 
-    if (player.combat.targetType === 'player') {
-      const target = online.find((p) => p.name === player.combat.targetId);
-      if (!target || target.position.zone !== player.position.zone || target.position.room !== player.position.room) {
-        player.combat = null;
-        player.send('目标已消失。');
-        return;
-      }
-      if (!target.flags) target.flags = {};
-      target.flags.lastCombatAt = Date.now();
+      if (player.combat.targetType === 'player') {
+        const target = online.find((p) => p.name === player.combat.targetId);
+        if (!target || target.position.zone !== player.position.zone || target.position.room !== player.position.room) {
+          player.combat = null;
+          player.send('目标已消失。');
+          return;
+        }
+        if (!target.flags) target.flags = {};
+        target.flags.lastCombatAt = Date.now();
 
       reduceDurabilityOnAttack(player);
+      player.flags.lastAttackAt = Date.now();
+        player.flags.lastAttackAt = Date.now();
 
-    let chosenSkillId = pickCombatSkillId(player, player.combat.skillId);
+      let chosenSkillId = pickCombatSkillId(player, player.combat.skillId);
     let skill = skillForPlayer(player, chosenSkillId);
     if (skill && player.mp < skill.mp) {
       skill = skillForPlayer(player, DEFAULT_SKILLS[player.classId]);
@@ -1755,7 +1761,15 @@ function combatTick() {
       return;
     }
 
-    const mobTarget = player.summon && player.summon.hp > 0 ? player.summon : player;
+    const now = Date.now();
+    const summonAlive = Boolean(player.summon && player.summon.hp > 0);
+    if (player.flags?.summonAggro && summonAlive) {
+      const lastAttackAt = player.flags.lastAttackAt || 0;
+      if (now - lastAttackAt >= 5000) {
+        player.flags.summonAggro = false;
+      }
+    }
+    const mobTarget = player.flags?.summonAggro || !summonAlive ? player : player.summon;
     const mobHitChance = calcHitChance(mob, mobTarget);
     if (Math.random() <= mobHitChance) {
       const dmg = calcDamage(mob, mobTarget, 1);
@@ -1768,6 +1782,8 @@ function combatTick() {
         if (mobTarget.hp <= 0) {
           player.send(`${mobTarget.name} 被击败。`);
           player.summon = null;
+          if (!player.flags) player.flags = {};
+          player.flags.summonAggro = true;
           autoResummon(player);
           const followChance = calcHitChance(mob, player);
           if (Math.random() <= followChance) {

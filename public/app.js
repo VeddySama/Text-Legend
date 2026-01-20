@@ -825,7 +825,7 @@ const TRAINING_OPTIONS = [
   { id: 'mag', label: '\u9b54\u6cd5', inc: 1 },
   { id: 'mdef', label: '\u9b54\u5fa1', inc: 1 },
   { id: 'spirit', label: '\u9053\u672f', inc: 1 },
-  { id: 'dex', label: '\u8e32\u95ea', inc: 1 }
+  { id: 'dex', label: '\u8eb2\u95ea', inc: 1 }
 ];
 
 function trainingCost(current, inc) {

@@ -606,10 +606,22 @@ button:hover {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
+  flex-wrap: wrap;
 }
 
 .modal-actions button {
   min-width: 90px;
+}
+
+#player-modal .modal-actions {
+  justify-content: center;
+  gap: 8px;
+}
+
+#player-modal .modal-actions button {
+  min-width: 70px;
+  padding: 8px 10px;
+  font-size: 0.9rem;
 }
 
 #prompt-extra {

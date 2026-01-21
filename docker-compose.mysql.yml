@@ -20,6 +20,7 @@ services:
     ports:
       - "3000:3000"
     environment:
+      - TZ=Asia/Shanghai
       - PORT=3000
       - DB_CLIENT=mysql
       - DB_HOST=db

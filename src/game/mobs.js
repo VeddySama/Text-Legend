@@ -145,5 +145,27 @@
       { id: 'ring_protect', chance: 0.01 },
       { id: 'ring_revival', chance: 0.01 }
     ]
+  },
+  sabak_boss: {
+    id: 'sabak_boss',
+    name: '沙巴克守护·玄武',
+    level: 55,
+    hp: 8000,
+    atk: 160,
+    def: 95,
+    exp: 6000,
+    gold: [1500, 2600],
+    sabakBoss: true,
+    respawnMs: 6 * 60 * 60 * 1000,
+    drops: [
+      { id: 'armor_molong', chance: 0.2 },
+      { id: 'wulong', chance: 0.08 },
+      { id: 'nujian', chance: 0.08 },
+      { id: 'blood_drink', chance: 0.08 },
+      { id: 'ring_magic', chance: 0.02 },
+      { id: 'ring_teleport', chance: 0.02 },
+      { id: 'ring_protect', chance: 0.02 },
+      { id: 'ring_revival', chance: 0.02 }
+    ]
   }
 };

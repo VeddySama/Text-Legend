@@ -9,14 +9,14 @@
 <body>
   <div id="app">
     <header>
-      <h1>文字传奇 1.76</h1>
+      <h1>文字传奇</h1>
       <p>致敬 1.76 时代的网页文字版传奇。</p>
     </header>
 
     <section id="auth" class="panel">
       <div class="auth-hero">
         <div class="auth-copy">
-          <span class="badge">文字传奇 1.76</span>
+          <span class="badge">文字传奇</span>
           <h2>踏入玛法</h2>
           <p>创建角色，进入比奇城，与你的同伴一起探索沙巴克与赤月。</p>
           <div class="auth-ornament"></div>
@@ -66,6 +66,7 @@
           <div class="status-row"><span>VIP</span><strong id="ui-vip">-</strong></div>
           <div class="status-row"><span>沙巴克加成</span><strong id="ui-sabak-bonus">-</strong></div>
           <div class="status-row"><span>在线人数</span><strong id="ui-online">-</strong></div>
+          <div class="status-row"><span>服务器时间</span><strong id="ui-server-time">-</strong></div>
           <div class="status-row"><span>队伍成员</span><strong id="ui-party">-</strong></div>
         </div>
         <div class="status-card">
@@ -261,6 +262,15 @@
   <div id="bag-modal" class="modal hidden">
     <div class="modal-card">
       <div class="modal-title">背包</div>
+      <div class="bag-tabs">
+        <button class="bag-tab active" data-filter="all">全部</button>
+        <button class="bag-tab" data-filter="consumable">药品</button>
+        <button class="bag-tab" data-filter="weapon">武器</button>
+        <button class="bag-tab" data-filter="armor">防具</button>
+        <button class="bag-tab" data-filter="accessory">饰品</button>
+        <button class="bag-tab" data-filter="book">技能书</button>
+        <button class="bag-tab" data-filter="material">材料</button>
+      </div>
       <div class="modal-text" id="bag-page">第 1/1 页</div>
       <div id="bag-list" class="bag-list"></div>
       <div class="modal-actions">
@@ -293,6 +303,20 @@
         <button id="player-trade">交易</button>
         <button id="player-party">组队</button>
         <button id="player-close">关闭</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="stats-modal" class="modal hidden">
+    <div class="modal-card">
+      <div class="modal-title">角色属性</div>
+      <div class="modal-text" id="stats-summary"></div>
+      <div class="modal-text">已装备</div>
+      <div id="stats-equipment" class="bag-list"></div>
+      <div class="modal-text">可更换装备</div>
+      <div id="stats-inventory" class="bag-list"></div>
+      <div class="modal-actions">
+        <button id="stats-close">关闭</button>
       </div>
     </div>
   </div>

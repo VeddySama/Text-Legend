@@ -12,7 +12,7 @@ import {
   ensurePlayerSkills
 } from './skills.js';
 import { QUESTS } from './quests.js';
-import { addItem, removeItem, equipItem, unequipItem, bagLimit, gainExp, computeDerived, getDurabilityMax, getRepairCost } from './player.js';
+import { addItem, removeItem, equipItem, unequipItem, bagLimit, gainExp, computeDerived, getDurabilityMax, getRepairCost, getItemKey } from './player.js';
 import { CLASSES, expForLevel } from './constants.js';
 import { getRoom, getAliveMobs, spawnMobs } from './state.js';
 import { clamp } from './utils.js';
@@ -157,6 +157,10 @@ function isRedName(player) {
   return (player.flags?.pkValue || 0) >= 100;
 }
 
+function isSabakZone(zoneId) {
+  return typeof zoneId === 'string' && zoneId.startsWith('sb_');
+}
+
 function formatStats(player, partyApi) {
   const className = CLASSES[player.classId]?.name || player.classId;
   let partyInfo = '无';
@@ -212,6 +216,34 @@ function canShop(player) {
   return Boolean(shopForRoom(player.position.room));
 }
 
+function isSabakOwnerMember(player, guildApi) {
+  return Boolean(
+    player.guild && guildApi?.sabakState?.ownerGuildId && player.guild.id === guildApi.sabakState.ownerGuildId
+  );
+}
+
+function resolveInventoryItem(player, raw) {
+  if (!raw || !player || !player.inventory) return { slot: null, item: null, keyMatch: false };
+  const trimmed = raw.trim();
+  const byKey = player.inventory.find((slot) => getItemKey(slot) === trimmed);
+  if (byKey) {
+    return { slot: byKey, item: ITEM_TEMPLATES[byKey.id], keyMatch: true };
+  }
+  const byId = player.inventory.find((slot) => slot.id === trimmed);
+  if (byId) {
+    return { slot: byId, item: ITEM_TEMPLATES[byId.id], keyMatch: false };
+  }
+  const lower = trimmed.toLowerCase();
+  const byName = player.inventory.find((slot) => {
+    const tmpl = ITEM_TEMPLATES[slot.id];
+    return tmpl && tmpl.name.toLowerCase() === lower;
+  });
+  if (byName) {
+    return { slot: byName, item: ITEM_TEMPLATES[byName.id], keyMatch: false };
+  }
+  return { slot: null, item: null, keyMatch: false };
+}
+
 function getShopStock(player) {
   const shopId = shopForRoom(player.position.room);
   if (!shopId) return [];
@@ -254,16 +286,14 @@ function trainingCost(player, key) {
 export function summonStats(player, skill, summonLevelOverride = null) {
   const base = skill.summon;
   const skillLevel = getSkillLevel(player, skill.id);
-  const spirit = player.spirit ?? player.stats?.spirit ?? 0;
   const desiredLevel = summonLevelOverride ?? skillLevel ?? 1;
   const summonLevel = Math.max(1, Math.min(8, Math.floor(desiredLevel)));
   const level = summonLevel;
-  const spiritPart = spirit * 0.4;
-  const summonPart = summonLevel * 0.4;
-  const skillPart = skillLevel * 0.2;
-  const max_hp = Math.floor(base.baseHp + spiritPart * 2 + summonPart * 30 + skillPart * 40);
-  const atk = Math.floor(base.baseAtk + spiritPart * 0.2 + summonPart * 2 + skillPart * 3);
-  const def = Math.floor(base.baseDef + spiritPart * 0.2 + summonPart * 2 + skillPart * 2);
+  const increase = Math.min((level - 1) * 1.25, 10);
+  const multiplier = 1 + increase;
+  const max_hp = Math.floor(base.baseHp * multiplier);
+  const atk = Math.floor(base.baseAtk * multiplier);
+  const def = Math.floor(base.baseDef * multiplier);
   const dex = 8 + skillLevel;
   return {
     id: skill.id,
@@ -363,9 +393,23 @@ export async function handleCommand({ player, players, input, send, partyApi, gu
       const dest = room.exits[dir];
       if (dest.includes(':')) {
         const [zoneId, roomId] = dest.split(':');
+        const targetRoom = WORLD[zoneId]?.rooms?.[roomId];
+        if (targetRoom?.sabakOnly) {
+          if (!player.guild || !guildApi?.sabakState?.ownerGuildId || player.guild.id !== guildApi.sabakState.ownerGuildId) {
+            send('只有沙巴克城主行会成员可以进入该区域。');
+            return;
+          }
+        }
         player.position.zone = zoneId;
         player.position.room = roomId;
       } else {
+        const targetRoom = WORLD[player.position.zone]?.rooms?.[dest];
+        if (targetRoom?.sabakOnly) {
+          if (!player.guild || !guildApi?.sabakState?.ownerGuildId || player.guild.id !== guildApi.sabakState.ownerGuildId) {
+            send('只有沙巴克城主行会成员可以进入该区域。');
+            return;
+          }
+        }
         player.position.room = dest;
       }
       const zone = WORLD[player.position.zone];
@@ -430,9 +474,9 @@ export async function handleCommand({ player, players, input, send, partyApi, gu
     }
     case 'equip': {
       if (!args) return send('要装备哪件物品？');
-      const item = Object.values(ITEM_TEMPLATES).find((i) => i.name.toLowerCase() === args.toLowerCase() || i.id === args);
-      if (!item) return send('未找到物品。');
-      const res = equipItem(player, item.id);
+      const resolved = resolveInventoryItem(player, args);
+      if (!resolved.slot || !resolved.item) return send('背包里没有该物品。');
+      const res = equipItem(player, resolved.slot.id, resolved.slot.effects || null);
       send(res.msg);
       return;
     }
@@ -444,8 +488,9 @@ export async function handleCommand({ player, players, input, send, partyApi, gu
     }
     case 'use': {
       if (!args) return send('要使用什么？');
-      const item = Object.values(ITEM_TEMPLATES).find((i) => i.name.toLowerCase() === args.toLowerCase() || i.id === args);
-      if (!item) return send('未找到物品。');
+      const resolved = resolveInventoryItem(player, args);
+      if (!resolved.slot || !resolved.item) return send('背包里没有该物品。');
+      const item = resolved.item;
       if (item.type === 'book') {
         const mapping = BOOK_SKILLS[item.id];
         if (!mapping) return send('该技能书暂未开放。');
@@ -454,14 +499,14 @@ export async function handleCommand({ player, players, input, send, partyApi, gu
         if (!skill) return send('该技能暂未开放。');
         ensurePlayerSkills(player);
         if (hasSkill(player, skill.id)) return send('你已学会该技能。');
-        if (!removeItem(player, item.id, 1)) return send('背包里没有该物品。');
+        if (!removeItem(player, item.id, 1, resolved.slot.effects)) return send('背包里没有该物品。');
         player.skills.push(skill.id);
         send(`学会技能: ${skill.name}。`);
         return;
       }
-      if (!removeItem(player, item.id, 1)) return send('背包里没有该物品。');
+      if (!removeItem(player, item.id, 1, resolved.slot.effects)) return send('背包里没有该物品。');
       if (item.type !== 'consumable') {
-        addItem(player, item.id, 1);
+        addItem(player, item.id, 1, resolved.slot.effects);
         return send('该物品无法使用。');
       }
       if (item.teleport && !item.hp && !item.mp) {
@@ -511,6 +556,14 @@ export async function handleCommand({ player, players, input, send, partyApi, gu
             p.position.zone === player.position.zone && p.position.room === player.position.room
         );
         if (!pvpTarget) return send('未找到目标。');
+        if (
+          isSabakZone(player.position.zone) &&
+          player.guild &&
+          pvpTarget.guild &&
+          player.guild.id === pvpTarget.guild.id
+        ) {
+          return send('沙巴克内不能攻击同一行会成员。');
+        }
         player.combat = { targetId: pvpTarget.name, targetType: 'player', skillId: 'slash' };
         send(`你开始攻击 ${pvpTarget.name}。`);
         return;
@@ -526,6 +579,14 @@ export async function handleCommand({ player, players, input, send, partyApi, gu
           p.position.zone === player.position.zone && p.position.room === player.position.room
       );
       if (!pvpTarget) return send('未找到目标。');
+      if (
+        isSabakZone(player.position.zone) &&
+        player.guild &&
+        pvpTarget.guild &&
+        player.guild.id === pvpTarget.guild.id
+      ) {
+        return send('沙巴克内不能攻击同一行会成员。');
+      }
       player.combat = { targetId: pvpTarget.name, targetType: 'player', skillId: 'slash' };
       send(`你开始攻击 ${pvpTarget.name}。`);
       return;
@@ -773,8 +834,11 @@ export async function handleCommand({ player, players, input, send, partyApi, gu
       const stock = getShopStock(player);
       const item = stock.find((i) => i.name.toLowerCase() === name.toLowerCase() || i.id === name);
       if (!item) return send('这里不卖该物品。');
-      const totalPrice = item.price * qty;
-      if (player.gold < totalPrice) return send('金币不足。');
+        let totalPrice = item.price * qty;
+        if (isSabakOwnerMember(player, guildApi) && item.type === 'consumable' && (item.hp || item.mp)) {
+          totalPrice = Math.max(1, Math.floor(totalPrice * 0.8));
+        }
+        if (player.gold < totalPrice) return send('金币不足。');
       player.gold -= totalPrice;
       const unitQty = ['powder_green', 'powder_red'].includes(item.id) ? 100 : 1;
       const totalQty = unitQty * qty;
@@ -799,10 +863,11 @@ export async function handleCommand({ player, players, input, send, partyApi, gu
         qty = Math.max(1, Number(parts.pop()));
       }
       const name = parts.join(' ');
-      const item = Object.values(ITEM_TEMPLATES).find((i) => i.name.toLowerCase() === name.toLowerCase() || i.id === name);
-      if (!item) return send('未找到物品。');
+      const resolved = resolveInventoryItem(player, name);
+      if (!resolved.slot || !resolved.item) return send('背包里没有该物品。');
+      const item = resolved.item;
       if (item.type === 'currency') return send('金币无法出售。');
-      if (!removeItem(player, item.id, qty)) return send('背包里没有足够数量。');
+      if (!removeItem(player, item.id, qty, resolved.slot.effects)) return send('背包里没有足够数量。');
       const price = Math.max(1, Math.floor((item.price || 10) * 0.5));
       const total = price * qty;
       player.gold += total;
@@ -823,22 +888,20 @@ export async function handleCommand({ player, players, input, send, partyApi, gu
         if (!items.length) send('你没有寄售物品。');
         return;
       }
-      if (sub === 'sell') {
-        if (parts.length < 3) return send('格式: consign sell <物品> <数量> <单价>');
-        const price = Number(parts.pop());
-        const qty = Number(parts.pop());
-        const name = parts.join(' ');
-        if (!name || Number.isNaN(price) || Number.isNaN(qty)) {
-          return send('格式: consign sell <物品> <数量> <单价>');
+        if (sub === 'sell') {
+          if (parts.length < 3) return send('格式: consign sell <物品> <数量> <单价>');
+          const price = Number(parts.pop());
+          const qty = Number(parts.pop());
+          const name = parts.join(' ');
+          if (!name || Number.isNaN(price) || Number.isNaN(qty)) {
+            return send('格式: consign sell <物品> <数量> <单价>');
+          }
+          const resolved = resolveInventoryItem(player, name);
+          if (!resolved.slot || !resolved.item) return send('背包里没有该物品。');
+          const res = await consignApi.sell(player, resolved.slot.id, qty, price, resolved.slot.effects || null);
+          send(res.msg);
+          return;
         }
-        const item = Object.values(ITEM_TEMPLATES).find(
-          (i) => i.name.toLowerCase() === name.toLowerCase() || i.id === name
-        );
-        if (!item) return send('未找到物品。');
-        const res = await consignApi.sell(player, item.id, qty, price);
-        send(res.msg);
-        return;
-      }
       if (sub === 'buy') {
         if (parts.length < 1) return send('格式: consign buy <编号> [数量]');
         const id = Number(parts[0]);
@@ -872,7 +935,10 @@ export async function handleCommand({ player, players, input, send, partyApi, gu
             const maxDur = equipped.max_durability || getDurabilityMax(item);
             const cur = equipped.durability == null ? maxDur : equipped.durability;
             const missing = Math.max(0, maxDur - cur);
-            const cost = missing > 0 ? getRepairCost(item, missing, player) : 0;
+            let cost = missing > 0 ? getRepairCost(item, missing, player) : 0;
+            if (cost > 0 && isSabakOwnerMember(player, guildApi)) {
+              cost = Math.max(1, Math.floor(cost * 0.8));
+            }
             return `${slot}: ${item.name} (${cur}/${maxDur}) 费用 ${cost}`;
           })
           .filter(Boolean);
@@ -891,7 +957,10 @@ export async function handleCommand({ player, players, input, send, partyApi, gu
         const cur = equipped.durability == null ? maxDur : equipped.durability;
         const missing = Math.max(0, maxDur - cur);
         if (missing <= 0) return;
-        const cost = getRepairCost(item, missing, player);
+        let cost = getRepairCost(item, missing, player);
+        if (cost > 0 && isSabakOwnerMember(player, guildApi)) {
+          cost = Math.max(1, Math.floor(cost * 0.8));
+        }
         total += cost;
         targets.push({ slot, item, maxDur });
       });
@@ -1043,6 +1112,8 @@ export async function handleCommand({ player, players, input, send, partyApi, gu
         if (target.guild) return send('对方已有行会，请先退出行会再邀请。');
         const isLeader = await guildApi.isGuildLeader(player.guild.id, player.userId, player.name);
         if (!isLeader) return send('只有会长可以邀请。');
+        const members = await guildApi.listGuildMembers(player.guild.id);
+        if (members.length >= 5) return send('行会人数已满(5人)。');
         await guildApi.addGuildMember(player.guild.id, target.userId, target.name);
         target.guild = { id: player.guild.id, name: player.guild.name, role: 'member' };
         send(`${target.name} 已加入行会。`);
@@ -1146,6 +1217,12 @@ export async function handleCommand({ player, players, input, send, partyApi, gu
       if (!zoneId || !roomId || !WORLD[zoneId] || !WORLD[zoneId].rooms[roomId]) {
         return send('目标地点无效。');
       }
+      const targetRoom = WORLD[zoneId].rooms[roomId];
+      if (targetRoom?.sabakOnly) {
+        if (!player.guild || !guildApi?.sabakState?.ownerGuildId || player.guild.id !== guildApi.sabakState.ownerGuildId) {
+          return send('只有沙巴克城主行会成员可以进入该区域。');
+        }
+      }
       player.position.zone = zoneId;
       player.position.room = roomId;
       send(`你使用传送戒指前往 ${WORLD[zoneId].rooms[roomId].name}。`);
@@ -1228,15 +1305,19 @@ export async function handleCommand({ player, players, input, send, partyApi, gu
           offerParts.pop();
         }
         const itemName = offerParts.join(' ');
-        const itemLower = itemName.toLowerCase();
-        const item = Object.values(ITEM_TEMPLATES).find((i) => i.id.toLowerCase() === itemLower || i.name === itemName);
-        if (!item) return send('未找到物品。');
-        const res = tradeApi.addItem(player, item.id, qty);
+        const resolved = resolveInventoryItem(player, itemName);
+        if (!resolved.slot || !resolved.item) return send('背包里没有该物品。');
+        const res = tradeApi.addItem(player, resolved.slot.id, qty, resolved.slot.effects || null);
         if (!res.ok) return send(res.msg);
         const otherName = trade.a.name === player.name ? trade.b.name : trade.a.name;
         const other = players.find((p) => p.name === otherName);
-        send(`你放入: ${item.name} x${qty}`);
-        if (other) other.send(`${player.name} 放入: ${item.name} x${qty}`);
+        const tags = [];
+        if (resolved.slot.effects?.combo) tags.push('连击');
+        if (resolved.slot.effects?.fury) tags.push('狂攻');
+        if (resolved.slot.effects?.unbreakable) tags.push('不磨');
+        const label = tags.length ? `${resolved.item.name}·${tags.join('·')}` : resolved.item.name;
+        send(`你放入: ${label} x${qty}`);
+        if (other) other.send(`${player.name} 放入: ${label} x${qty}`);
         return;
       }
 

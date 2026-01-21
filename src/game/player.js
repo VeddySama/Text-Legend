@@ -13,6 +13,36 @@ function rarityByPrice(item) {
   return 'common';
 }
 
+function normalizeEffects(effects) {
+  if (!effects || typeof effects !== 'object') return null;
+  const normalized = {};
+  if (effects.combo) normalized.combo = true;
+  if (effects.fury) normalized.fury = true;
+  if (effects.unbreakable) normalized.unbreakable = true;
+  return Object.keys(normalized).length ? normalized : null;
+}
+
+function effectsKey(effects) {
+  if (!effects) return '';
+  const parts = [];
+  if (effects.combo) parts.push('combo');
+  if (effects.fury) parts.push('fury');
+  if (effects.unbreakable) parts.push('unbreakable');
+  return parts.join('+');
+}
+
+export function getItemKey(slot) {
+  if (!slot || !slot.id) return '';
+  const key = effectsKey(slot.effects);
+  return key ? `${slot.id}#${key}` : slot.id;
+}
+
+function sameEffects(a, b) {
+  const na = normalizeEffects(a);
+  const nb = normalizeEffects(b);
+  return effectsKey(na) === effectsKey(nb);
+}
+
 function ensureDurability(equipped) {
   if (!equipped || !equipped.id) return;
   const item = ITEM_TEMPLATES[equipped.id];
@@ -112,15 +142,28 @@ export function computeDerived(player) {
   const level = player.level;
   const bonus = Object.values(player.equipment)
     .filter((equipped) => equipped && equipped.id && (equipped.durability == null || equipped.durability > 0))
-    .map((equipped) => ITEM_TEMPLATES[equipped.id]);
+    .map((equipped) => ({
+      item: ITEM_TEMPLATES[equipped.id],
+      effects: equipped.effects || null
+    }))
+    .filter((entry) => entry.item);
 
   const stats = { ...base };
-  for (const item of bonus) {
-    stats.str += item.atk ? Math.floor(item.atk / 2) : 0;
-  stats.dex += item.dex || 0;
-    stats.int += item.mag ? Math.floor(item.mag / 2) : 0;
+  for (const entry of bonus) {
+    const item = entry.item;
+    let atk = item.atk || 0;
+    let mag = item.mag || 0;
+    let spirit = item.spirit || 0;
+    if (entry.effects?.fury && item.type === 'weapon') {
+      atk = Math.floor(atk * 1.25);
+      mag = Math.floor(mag * 1.25);
+      spirit = Math.floor(spirit * 1.25);
+    }
+    stats.str += atk ? Math.floor(atk / 2) : 0;
+    stats.dex += item.dex || 0;
+    stats.int += mag ? Math.floor(mag / 2) : 0;
     stats.con += item.def ? Math.floor(item.def / 2) : 0;
-    stats.spirit += item.spirit || 0;
+    stats.spirit += spirit || 0;
   }
   const training = player.flags.training;
   stats.spirit += training.spirit || 0;
@@ -160,13 +203,14 @@ export function bagLimit(player) {
   return maxBagSlots(player.level);
 }
 
-export function addItem(player, itemId, qty = 1) {
+export function addItem(player, itemId, qty = 1, effects = null) {
   if (!player.inventory) player.inventory = [];
-  const slot = player.inventory.find((i) => i.id === itemId);
+  const normalized = normalizeEffects(effects);
+  const slot = player.inventory.find((i) => i.id === itemId && sameEffects(i.effects, normalized));
   if (slot) {
     slot.qty += qty;
   } else {
-    player.inventory.push({ id: itemId, qty });
+    player.inventory.push({ id: itemId, qty, effects: normalized });
   }
 }
 
@@ -177,9 +221,11 @@ export function normalizeInventory(player) {
     const id = slot.id;
     const qty = Number(slot.qty || 0);
     if (qty <= 0) return;
-    const cur = merged.get(id) || { id, qty: 0 };
+    const effects = normalizeEffects(slot.effects);
+    const key = `${id}|${effectsKey(effects)}`;
+    const cur = merged.get(key) || { id, qty: 0, effects };
     cur.qty += qty;
-    merged.set(id, cur);
+    merged.set(key, cur);
   });
   player.inventory = Array.from(merged.values());
 }
@@ -215,8 +261,11 @@ function resolveEquipSlot(player, item) {
   return slot;
 }
 
-export function removeItem(player, itemId, qty = 1) {
-  const slot = player.inventory.find((i) => i.id === itemId);
+export function removeItem(player, itemId, qty = 1, effects = null) {
+  const normalized = normalizeEffects(effects);
+  const slot = normalized
+    ? player.inventory.find((i) => i.id === itemId && sameEffects(i.effects, normalized))
+    : player.inventory.find((i) => i.id === itemId);
   if (!slot) return false;
   if (slot.qty < qty) return false;
   slot.qty -= qty;
@@ -226,21 +275,23 @@ export function removeItem(player, itemId, qty = 1) {
   return true;
 }
 
-export function equipItem(player, itemId) {
+export function equipItem(player, itemId, effects = null) {
   const item = ITEM_TEMPLATES[itemId];
   if (!item || !item.slot) return { ok: false, msg: '\u8BE5\u7269\u54C1\u65E0\u6CD5\u88C5\u5907\u3002' };
-  const has = player.inventory.find((i) => i.id === itemId);
+  const has = effects
+    ? player.inventory.find((i) => i.id === itemId && sameEffects(i.effects, effects))
+    : player.inventory.find((i) => i.id === itemId);
   if (!has) return { ok: false, msg: '\u80CC\u5305\u91CC\u6CA1\u6709\u8BE5\u7269\u54C1\u3002' };
 
   normalizeEquipment(player);
   const slot = resolveEquipSlot(player, item);
   if (player.equipment[slot]) {
-    addItem(player, player.equipment[slot].id, 1);
+    addItem(player, player.equipment[slot].id, 1, player.equipment[slot].effects);
   }
 
   const maxDur = 100;
-  player.equipment[slot] = { id: itemId, durability: maxDur, max_durability: maxDur };
-  removeItem(player, itemId, 1);
+  player.equipment[slot] = { id: itemId, durability: maxDur, max_durability: maxDur, effects: has.effects || null };
+  removeItem(player, itemId, 1, has.effects);
   computeDerived(player);
   return { ok: true, msg: `\u5DF2\u88C5\u5907${item.name}\u3002` };
 }
@@ -255,7 +306,7 @@ export function unequipItem(player, slot) {
   }
   const current = player.equipment[slot];
   if (!current) return { ok: false, msg: '\u8BE5\u90E8\u4F4D\u6CA1\u6709\u88C5\u5907\u3002' };
-  addItem(player, current.id, 1);
+  addItem(player, current.id, 1, current.effects);
   player.equipment[slot] = null;
   computeDerived(player);
   return { ok: true, msg: `\u5DF2\u5378\u4E0B${ITEM_TEMPLATES[current.id].name}\u3002` };

@@ -789,6 +789,32 @@ button:hover {
   line-height: 1.2;
 }
 
+.bag-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.bag-tab {
+  border-radius: 999px;
+  border: 1px solid rgba(118, 70, 22, 0.25);
+  background: #f7e2c6;
+  padding: 6px 12px;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.bag-tab.active {
+  background: #b65a1a;
+  color: #fff;
+  border-color: #b65a1a;
+}
+
+#stats-summary {
+  white-space: pre-line;
+}
+
 .bag-item:hover {
   filter: brightness(1.03);
 }
@@ -911,6 +937,18 @@ button:hover {
 .chip.small {
   font-size: 0.75rem;
   padding: 4px 8px;
+}
+
+.chip.player-friendly {
+  border-color: rgba(58, 134, 213, 0.55);
+  color: #2f6aa6;
+  background: #eef5ff;
+}
+
+.chip.player-enemy {
+  border-color: rgba(210, 92, 92, 0.55);
+  color: #b63c3c;
+  background: #fff0f0;
 }
 
 .item-tooltip {

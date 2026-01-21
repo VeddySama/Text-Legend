@@ -4,6 +4,9 @@ let activeChar = null;
 const classNames = { warrior: '战士', mage: '法师', taoist: '道士' };
 let selectedMob = null;
 let lastState = null;
+let serverTimeBase = null;
+let serverTimeLocal = null;
+let serverTimeTimer = null;
 const directionLabels = {
   north: '北',
   south: '南',
@@ -24,6 +27,7 @@ const ui = {
   vip: document.getElementById('ui-vip'),
   sabakBonus: document.getElementById('ui-sabak-bonus'),
   online: document.getElementById('ui-online'),
+  serverTime: document.getElementById('ui-server-time'),
   party: document.getElementById('ui-party'),
   gold: document.getElementById('ui-gold'),
   hpValue: document.getElementById('ui-hp'),
@@ -110,14 +114,22 @@ const consignUi = {
   inventoryPage: document.getElementById('consign-inventory-page'),
   close: document.getElementById('consign-close')
 };
-const bagUi = {
-  modal: document.getElementById('bag-modal'),
-  list: document.getElementById('bag-list'),
-  page: document.getElementById('bag-page'),
-  prev: document.getElementById('bag-prev'),
-  next: document.getElementById('bag-next'),
-  close: document.getElementById('bag-close')
-};
+  const bagUi = {
+    modal: document.getElementById('bag-modal'),
+    list: document.getElementById('bag-list'),
+    page: document.getElementById('bag-page'),
+    prev: document.getElementById('bag-prev'),
+    next: document.getElementById('bag-next'),
+    tabs: Array.from(document.querySelectorAll('.bag-tab')),
+    close: document.getElementById('bag-close')
+  };
+  const statsUi = {
+    modal: document.getElementById('stats-modal'),
+    summary: document.getElementById('stats-summary'),
+    equipment: document.getElementById('stats-equipment'),
+    inventory: document.getElementById('stats-inventory'),
+    close: document.getElementById('stats-close')
+  };
 const afkUi = {
   modal: document.getElementById('afk-modal'),
   list: document.getElementById('afk-skill-list'),
@@ -143,9 +155,10 @@ let consignMyPage = 0;
 let consignInventoryPage = 0;
 let consignMarketFilter = 'all';
 const CONSIGN_PAGE_SIZE = 9;
-let bagItems = [];
-let bagPage = 0;
-const BAG_PAGE_SIZE = 40;
+  let bagItems = [];
+  let bagPage = 0;
+  let bagFilter = 'all';
+  const BAG_PAGE_SIZE = 40;
 
 const authSection = document.getElementById('auth');
 const characterSection = document.getElementById('character');
@@ -175,6 +188,23 @@ function show(section) {
   gameSection.classList.add('hidden');
   section.classList.remove('hidden');
   hideItemTooltip();
+}
+
+function exitGame() {
+  if (serverTimeTimer) {
+    clearInterval(serverTimeTimer);
+    serverTimeTimer = null;
+  }
+  serverTimeBase = null;
+  serverTimeLocal = null;
+  if (socket) {
+    socket.disconnect();
+    socket = null;
+  }
+  activeChar = null;
+  lastState = null;
+  localStorage.removeItem('savedToken');
+  show(authSection);
 }
 
 function updateSavedCharacters(player) {
@@ -247,6 +277,17 @@ function appendLine(payload) {
   const p = buildLine(payload);
   log.appendChild(p);
   log.scrollTop = log.scrollHeight;
+}
+
+function formatServerTime(ms) {
+  if (!ms) return '-';
+  return new Date(ms).toLocaleString('zh-CN', { hour12: false });
+}
+
+function updateServerTimeDisplay() {
+  if (!ui.serverTime || serverTimeBase == null || serverTimeLocal == null) return;
+  const delta = Date.now() - serverTimeLocal;
+  ui.serverTime.textContent = formatServerTime(serverTimeBase + delta);
 }
 
 function appendChatLine(payload) {
@@ -412,14 +453,15 @@ function showShopModal(items) {
     empty.textContent = '\u5546\u5E97\u65E0\u5546\u54C1';
     shopUi.list.appendChild(empty);
   } else {
-    items.forEach((item) => {
-      const card = document.createElement('div');
-      card.className = 'shop-item';
-      card.textContent = `${item.name} (${item.price}\u91D1)`;
-      card.addEventListener('click', async () => {
-        const qtyText = await promptModal({
-          title: '\u6279\u91cf\u8d2d\u4e70',
-          text: `\u8bf7\u8f93\u5165\u8d2d\u4e70\u6570\u91cf: ${item.name}`,
+      items.forEach((item) => {
+        const card = document.createElement('div');
+        card.className = 'shop-item';
+        const displayPrice = shopDisplayPrice(item);
+        card.textContent = `${item.name} (${displayPrice}\u91D1)`;
+        card.addEventListener('click', async () => {
+          const qtyText = await promptModal({
+            title: '\u6279\u91cf\u8d2d\u4e70',
+            text: `\u8bf7\u8f93\u5165\u8d2d\u4e70\u6570\u91cf: ${item.name}`,
           placeholder: '1',
           value: '1'
         });
@@ -461,7 +503,7 @@ function renderConsignMarket(items) {
     slice.forEach((entry) => {
     const btn = document.createElement('div');
     btn.className = 'consign-item';
-    btn.innerHTML = `${entry.item.name} x${entry.qty} (${entry.price}\u91D1)<small>${entry.seller}</small>`;
+      btn.innerHTML = `${formatItemName(entry.item)} x${entry.qty} (${entry.price}\u91D1)<small>${entry.seller}</small>`;
     const tooltip = formatItemTooltip(entry.item);
     if (tooltip) {
       btn.addEventListener('mouseenter', (evt) => showItemTooltip(tooltip, evt));
@@ -472,12 +514,12 @@ function renderConsignMarket(items) {
       if (!socket) return;
       let qty = 1;
       if (entry.qty > 1) {
-        const qtyText = await promptModal({
-          title: '\u8D2D\u4E70\u5BC4\u552E',
-          text: `\u8BF7\u8F93\u5165\u8D2D\u4E70\u6570\u91CF: ${entry.item.name}`,
-          placeholder: '1',
-          value: '1'
-        });
+          const qtyText = await promptModal({
+            title: '\u8D2D\u4E70\u5BC4\u552E',
+            text: `\u8BF7\u8F93\u5165\u8D2D\u4E70\u6570\u91CF: ${formatItemName(entry.item)}`,
+            placeholder: '1',
+            value: '1'
+          });
         if (!qtyText) return;
         qty = Math.max(1, Number(qtyText || 1));
         if (Number.isNaN(qty) || qty <= 0) return;
@@ -509,7 +551,7 @@ function renderConsignMine(items) {
   slice.forEach((entry) => {
     const btn = document.createElement('div');
     btn.className = 'consign-item';
-    btn.innerHTML = `${entry.item.name} x${entry.qty} (${entry.price}\u91D1)<small>\u7F16\u53F7 ${entry.id}</small>`;
+      btn.innerHTML = `${formatItemName(entry.item)} x${entry.qty} (${entry.price}\u91D1)<small>\u7F16\u53F7 ${entry.id}</small>`;
     const tooltip = formatItemTooltip(entry.item);
     if (tooltip) {
       btn.addEventListener('mouseenter', (evt) => showItemTooltip(tooltip, evt));
@@ -548,7 +590,7 @@ function renderConsignInventory(items) {
   slice.forEach((item) => {
     const btn = document.createElement('div');
     btn.className = 'consign-item';
-    btn.textContent = `${item.name} x${item.qty}`;
+      btn.textContent = `${formatItemName(item)} x${item.qty}`;
     const tooltip = formatItemTooltip(item);
     if (tooltip) {
       btn.addEventListener('mouseenter', (evt) => showItemTooltip(tooltip, evt));
@@ -559,26 +601,27 @@ function renderConsignInventory(items) {
       if (!socket) return;
       let qty = 1;
       if (item.qty > 1) {
-        const qtyText = await promptModal({
-          title: '\u5BC4\u552E\u6570\u91CF',
-          text: `\u8BF7\u8F93\u5165\u5BC4\u552E\u6570\u91CF: ${item.name}`,
-          placeholder: '1',
-          value: '1'
-        });
+          const qtyText = await promptModal({
+            title: '\u5BC4\u552E\u6570\u91CF',
+            text: `\u8BF7\u8F93\u5165\u5BC4\u552E\u6570\u91CF: ${formatItemName(item)}`,
+            placeholder: '1',
+            value: '1'
+          });
         if (!qtyText) return;
         qty = Math.max(1, Number(qtyText || 1));
         if (Number.isNaN(qty) || qty <= 0) return;
       }
-      const priceText = await promptModal({
-        title: '\u5BC4\u552E\u4EF7\u683C',
-        text: `\u8BF7\u8F93\u5165\u5355\u4EF7: ${item.name}`,
-        placeholder: '1000',
-        value: '1000'
-      });
+        const priceText = await promptModal({
+          title: '\u5BC4\u552E\u4EF7\u683C',
+          text: `\u8BF7\u8F93\u5165\u5355\u4EF7: ${formatItemName(item)}`,
+          placeholder: '1000',
+          value: '1000'
+        });
       if (!priceText) return;
       const price = Math.max(1, Number(priceText || 0));
       if (Number.isNaN(price) || price <= 0) return;
-      socket.emit('cmd', { text: `consign sell ${item.id} ${qty} ${price}` });
+        const key = item.key || item.id;
+        socket.emit('cmd', { text: `consign sell ${key} ${qty} ${price}` });
       socket.emit('cmd', { text: 'consign my' });
       socket.emit('cmd', { text: 'consign list' });
     });
@@ -645,7 +688,7 @@ function renderRepairList(equipment) {
     const cost = calcRepairCost(entry.item, missing);
     const btn = document.createElement('div');
     btn.className = 'repair-item';
-    btn.innerHTML = `${entry.item.name}<br>${entry.durability}/${entry.max_durability} (${cost}\u91D1)`;
+      btn.innerHTML = `${formatItemName(entry.item)}<br>${entry.durability}/${entry.max_durability} (${cost}\u91D1)`;
     const tooltip = formatItemTooltip(entry.item);
     if (tooltip) {
       btn.addEventListener('mouseenter', (evt) => showItemTooltip(tooltip, evt));
@@ -726,20 +769,21 @@ function renderShopSellList(items) {
     if (item.type === 'currency') return;
     const btn = document.createElement('div');
     btn.className = 'shop-sell-item';
-    btn.textContent = `${item.name} x${item.qty}`;
-    btn.addEventListener('click', async () => {
-      const qtyText = await promptModal({
-        title: '\u51fa\u552e\u7269\u54c1',
-        text: `\u8bf7\u8f93\u5165\u51fa\u552e\u6570\u91cf: ${item.name}`,
-        placeholder: '1',
-        value: '1'
+      btn.textContent = `${formatItemName(item)} x${item.qty}`;
+      btn.addEventListener('click', async () => {
+        const qtyText = await promptModal({
+          title: '\u51fa\u552e\u7269\u54c1',
+          text: `\u8bf7\u8f93\u5165\u51fa\u552e\u6570\u91cf: ${formatItemName(item)}`,
+          placeholder: '1',
+          value: '1'
+        });
+        if (!qtyText) return;
+        const qty = Math.max(1, Number(qtyText || 1));
+        if (Number.isNaN(qty) || qty <= 0) return;
+        if (!socket) return;
+        const key = item.key || item.id;
+        socket.emit('cmd', { text: `sell ${key} ${qty}` });
       });
-      if (!qtyText) return;
-      const qty = Math.max(1, Number(qtyText || 1));
-      if (Number.isNaN(qty) || qty <= 0) return;
-      if (!socket) return;
-      socket.emit('cmd', { text: `sell ${item.id} ${qty}` });
-    });
     shopUi.sellList.appendChild(btn);
   });
 }
@@ -852,14 +896,15 @@ function hideItemTooltip() {
 
 function handleItemAction(item) {
   if (!item || !socket) return;
+  const itemKey = item.key || item.id;
   if (item.type === 'consumable' || item.type === 'book') {
-    socket.emit('cmd', { text: `use ${item.id}` });
+    socket.emit('cmd', { text: `use ${itemKey}` });
   } else if (item.slot) {
-    socket.emit('cmd', { text: `equip ${item.id}` });
+    socket.emit('cmd', { text: `equip ${itemKey}` });
   }
 }
 
-function renderChips(container, items, onClick, activeId) {
+  function renderChips(container, items, onClick, activeId) {
   container.innerHTML = '';
   items.forEach((item) => {
     const btn = document.createElement('div');
@@ -876,27 +921,48 @@ function renderChips(container, items, onClick, activeId) {
     btn.addEventListener('click', () => onClick(item));
     container.appendChild(btn);
   });
-  if (container === ui.items) {
-    container.onclick = (evt) => {
-      if (!evt.target || evt.target !== container) return;
-      if (bagItems.length > BAG_PAGE_SIZE) {
-        renderBagModal();
-      }
-    };
+    if (container === ui.items) {
+      container.onclick = (evt) => {
+        if (!evt.target || evt.target !== container) return;
+        if (bagItems.length > BAG_PAGE_SIZE) {
+          showBagModal();
+        }
+      };
+    }
   }
-}
 
-function renderBagModal() {
-  if (!bagUi.modal || !bagUi.list) return;
-  bagUi.list.innerHTML = '';
-  const totalPages = Math.max(1, Math.ceil(bagItems.length / BAG_PAGE_SIZE));
-  bagPage = Math.min(Math.max(0, bagPage), totalPages - 1);
-  const start = bagPage * BAG_PAGE_SIZE;
-  const pageItems = bagItems.slice(start, start + BAG_PAGE_SIZE);
-  pageItems.forEach((item) => {
-    const btn = document.createElement('div');
-    btn.className = 'bag-item';
-    btn.textContent = `${item.name} x${item.qty}`;
+  function filterBagItems(items, filter) {
+    if (!filter || filter === 'all') return items;
+    if (filter === 'consumable') {
+      return items.filter((i) => i.type === 'consumable' && (i.hp || i.mp));
+    }
+    return items.filter((i) => i.type === filter);
+  }
+
+  function showBagModal() {
+    hideItemTooltip();
+    bagFilter = 'all';
+    bagPage = 0;
+    if (bagUi.tabs && bagUi.tabs.length) {
+      bagUi.tabs.forEach((btn) => {
+        btn.classList.toggle('active', btn.dataset.filter === bagFilter);
+      });
+    }
+    renderBagModal();
+  }
+
+  function renderBagModal() {
+    if (!bagUi.modal || !bagUi.list) return;
+    bagUi.list.innerHTML = '';
+    const filtered = filterBagItems(bagItems, bagFilter);
+    const totalPages = Math.max(1, Math.ceil(filtered.length / BAG_PAGE_SIZE));
+    bagPage = Math.min(Math.max(0, bagPage), totalPages - 1);
+    const start = bagPage * BAG_PAGE_SIZE;
+    const pageItems = filtered.slice(start, start + BAG_PAGE_SIZE);
+    pageItems.forEach((item) => {
+      const btn = document.createElement('div');
+      btn.className = 'bag-item';
+      btn.textContent = `${formatItemName(item)} x${item.qty}`;
     if (item.tooltip) {
       btn.addEventListener('mouseenter', (evt) => showItemTooltip(item.tooltip, evt));
       btn.addEventListener('mousemove', (evt) => positionTooltip(evt.clientX, evt.clientY));
@@ -905,11 +971,99 @@ function renderBagModal() {
     btn.addEventListener('click', () => handleItemAction(item));
     bagUi.list.appendChild(btn);
   });
-  if (bagUi.page) bagUi.page.textContent = `第 ${bagPage + 1}/${totalPages} 页`;
-  if (bagUi.prev) bagUi.prev.disabled = bagPage === 0;
-  if (bagUi.next) bagUi.next.disabled = bagPage >= totalPages - 1;
-  bagUi.modal.classList.remove('hidden');
-}
+    if (bagUi.page) bagUi.page.textContent = `第 ${bagPage + 1}/${totalPages} 页`;
+    if (bagUi.prev) bagUi.prev.disabled = bagPage === 0;
+    if (bagUi.next) bagUi.next.disabled = bagPage >= totalPages - 1;
+    bagUi.modal.classList.remove('hidden');
+  }
+
+  function renderStatsModal() {
+    if (!statsUi.modal || !lastState) return;
+    const stats = lastState.stats || {};
+    const summaryLines = [
+      `${lastState.player?.name || ''} Lv${lastState.player?.level || 0}`,
+      `生命: ${stats.hp || 0}/${stats.max_hp || 0}  魔法: ${stats.mp || 0}/${stats.max_mp || 0}`,
+      `攻击: ${stats.atk || 0}  防御: ${stats.def || 0}  魔法: ${stats.mag || 0}`,
+      `道术: ${stats.spirit || 0}  魔御: ${stats.mdef || 0}  金币: ${stats.gold || 0}`,
+      `PK值: ${stats.pk || 0}  VIP: ${stats.vip ? '是' : '否'}  沙巴克加成: ${stats.sabak_bonus ? '已生效' : '无'}`
+    ];
+    if (statsUi.summary) statsUi.summary.textContent = summaryLines.join('\n');
+
+    if (statsUi.equipment) {
+      statsUi.equipment.innerHTML = '';
+      const slotLabels = {
+        weapon: '武器',
+        chest: '衣服',
+        head: '头盔',
+        waist: '腰带',
+        feet: '靴子',
+        ring_left: '戒指(左)',
+        ring_right: '戒指(右)',
+        bracelet_left: '手镯(左)',
+        bracelet_right: '手镯(右)',
+        neck: '项链'
+      };
+      const equipment = (lastState.equipment || []).slice();
+      if (!equipment.length) {
+        const empty = document.createElement('div');
+        empty.textContent = '暂无装备';
+        statsUi.equipment.appendChild(empty);
+      } else {
+        equipment.forEach((entry) => {
+          const btn = document.createElement('div');
+          btn.className = 'bag-item';
+          const slotLabel = slotLabels[entry.slot] || entry.slot;
+          btn.textContent = `${slotLabel}: ${formatItemName(entry.item)}`;
+          const tooltip = formatItemTooltip(entry.item);
+          if (tooltip) {
+            btn.addEventListener('mouseenter', (evt) => showItemTooltip(tooltip, evt));
+            btn.addEventListener('mousemove', (evt) => positionTooltip(evt.clientX, evt.clientY));
+            btn.addEventListener('mouseleave', hideItemTooltip);
+          }
+          btn.addEventListener('click', () => {
+            if (!socket) return;
+            socket.emit('cmd', { text: `unequip ${entry.slot}` });
+          });
+          statsUi.equipment.appendChild(btn);
+        });
+      }
+    }
+
+    if (statsUi.inventory) {
+      statsUi.inventory.innerHTML = '';
+      const equipables = (bagItems || []).filter((item) => item && item.slot);
+      if (!equipables.length) {
+        const empty = document.createElement('div');
+        empty.textContent = '背包暂无可装备物品';
+        statsUi.inventory.appendChild(empty);
+      } else {
+        equipables.forEach((item) => {
+          const btn = document.createElement('div');
+          btn.className = 'bag-item';
+          btn.textContent = `${formatItemName(item)} x${item.qty}`;
+          const tooltip = formatItemTooltip(item);
+          if (tooltip) {
+            btn.addEventListener('mouseenter', (evt) => showItemTooltip(tooltip, evt));
+            btn.addEventListener('mousemove', (evt) => positionTooltip(evt.clientX, evt.clientY));
+            btn.addEventListener('mouseleave', hideItemTooltip);
+          }
+          btn.addEventListener('click', () => {
+            if (!socket) return;
+            const key = item.key || item.id;
+            socket.emit('cmd', { text: `equip ${key}` });
+          });
+          statsUi.inventory.appendChild(btn);
+        });
+      }
+    }
+
+    statsUi.modal.classList.remove('hidden');
+  }
+
+  function showStatsModal() {
+    hideItemTooltip();
+    renderStatsModal();
+  }
 
 const ITEM_TYPE_LABELS = {
   consumable: '\u6d88\u8017\u54c1',
@@ -929,31 +1083,39 @@ const RARITY_LABELS = {
   common: '\u666e\u901a'
 };
 
-function repairMultiplier(rarity) {
-  switch (rarity) {
-    case 'legendary':
-      return 1.7;
-    case 'epic':
-      return 1.45;
-    case 'rare':
-      return 1.25;
-    case 'uncommon':
-      return 1.1;
-    default:
-      return 1.0;
+  function repairMultiplier(rarity) {
+    switch (rarity) {
+      case 'legendary':
+        return 5.0;
+      case 'epic':
+        return 4.2;
+      case 'rare':
+        return 3.4;
+      case 'uncommon':
+        return 2.6;
+      default:
+        return 2.0;
+    }
   }
-}
-
-function repairBase(type) {
-  if (type === 'weapon') return 12;
-  if (type === 'armor') return 10;
-  return 8;
-}
-
-function calcRepairCost(item, missing) {
-  if (!item || missing <= 0) return 0;
-  return Math.max(1, Math.floor(repairBase(item.type) * repairMultiplier(item.rarity) * missing));
-}
+  
+  function repairBase(type) {
+    if (type === 'weapon') return 200;
+    if (type === 'armor') return 180;
+    return 160;
+  }
+  
+  function calcRepairCost(item, missing) {
+    if (!item || missing <= 0) return 0;
+    let cost = Math.max(1, Math.floor(repairBase(item.type) * repairMultiplier(item.rarity) * missing));
+    cost = Math.min(50000, cost);
+    if (lastState && lastState.stats && lastState.stats.sabak_bonus) {
+      cost = Math.max(1, Math.floor(cost * 0.8));
+    }
+    if (lastState && lastState.stats && lastState.stats.vip) {
+      cost = Math.max(1, Math.floor(cost * 0.5));
+    }
+    return cost;
+  }
 const ITEM_SLOT_LABELS = {
   weapon: '\u6b66\u5668',
   chest: '\u8863\u670d',
@@ -989,6 +1151,15 @@ function formatItemTooltip(item) {
   if (item.rarity) {
     lines.push(`\u7a00\u6709\u5ea6: ${RARITY_LABELS[item.rarity] || item.rarity}`);
   }
+  if (item.effects && item.effects.combo) {
+    lines.push('\u7279\u6548: \u8fde\u51fb(10%\u53cc\u51fb)');
+  }
+  if (item.effects && item.effects.fury) {
+    lines.push('\u7279\u6548: \u7834\u8840\u72C2\u653B(\u6B66\u5668\u5C5E\u6027+25%)');
+  }
+  if (item.effects && item.effects.unbreakable) {
+    lines.push('\u7279\u6548: \u6c38\u4e0d\u78e8\u635f(\u8010\u4e45\u4e0d\u4f1a\u964d\u4f4e)');
+  }
   const typeLabel = ITEM_TYPE_LABELS[item.type] || ITEM_TYPE_LABELS.unknown;
   lines.push(`\u7c7b\u578b: ${typeLabel}`);
   if (item.slot) {
@@ -1010,6 +1181,28 @@ function formatItemTooltip(item) {
     lines.push(`\u4ef7\u683c: ${item.price}\u91d1`);
   }
   return lines.filter(Boolean).join('\n');
+}
+
+function formatItemName(item) {
+  if (!item) return '';
+  const tags = [];
+  if (item.effects && item.effects.combo) tags.push('\u8fde\u51fb');
+  if (item.effects && item.effects.fury) tags.push('\u72C2\u653B');
+  if (item.effects && item.effects.unbreakable) tags.push('\u4e0d\u78e8');
+  return tags.length ? `${item.name}\u00b7${tags.join('\u00b7')}` : item.name;
+}
+
+function isPotionName(name) {
+  if (!name) return false;
+  return /药|雪霜|太阳水/.test(name);
+}
+
+function shopDisplayPrice(item) {
+  let price = item.price || 0;
+  if (lastState?.stats?.sabak_bonus && isPotionName(item.name)) {
+    price = Math.max(1, Math.floor(price * 0.8));
+  }
+  return price;
 }
 
 function renderState(state) {
@@ -1045,6 +1238,14 @@ function renderState(state) {
     }
     if (ui.online) {
       ui.online.textContent = state.online ? String(state.online.count || 0) : '0';
+    }
+    if (state.server_time) {
+      serverTimeBase = state.server_time;
+      serverTimeLocal = Date.now();
+      updateServerTimeDisplay();
+      if (!serverTimeTimer) {
+        serverTimeTimer = setInterval(updateServerTimeDisplay, 1000);
+      }
     }
     if (ui.party) {
       if (state.party && Array.isArray(state.party.members) && state.party.members.length) {
@@ -1093,7 +1294,12 @@ function renderState(state) {
     .map((p) => ({
       id: p.name,
       label: `${p.name} Lv${p.level} ${classNames[p.classId] || p.classId}`,
-      raw: p
+      raw: p,
+      className: (state.sabak && state.sabak.inZone)
+        ? (state.player && state.player.guildId && p.guildId === state.player.guildId
+          ? 'player-friendly'
+          : 'player-enemy')
+        : ''
     }));
   renderChips(ui.players, players, (p) => showPlayerModal(p.raw));
 
@@ -1132,24 +1338,27 @@ function renderState(state) {
     }
   }
 
-  const itemTotals = {};
-  (state.items || []).forEach((i) => {
-    if (!itemTotals[i.id]) {
-      itemTotals[i.id] = { ...i, qty: 0 };
-    }
-    itemTotals[i.id].qty += i.qty;
-  });
-  const items = Object.values(itemTotals).map((i) => ({
-    id: i.id,
-    label: `${i.name} x${i.qty}`,
-    raw: i,
-    tooltip: formatItemTooltip(i),
-    className: `${i.rarity ? `rarity-${i.rarity}` : ''}${i.is_set ? ' item-set' : ''}`.trim()
-  }));
-  bagItems = items.map((i) => ({ ...i.raw, tooltip: i.tooltip }));
-  const inlineItems = items.length > BAG_PAGE_SIZE
-    ? items.slice(0, BAG_PAGE_SIZE).concat([{ id: 'bag-more', label: '更多...', raw: null }])
-    : items;
+    const itemTotals = {};
+    (state.items || []).forEach((i) => {
+      const key = i.key || i.id;
+      if (!itemTotals[key]) {
+        itemTotals[key] = { ...i, qty: 0, key };
+      }
+      itemTotals[key].qty += i.qty;
+    });
+    const allItems = Object.values(itemTotals);
+    const displayItems = allItems.filter((i) => i.type === 'consumable' && (i.hp || i.mp));
+    const displayChips = displayItems.map((i) => ({
+      id: i.key || i.id,
+      label: `${formatItemName(i)} x${i.qty}`,
+      raw: i,
+      tooltip: formatItemTooltip(i),
+      className: `${i.rarity ? `rarity-${i.rarity}` : ''}${i.is_set ? ' item-set' : ''}`.trim()
+    }));
+  bagItems = allItems.map((i) => ({ ...i, tooltip: formatItemTooltip(i) }));
+  const inlineItems = displayChips.length > BAG_PAGE_SIZE
+    ? displayChips.slice(0, BAG_PAGE_SIZE).concat([{ id: 'bag-more', label: '更多...', raw: null }])
+    : displayChips;
   renderChips(ui.items, inlineItems, (i) => {
     if (i.id === 'bag-more') {
       renderBagModal();
@@ -1165,6 +1374,9 @@ function renderState(state) {
   }
   if (repairUi.modal && !repairUi.modal.classList.contains('hidden')) {
     renderRepairList(state.equipment || []);
+  }
+  if (statsUi.modal && !statsUi.modal.classList.contains('hidden')) {
+    renderStatsModal();
   }
 
   if (ui.training) {
@@ -1185,16 +1397,16 @@ function renderState(state) {
   }
   if (tradeUi.itemSelect) {
     tradeUi.itemSelect.innerHTML = '';
-    if (!items.length) {
+    if (!allItems.length) {
       const opt = document.createElement('option');
       opt.value = '';
       opt.textContent = '\u65e0\u53ef\u7528\u7269\u54c1';
       tradeUi.itemSelect.appendChild(opt);
     } else {
-      items.forEach((entry) => {
+      allItems.forEach((entry) => {
         const opt = document.createElement('option');
-        opt.value = entry.raw.id;
-        opt.textContent = entry.label;
+        opt.value = entry.key || entry.id;
+        opt.textContent = `${formatItemName(entry)} x${entry.qty}`;
         tradeUi.itemSelect.appendChild(opt);
       });
     }
@@ -1211,13 +1423,22 @@ function renderState(state) {
     { id: 'shop', label: '\u5546\u5e97' },
     { id: 'repair', label: '\u4FEE\u7406' },
     { id: 'consign', label: '\u5BC4\u552E' },
-    { id: 'vip activate', label: 'VIP\u6fc0\u6d3b' }
+    { id: 'vip activate', label: 'VIP\u6fc0\u6d3b' },
+    { id: 'logout', label: '\u9000\u51fa\u6e38\u620f' }
   ];
   if (state.stats && state.stats.vip) {
     const afkLabel = state.stats.autoSkillId ? '\u505c\u6b62\u6302\u673a' : '\u6302\u673a';
     actions.push({ id: 'afk', label: afkLabel });
   }
   renderChips(ui.actions, actions, async (a) => {
+    if (a.id === 'stats') {
+      showStatsModal();
+      return;
+    }
+    if (a.id === 'bag') {
+      showBagModal();
+      return;
+    }
     if (a.id === 'vip activate') {
       const code = await promptModal({
         title: 'VIP\u6fc0\u6d3b',
@@ -1226,6 +1447,10 @@ function renderState(state) {
       });
       if (!code) return;
       socket.emit('cmd', { text: `vip activate ${code.trim()}` });
+      return;
+    }
+    if (a.id === 'logout') {
+      exitGame();
       return;
     }
     if (a.id === 'train') {
@@ -1664,35 +1889,52 @@ if (consignUi.inventoryPrev) {
     renderConsignInventory(consignInventoryItems);
   });
 }
-if (consignUi.inventoryNext) {
-  consignUi.inventoryNext.addEventListener('click', () => {
-    consignInventoryPage += 1;
-    renderConsignInventory(consignInventoryItems);
-  });
+  if (consignUi.inventoryNext) {
+    consignUi.inventoryNext.addEventListener('click', () => {
+      consignInventoryPage += 1;
+      renderConsignInventory(consignInventoryItems);
+    });
+  }
+  if (bagUi.tabs && bagUi.tabs.length) {
+    bagUi.tabs.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const filter = btn.dataset.filter || 'all';
+        bagFilter = filter;
+        bagPage = 0;
+        bagUi.tabs.forEach((b) => b.classList.toggle('active', b === btn));
+        renderBagModal();
+      });
+    });
+  }
+  if (bagUi.prev) {
+    bagUi.prev.addEventListener('click', () => {
+      if (bagPage > 0) {
+        bagPage -= 1;
+        renderBagModal();
+      }
+    });
+  }
+  if (bagUi.next) {
+    bagUi.next.addEventListener('click', () => {
+      const totalPages = Math.max(1, Math.ceil(filterBagItems(bagItems, bagFilter).length / BAG_PAGE_SIZE));
+      if (bagPage < totalPages - 1) {
+        bagPage += 1;
+        renderBagModal();
+      }
+    });
 }
-if (bagUi.prev) {
-  bagUi.prev.addEventListener('click', () => {
-    if (bagPage > 0) {
-      bagPage -= 1;
-      renderBagModal();
-    }
-  });
-}
-if (bagUi.next) {
-  bagUi.next.addEventListener('click', () => {
-    const totalPages = Math.max(1, Math.ceil(bagItems.length / BAG_PAGE_SIZE));
-    if (bagPage < totalPages - 1) {
-      bagPage += 1;
-      renderBagModal();
-    }
-  });
-}
-if (bagUi.close) {
-  bagUi.close.addEventListener('click', () => {
-    if (bagUi.modal) bagUi.modal.classList.add('hidden');
-    hideItemTooltip();
-  });
-}
+  if (bagUi.close) {
+    bagUi.close.addEventListener('click', () => {
+      if (bagUi.modal) bagUi.modal.classList.add('hidden');
+      hideItemTooltip();
+    });
+  }
+  if (statsUi.close) {
+    statsUi.close.addEventListener('click', () => {
+      if (statsUi.modal) statsUi.modal.classList.add('hidden');
+      hideItemTooltip();
+    });
+  }
 if (afkUi.start) {
   afkUi.start.addEventListener('click', () => {
     if (!socket || !afkUi.selected) return;
@@ -1739,4 +1981,6 @@ if (playerUi.party) {
     if (playerUi.modal) playerUi.modal.classList.add('hidden');
   });
 }
+
+
 

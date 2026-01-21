@@ -12,12 +12,13 @@ export async function getConsignment(id) {
   return knex('consignments').where({ id }).first();
 }
 
-export async function createConsignment({ sellerName, itemId, qty, price }) {
+export async function createConsignment({ sellerName, itemId, qty, price, effectsJson }) {
   const [id] = await knex('consignments').insert({
     seller_name: sellerName,
     item_id: itemId,
     qty,
-    price
+    price,
+    effects_json: effectsJson || null
   });
   return id;
 }

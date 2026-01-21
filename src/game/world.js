@@ -182,8 +182,22 @@
         id: 'palace',
         name: '沙城皇宫',
         desc: '王座之上空无一人。',
-        exits: { south: 'street' },
+        exits: { south: 'street', north: 'sb_guild:sanctum' },
         spawns: []
+      }
+    }
+  },
+  sb_guild: {
+    id: 'sb_guild',
+    name: '沙巴克秘境',
+    rooms: {
+      sanctum: {
+        id: 'sanctum',
+        name: '守护神殿',
+        desc: '只对城主行会开放的秘境，守护者在此沉睡。',
+        exits: { south: 'sb_town:palace' },
+        spawns: ['sabak_boss'],
+        sabakOnly: true
       }
     }
   },

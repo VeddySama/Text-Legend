@@ -162,7 +162,9 @@ export function removeMob(zoneId, roomId, mobId) {
       tpl.id.includes('demon') ||
       ['bug_queen', 'huangquan', 'evil_snake', 'pig_white'].includes(tpl.id)
     );
-    const delayMs = tpl && tpl.worldBoss ? 60 * 60 * 1000 : (isBoss ? 60 * 1000 : 0);
+    const delayMs = tpl && tpl.respawnMs
+      ? tpl.respawnMs
+      : (tpl && tpl.worldBoss ? 60 * 60 * 1000 : (isBoss ? 60 * 1000 : 0));
     mob.respawnAt = Date.now() + delayMs;
     if (delayMs > 0) {
       RESPAWN_CACHE.set(respawnKey(zoneId, roomId, mob.slotIndex), {

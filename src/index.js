@@ -23,7 +23,7 @@ import {
   deleteConsignment
 } from './db/consignments.js';
 import { runMigrations } from './db/migrate.js';
-import { newCharacter, computeDerived, gainExp, addItem, removeItem } from './game/player.js';
+import { newCharacter, computeDerived, gainExp, addItem, removeItem, getItemKey } from './game/player.js';
 import { handleCommand, awardKill, summonStats } from './game/commands.js';
 import {
   DEFAULT_SKILLS,
@@ -190,9 +190,7 @@ const tradeInvites = new Map();
 const tradesByPlayer = new Map();
 
 const sabakConfig = {
-  startHour: 20,
-  durationHours: 2,
-  captureMinutes: 10
+  siegeMinutes: 30
 };
 let sabakState = {
   active: false,
@@ -200,11 +198,18 @@ let sabakState = {
   ownerGuildName: null,
   captureGuildId: null,
   captureGuildName: null,
-  captureStart: null
+  captureStart: null,
+  siegeEndsAt: null,
+  killStats: {}
 };
 
 function listOnlinePlayers() {
   return Array.from(players.values());
+}
+
+function listSabakMembersOnline() {
+  if (!sabakState.ownerGuildId) return [];
+  return listOnlinePlayers().filter((p) => p.guild && p.guild.id === sabakState.ownerGuildId);
 }
 
 function sendTo(player, message) {
@@ -267,7 +272,12 @@ function isSetItem(itemId) {
   return item.name.includes('(套)');
 }
 
-function buildItemView(itemId) {
+const EFFECT_SINGLE_CHANCE = 0.005;
+const EFFECT_DOUBLE_CHANCE = 0.001;
+const COMBO_PROC_CHANCE = 0.1;
+const SABAK_TAX_RATE = 0.2;
+
+function buildItemView(itemId, effects = null) {
   const item = ITEM_TEMPLATES[itemId] || { id: itemId, name: itemId, type: 'unknown' };
   return {
     id: itemId,
@@ -283,8 +293,53 @@ function buildItemView(itemId) {
     def: item.def || 0,
     mag: item.mag || 0,
     spirit: item.spirit || 0,
-    dex: item.dex || 0
+    dex: item.dex || 0,
+    effects: effects || null
   };
+}
+
+function parseJson(value, fallback = null) {
+  if (value == null) return fallback;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return fallback;
+  }
+}
+
+function formatItemLabel(itemId, effects = null) {
+  const item = ITEM_TEMPLATES[itemId] || { name: itemId };
+  if (!effects) return item.name;
+  const tags = [];
+  if (effects.combo) tags.push('连击');
+  if (effects.fury) tags.push('狂攻');
+  if (effects.unbreakable) tags.push('不磨');
+  return tags.length ? `${item.name}·${tags.join('·')}` : item.name;
+}
+
+function rollEquipmentEffects(itemId) {
+  const item = ITEM_TEMPLATES[itemId];
+  if (!item || !['weapon', 'armor', 'accessory'].includes(item.type)) return null;
+  const candidates = [];
+  if (item.type === 'weapon') {
+    candidates.push('combo', 'fury');
+  }
+  candidates.push('unbreakable');
+  if (candidates.length < 1) return null;
+  if (Math.random() <= EFFECT_DOUBLE_CHANCE && candidates.length >= 2) {
+    const first = randInt(0, candidates.length - 1);
+    let second = randInt(0, candidates.length - 1);
+    if (second === first) second = (second + 1) % candidates.length;
+    return {
+      [candidates[first]]: true,
+      [candidates[second]]: true
+    };
+  }
+  if (Math.random() <= EFFECT_SINGLE_CHANCE) {
+    const pick = candidates[randInt(0, candidates.length - 1)];
+    return { [pick]: true };
+  }
+  return null;
 }
 
 function isBossMob(mobTemplate) {
@@ -318,15 +373,20 @@ const WORLD_BOSS_DROP_BONUS = 1.5;
 
 function dropLoot(mobTemplate, bonus = 1) {
   const loot = [];
-  const finalBonus = mobTemplate.worldBoss ? bonus * WORLD_BOSS_DROP_BONUS : bonus;
+  const sabakBonus = mobTemplate.sabakBoss ? 3.0 : 1.0;
+  const finalBonus = (mobTemplate.worldBoss ? bonus * WORLD_BOSS_DROP_BONUS : bonus) * sabakBonus;
   if (mobTemplate.drops) {
     mobTemplate.drops.forEach((drop) => {
       const chance = Math.min(1, (drop.chance || 0) * finalBonus);
-      if (Math.random() <= chance) loot.push(drop.id);
+      if (Math.random() <= chance) {
+        loot.push({ id: drop.id, effects: rollEquipmentEffects(drop.id) });
+      }
     });
   }
   const rarityDrop = rollRarityDrop(mobTemplate, finalBonus);
-  if (rarityDrop) loot.push(rarityDrop);
+  if (rarityDrop) {
+    loot.push({ id: rarityDrop, effects: rollEquipmentEffects(rarityDrop) });
+  }
   return loot;
 }
 
@@ -387,23 +447,49 @@ function offerText(offer) {
   const parts = [];
   if (offer.gold) parts.push(`金币 ${offer.gold}`);
   offer.items.forEach((i) => {
-    const name = ITEM_TEMPLATES[i.id]?.name || i.id;
+    const name = formatItemLabel(i.id, i.effects);
     parts.push(`${name} x${i.qty}`);
   });
   return parts.length ? parts.join(', ') : '无';
 }
 
+function normalizeEffects(effects) {
+  if (!effects || typeof effects !== 'object') return null;
+  const normalized = {};
+  if (effects.combo) normalized.combo = true;
+  if (effects.fury) normalized.fury = true;
+  if (effects.unbreakable) normalized.unbreakable = true;
+  return Object.keys(normalized).length ? normalized : null;
+}
+
+function sameEffects(a, b) {
+  const na = normalizeEffects(a);
+  const nb = normalizeEffects(b);
+  return Boolean((na?.combo || false) === (nb?.combo || false))
+    && Boolean((na?.fury || false) === (nb?.fury || false))
+    && Boolean((na?.unbreakable || false) === (nb?.unbreakable || false));
+}
+
+function findInventorySlot(player, itemId, effects = null) {
+  if (!player || !player.inventory) return null;
+  const normalized = normalizeEffects(effects);
+  if (normalized) {
+    return player.inventory.find((i) => i.id === itemId && sameEffects(i.effects, normalized));
+  }
+  return player.inventory.find((i) => i.id === itemId);
+}
+
 function hasOfferItems(player, offer) {
   return offer.items.every((slot) => {
-    const inv = player.inventory.find((i) => i.id === slot.id);
+    const inv = findInventorySlot(player, slot.id, slot.effects);
     return inv && inv.qty >= slot.qty;
   });
 }
 
 function applyOfferItems(from, to, offer) {
   offer.items.forEach((slot) => {
-    removeItem(from, slot.id, slot.qty);
-    addItem(to, slot.id, slot.qty);
+    removeItem(from, slot.id, slot.qty, slot.effects);
+    addItem(to, slot.id, slot.qty, slot.effects);
   });
 }
 
@@ -453,19 +539,19 @@ const tradeApi = {
     player.send(tip);
     return { ok: true, trade };
   },
-  addItem(player, itemId, qty) {
+  addItem(player, itemId, qty, effects = null) {
     const trade = getTradeByPlayer(player.name);
     if (!trade) return { ok: false, msg: '你不在交易中。' };
     if (trade.locked[player.name] || trade.locked[trade.a.name === player.name ? trade.b.name : trade.a.name]) {
       return { ok: false, msg: '交易已锁定，无法修改。' };
     }
     if (!qty || qty <= 0) return { ok: false, msg: '数量无效。' };
-    const inv = player.inventory.find((i) => i.id === itemId);
+    const inv = findInventorySlot(player, itemId, effects);
     if (!inv || inv.qty < qty) return { ok: false, msg: '背包里没有足够的物品。' };
     const offer = ensureOffer(trade, player.name);
-    const existing = offer.items.find((i) => i.id === itemId);
+    const existing = offer.items.find((i) => i.id === itemId && sameEffects(i.effects, effects));
     if (existing) existing.qty += qty;
-    else offer.items.push({ id: itemId, qty });
+    else offer.items.push({ id: itemId, qty, effects: normalizeEffects(effects) });
     return { ok: true, trade };
   },
   addGold(player, amount) {
@@ -545,46 +631,47 @@ const tradeApi = {
 const CONSIGN_EQUIPMENT_TYPES = new Set(['weapon', 'armor', 'accessory', 'book']);
 
 const consignApi = {
-  async listMarket(player) {
-    const rows = await listConsignments();
-    const items = rows.map((row) => ({
-      id: row.id,
-      seller: row.seller_name,
-      qty: row.qty,
-      price: row.price,
-      item: buildItemView(row.item_id)
-    }));
-    player.socket.emit('consign_list', { type: 'market', items });
-    return items;
-  },
-  async listMine(player) {
-    const rows = await listConsignmentsBySeller(player.name);
-    const items = rows.map((row) => ({
-      id: row.id,
-      seller: row.seller_name,
-      qty: row.qty,
-      price: row.price,
-      item: buildItemView(row.item_id)
-    }));
-    player.socket.emit('consign_list', { type: 'mine', items });
-    return items;
-  },
-  async sell(player, itemId, qty, price) {
-    const item = ITEM_TEMPLATES[itemId];
-    if (!item) return { ok: false, msg: '未找到物品。' };
-    if (!CONSIGN_EQUIPMENT_TYPES.has(item.type)) return { ok: false, msg: '仅可寄售装备。' };
-    if (qty <= 0 || price <= 0) return { ok: false, msg: '数量或价格无效。' };
-    if (!removeItem(player, itemId, qty)) return { ok: false, msg: '背包里没有足够数量。' };
-    const id = await createConsignment({
-      sellerName: player.name,
-      itemId,
-      qty,
-      price
-    });
-    await consignApi.listMine(player);
-    await consignApi.listMarket(player);
-    return { ok: true, msg: `寄售成功，编号 ${id}。` };
-  },
+    async listMarket(player) {
+      const rows = await listConsignments();
+      const items = rows.map((row) => ({
+        id: row.id,
+        seller: row.seller_name,
+        qty: row.qty,
+        price: row.price,
+        item: buildItemView(row.item_id, parseJson(row.effects_json))
+      }));
+      player.socket.emit('consign_list', { type: 'market', items });
+      return items;
+    },
+    async listMine(player) {
+      const rows = await listConsignmentsBySeller(player.name);
+      const items = rows.map((row) => ({
+        id: row.id,
+        seller: row.seller_name,
+        qty: row.qty,
+        price: row.price,
+        item: buildItemView(row.item_id, parseJson(row.effects_json))
+      }));
+      player.socket.emit('consign_list', { type: 'mine', items });
+      return items;
+    },
+    async sell(player, itemId, qty, price, effects = null) {
+      const item = ITEM_TEMPLATES[itemId];
+      if (!item) return { ok: false, msg: '未找到物品。' };
+      if (!CONSIGN_EQUIPMENT_TYPES.has(item.type)) return { ok: false, msg: '仅可寄售装备。' };
+      if (qty <= 0 || price <= 0) return { ok: false, msg: '数量或价格无效。' };
+      if (!removeItem(player, itemId, qty, effects)) return { ok: false, msg: '背包里没有足够数量。' };
+      const id = await createConsignment({
+        sellerName: player.name,
+        itemId,
+        qty,
+        price,
+        effectsJson: effects ? JSON.stringify(effects) : null
+      });
+      await consignApi.listMine(player);
+      await consignApi.listMarket(player);
+      return { ok: true, msg: `寄售成功，编号 ${id}。` };
+    },
   async buy(player, listingId, qty) {
     if (qty <= 0) return { ok: false, msg: '购买数量无效。' };
     const row = await getConsignment(listingId);
@@ -595,7 +682,7 @@ const consignApi = {
     if (player.gold < total) return { ok: false, msg: '金币不足。' };
 
     player.gold -= total;
-    addItem(player, row.item_id, qty);
+      addItem(player, row.item_id, qty, parseJson(row.effects_json));
 
     const remain = row.qty - qty;
     if (remain > 0) {
@@ -629,7 +716,7 @@ const consignApi = {
     const row = await getConsignment(listingId);
     if (!row) return { ok: false, msg: '寄售不存在。' };
     if (row.seller_name !== player.name) return { ok: false, msg: '只能取消自己的寄售。' };
-    addItem(player, row.item_id, row.qty);
+      addItem(player, row.item_id, row.qty, parseJson(row.effects_json));
     await deleteConsignment(listingId);
     await consignApi.listMine(player);
     await consignApi.listMarket(player);
@@ -646,12 +733,14 @@ function partyMembersInRoom(party, playersList, zone, room) {
 function distributeLoot(party, partyMembers, drops) {
   if (!drops.length || !party || partyMembers.length === 0) return [];
   const results = [];
-  drops.forEach((itemId) => {
+  drops.forEach((entry) => {
+    const itemId = entry.id || entry;
+    const effects = entry.effects || null;
     const target = partyMembers[randInt(0, partyMembers.length - 1)];
-    addItem(target, itemId, 1);
-    results.push({ id: itemId, target });
+    addItem(target, itemId, 1, effects);
+    results.push({ id: itemId, effects, target });
     partyMembers.forEach((member) => {
-      member.send(`队伍掉落: ${ITEM_TEMPLATES[itemId].name} -> ${target.name}`);
+      member.send(`队伍掉落: ${formatItemLabel(itemId, effects)} -> ${target.name}`);
     });
   });
   return results;
@@ -665,16 +754,103 @@ async function loadSabakState() {
   }
 }
 
-function isSabakActive() {
-  const now = new Date();
-  const start = new Date();
-  start.setHours(sabakConfig.startHour, 0, 0, 0);
-  const end = new Date(start.getTime() + sabakConfig.durationHours * 60 * 60 * 1000);
-  return now >= start && now <= end;
+function sabakWindowInfo() {
+  return `攻城时长 ${sabakConfig.siegeMinutes} 分钟`;
 }
 
-function sabakWindowInfo() {
-  return `每天 ${sabakConfig.startHour}:00-${sabakConfig.startHour + sabakConfig.durationHours}:00`;
+function isSabakZone(zoneId) {
+  return typeof zoneId === 'string' && zoneId.startsWith('sb_');
+}
+
+async function autoCaptureSabak(player) {
+  if (!player || !player.guild || !isSabakZone(player.position.zone)) return false;
+  if (sabakState.ownerGuildId) return false;
+  sabakState.ownerGuildId = player.guild.id;
+  sabakState.ownerGuildName = player.guild.name;
+  await setSabakOwner(player.guild.id, player.guild.name);
+  emitAnnouncement(`沙巴克无人占领，${player.guild.name} 已占领沙巴克。`, 'announce');
+  return true;
+}
+
+function startSabakSiege(attackerGuild) {
+  if (sabakState.active || !sabakState.ownerGuildId) return;
+  sabakState.active = true;
+  sabakState.siegeEndsAt = Date.now() + sabakConfig.siegeMinutes * 60 * 1000;
+  sabakState.killStats = {};
+  if (sabakState.ownerGuildId) {
+    sabakState.killStats[sabakState.ownerGuildId] = {
+      name: sabakState.ownerGuildName || '守城行会',
+      kills: 0
+    };
+  }
+  if (attackerGuild && attackerGuild.id) {
+    sabakState.killStats[attackerGuild.id] = {
+      name: attackerGuild.name || '攻城行会',
+      kills: 0
+    };
+  }
+  emitAnnouncement(`沙巴克攻城战开始！时长 ${sabakConfig.siegeMinutes} 分钟。`, 'announce');
+}
+
+async function finishSabakSiege() {
+  sabakState.active = false;
+  sabakState.siegeEndsAt = null;
+  const entries = Object.entries(sabakState.killStats || {});
+  let winnerId = sabakState.ownerGuildId;
+  let winnerName = sabakState.ownerGuildName;
+  let topKills = -1;
+  let tie = false;
+  entries.forEach(([guildId, info]) => {
+    const kills = info?.kills || 0;
+    if (kills > topKills) {
+      topKills = kills;
+      winnerId = guildId;
+      winnerName = info?.name || winnerName;
+      tie = false;
+    } else if (kills === topKills) {
+      tie = true;
+    }
+  });
+  if (entries.length === 0 || tie) {
+    emitAnnouncement('沙巴克攻城战结束，守城方继续守城。', 'announce');
+  } else if (winnerId && winnerId !== sabakState.ownerGuildId) {
+    sabakState.ownerGuildId = winnerId;
+    sabakState.ownerGuildName = winnerName;
+    await setSabakOwner(winnerId, winnerName || '未知行会');
+    emitAnnouncement(`沙巴克被 ${winnerName} 占领！`, 'announce');
+  } else {
+    emitAnnouncement('沙巴克攻城战结束，守城方成功守住。', 'announce');
+  }
+  sabakState.killStats = {};
+}
+
+function recordSabakKill(attacker, target) {
+  if (!attacker || !target) return;
+  if (!isSabakZone(attacker.position.zone)) return;
+  if (!attacker.guild) return;
+  if (attacker.guild && target.guild && attacker.guild.id === target.guild.id) return;
+  if (!sabakState.ownerGuildId) return;
+  if (attacker.guild.id !== sabakState.ownerGuildId && !sabakState.active) {
+    startSabakSiege(attacker.guild);
+  }
+  const entry = sabakState.killStats[attacker.guild.id] || {
+    name: attacker.guild.name,
+    kills: 0
+  };
+  entry.kills += 1;
+  sabakState.killStats[attacker.guild.id] = entry;
+}
+
+async function handleSabakEntry(player) {
+  if (!player || !player.guild) return;
+  if (!isSabakZone(player.position.zone)) return;
+  if (!sabakState.ownerGuildId) {
+    await autoCaptureSabak(player);
+    return;
+  }
+  if (player.guild.id !== sabakState.ownerGuildId && !sabakState.active) {
+    startSabakSiege(player.guild);
+  }
 }
 
 function isRedName(player) {
@@ -683,6 +859,11 @@ function isRedName(player) {
 
 function hasEquipped(player, itemId) {
   return Object.values(player.equipment || {}).some((eq) => eq && eq.id === itemId);
+}
+
+function hasComboWeapon(player) {
+  const weapon = player?.equipment?.weapon;
+  return Boolean(weapon && weapon.effects && weapon.effects.combo);
 }
 
 function applyDamageToPlayer(target, dmg) {
@@ -775,9 +956,9 @@ function applyOfflineRewards(player) {
 }
 
 function transferAllInventory(from, to) {
-  const items = from.inventory.map((i) => `${ITEM_TEMPLATES[i.id]?.name || i.id} x${i.qty}`);
+  const items = from.inventory.map((i) => `${formatItemLabel(i.id, i.effects)} x${i.qty}`);
   from.inventory.forEach((slot) => {
-    addItem(to, slot.id, slot.qty);
+    addItem(to, slot.id, slot.qty, slot.effects);
   });
   from.inventory = [];
   return items;
@@ -788,9 +969,9 @@ function transferOneEquipmentChance(from, to, chance) {
   const equippedList = Object.entries(from.equipment).filter(([, equipped]) => equipped);
   if (!equippedList.length) return [];
   const [slot, equipped] = equippedList[randInt(0, equippedList.length - 1)];
-  addItem(to, equipped.id, 1);
+  addItem(to, equipped.id, 1, equipped.effects);
   from.equipment[slot] = null;
-  return [ITEM_TEMPLATES[equipped.id]?.name || equipped.id];
+  return [formatItemLabel(equipped.id, equipped.effects)];
 }
 
 function buildState(player) {
@@ -826,8 +1007,10 @@ function buildState(player) {
   }));
   const items = player.inventory.map((i) => {
     const item = ITEM_TEMPLATES[i.id] || { id: i.id, name: i.id, type: 'unknown' };
+    const effects = i.effects || null;
     return {
       id: i.id,
+      key: getItemKey(i),
       name: item.name,
       qty: i.qty,
       type: item.type,
@@ -841,7 +1024,8 @@ function buildState(player) {
       def: item.def || 0,
       mag: item.mag || 0,
       spirit: item.spirit || 0,
-      dex: item.dex || 0
+      dex: item.dex || 0,
+      effects
     };
   });
   const equipment = Object.entries(player.equipment || {})
@@ -850,7 +1034,7 @@ function buildState(player) {
       slot,
       durability: equipped.durability ?? null,
       max_durability: equipped.max_durability ?? null,
-      item: buildItemView(equipped.id)
+      item: buildItemView(equipped.id, equipped.effects || null)
     }));
   const party = getPartyByMember(player.name);
   const partyMembers = party
@@ -869,17 +1053,21 @@ function buildState(player) {
       name: p.name,
       classId: p.classId,
       level: p.level,
-      guild: p.guild?.name || null
+      guild: p.guild?.name || null,
+      guildId: p.guild?.id || null
     }));
   return {
     player: {
       name: player.name,
       classId: player.classId,
-      level: player.level
+      level: player.level,
+      guildId: player.guild?.id || null
     },
     room: {
       zone: zone?.name || player.position.zone,
-      name: room?.name || player.position.room
+      name: room?.name || player.position.room,
+      zoneId: player.position.zone,
+      roomId: player.position.room
     },
     exits,
     mobs,
@@ -919,7 +1107,14 @@ function buildState(player) {
     party: party ? { size: party.members.length, members: partyMembers } : null,
     training: player.flags?.training || { hp: 0, mp: 0, atk: 0, def: 0, mag: 0, mdef: 0, spirit: 0, dex: 0 },
     online: { count: onlineCount },
-    players: roomPlayers
+    sabak: {
+      inZone: isSabakZone(player.position.zone),
+      active: sabakState.active,
+      ownerGuildId: sabakState.ownerGuildId,
+      ownerGuildName: sabakState.ownerGuildName
+    },
+    players: roomPlayers,
+    server_time: Date.now()
   };
 }
 
@@ -1171,6 +1366,7 @@ io.on('connection', (socket) => {
     if (loaded.guild) loaded.send(`行会: ${loaded.guild.name}`);
     applyOfflineRewards(loaded);
     spawnMobs(loaded.position.zone, loaded.position.room);
+    await handleSabakEntry(loaded);
     const zone = WORLD[loaded.position.zone];
     const room = zone?.rooms[loaded.position.room];
     const locationName = zone && room ? `${zone.name} - ${room.name}` : `${loaded.position.zone}:${loaded.position.room}`;
@@ -1181,6 +1377,8 @@ io.on('connection', (socket) => {
   socket.on('cmd', async (payload) => {
     const player = players.get(socket.id);
     if (!player) return;
+    const prevZone = player.position.zone;
+    const prevRoom = player.position.room;
     await handleCommand({
       player,
       players: listOnlinePlayers(),
@@ -1215,6 +1413,12 @@ io.on('connection', (socket) => {
         markMailRead
       }
     });
+    if (
+      (player.position.zone !== prevZone || player.position.room !== prevRoom) &&
+      isSabakZone(player.position.zone)
+    ) {
+      await handleSabakEntry(player);
+    }
     sendState(player);
     await savePlayer(player);
   });
@@ -1224,6 +1428,7 @@ io.on('connection', (socket) => {
     if (player) {
       if (!player.flags) player.flags = {};
       player.flags.offlineAt = Date.now();
+      player.summon = null;
       const trade = getTradeByPlayer(player.name);
       if (trade) {
         clearTrade(trade, `交易已取消（${player.name} 离线）。`);
@@ -1343,11 +1548,12 @@ function reduceDurabilityOnAttack(player) {
   if (player.flags.attackCount < threshold) return;
   player.flags.attackCount = 0;
   let broken = false;
-  Object.values(player.equipment).forEach((equipped) => {
-    if (!equipped || !equipped.id || equipped.durability == null || equipped.durability <= 0) return;
-    equipped.durability = Math.max(0, equipped.durability - 1);
-    if (equipped.durability === 0) broken = true;
-  });
+    Object.values(player.equipment).forEach((equipped) => {
+      if (!equipped || !equipped.id || equipped.durability == null || equipped.durability <= 0) return;
+      if (equipped.effects && equipped.effects.unbreakable) return;
+      equipped.durability = Math.max(0, equipped.durability - 1);
+      if (equipped.durability === 0) broken = true;
+    });
   if (broken) {
     computeDerived(player);
     player.send('有装备持久度归零，属性已失效，请修理。');
@@ -1402,17 +1608,42 @@ function processMobDeath(player, mob, online) {
   const shareExp = allInRoom ? totalExp : Math.floor(totalExp / eligibleCount);
   const shareGold = allInRoom ? totalGold : Math.floor(totalGold / eligibleCount);
 
-  partyMembers.forEach((member) => {
-    const sabakBonus = member.guild && sabakState.ownerGuildId && member.guild.id === sabakState.ownerGuildId ? 2 : 1;
-    const vipBonus = member.flags?.vip ? 2 : 1;
-    const finalExp = Math.floor(shareExp * sabakBonus * vipBonus);
-    const finalGold = Math.floor(shareGold * sabakBonus * vipBonus);
-    member.gold += finalGold;
-    const leveled = gainExp(member, finalExp);
-    awardKill(member, mob.templateId);
-    member.send(`队伍分配: 获得 ${finalExp} 经验和 ${finalGold} 金币。`);
-    if (leveled) member.send('你升级了！');
-  });
+    let sabakTaxExp = 0;
+    let sabakTaxGold = 0;
+    const sabakMembers = listSabakMembersOnline();
+    partyMembers.forEach((member) => {
+      const isSabakMember = member.guild && sabakState.ownerGuildId && member.guild.id === sabakState.ownerGuildId;
+      const sabakBonus = isSabakMember ? 2 : 1;
+      const vipBonus = member.flags?.vip ? 2 : 1;
+      let finalExp = Math.floor(shareExp * sabakBonus * vipBonus);
+      let finalGold = Math.floor(shareGold * sabakBonus * vipBonus);
+      if (sabakState.ownerGuildId && !isSabakMember) {
+        const taxExp = Math.floor(finalExp * SABAK_TAX_RATE);
+        const taxGold = Math.floor(finalGold * SABAK_TAX_RATE);
+        finalExp -= taxExp;
+        finalGold -= taxGold;
+        sabakTaxExp += taxExp;
+        sabakTaxGold += taxGold;
+      }
+      member.gold += finalGold;
+      const leveled = gainExp(member, finalExp);
+      awardKill(member, mob.templateId);
+      member.send(`队伍分配: 获得 ${finalExp} 经验和 ${finalGold} 金币。`);
+      if (leveled) member.send('你升级了！');
+    });
+    if (sabakMembers.length && (sabakTaxExp > 0 || sabakTaxGold > 0)) {
+      const expShare = Math.floor(sabakTaxExp / sabakMembers.length);
+      const goldShare = Math.floor(sabakTaxGold / sabakMembers.length);
+      if (expShare > 0 || goldShare > 0) {
+        sabakMembers.forEach((member) => {
+          member.gold += goldShare;
+          if (expShare > 0) {
+            const leveled = gainExp(member, expShare);
+            if (leveled) member.send('你升级了！');
+          }
+        });
+      }
+    }
 
     const dropTargets = [];
     if (isWorldBoss) {
@@ -1433,29 +1664,29 @@ function processMobDeath(player, mob, online) {
       if (!drops.length) return;
       if (!isWorldBoss && party && partyMembers.length > 0) {
         const distributed = distributeLoot(party, partyMembers, drops);
-        distributed.forEach(({ id, target }) => {
+        distributed.forEach(({ id, effects, target }) => {
           const item = ITEM_TEMPLATES[id];
           if (!item) return;
-        const rarity = rarityByPrice(item);
-        if (['uncommon', 'rare', 'epic', 'legendary'].includes(rarity)) {
-          emitAnnouncement(`${target.name} 击败 ${template.name} 获得${RARITY_LABELS[rarity] || '稀有'}装备 ${item.name}！`, rarity);
-        }
-      });
-      } else {
-        drops.forEach((id) => {
-          addItem(owner, id, 1);
+          const rarity = rarityByPrice(item);
+          if (['uncommon', 'rare', 'epic', 'legendary'].includes(rarity)) {
+            emitAnnouncement(`${target.name} 击败 ${template.name} 获得${RARITY_LABELS[rarity] || '稀有'}装备 ${formatItemLabel(id, effects)}！`, rarity);
+          }
         });
-        owner.send(`掉落: ${drops.map((id) => ITEM_TEMPLATES[id].name).join(', ')}`);
-      drops.forEach((id) => {
-        const item = ITEM_TEMPLATES[id];
-        if (!item) return;
-        const rarity = rarityByPrice(item);
-        if (['uncommon', 'rare', 'epic', 'legendary'].includes(rarity)) {
-          emitAnnouncement(`${owner.name} 击败 ${template.name} 获得${RARITY_LABELS[rarity] || '稀有'}装备 ${item.name}！`, rarity);
-        }
-      });
-    }
-  });
+      } else {
+        drops.forEach((entry) => {
+          addItem(owner, entry.id, 1, entry.effects);
+        });
+        owner.send(`掉落: ${drops.map((entry) => formatItemLabel(entry.id, entry.effects)).join(', ')}`);
+        drops.forEach((entry) => {
+          const item = ITEM_TEMPLATES[entry.id];
+          if (!item) return;
+          const rarity = rarityByPrice(item);
+          if (['uncommon', 'rare', 'epic', 'legendary'].includes(rarity)) {
+            emitAnnouncement(`${owner.name} 击败 ${template.name} 获得${RARITY_LABELS[rarity] || '稀有'}装备 ${formatItemLabel(entry.id, entry.effects)}！`, rarity);
+          }
+        });
+      }
+    });
 }
 
 function combatTick() {
@@ -1522,6 +1753,14 @@ function combatTick() {
           player.send('目标已消失。');
           return;
         }
+        if (isSabakZone(player.position.zone)) {
+          const sameGuild = player.guild && target.guild && player.guild.id === target.guild.id;
+          if (sameGuild) {
+            player.combat = null;
+            player.send('沙巴克内不能攻击同一行会成员。');
+            return;
+          }
+        }
         if (!target.flags) target.flags = {};
         target.flags.lastCombatAt = Date.now();
 
@@ -1560,13 +1799,19 @@ function combatTick() {
         dmg = Math.floor(calcDamage(player, target, 1) * crit);
       }
 
-      applyDamageToPlayer(target, dmg);
-      target.flags.lastCombatAt = Date.now();
-      player.send(`你对 ${target.name} 造成 ${dmg} 点伤害。`);
-      target.send(`${player.name} 对你造成 ${dmg} 点伤害。`);
-      if (!target.combat || target.combat.targetType !== 'player' || target.combat.targetId !== player.name) {
-        target.combat = { targetId: player.name, targetType: 'player', skillId: 'slash' };
-      }
+        applyDamageToPlayer(target, dmg);
+        target.flags.lastCombatAt = Date.now();
+        player.send(`你对 ${target.name} 造成 ${dmg} 点伤害。`);
+        target.send(`${player.name} 对你造成 ${dmg} 点伤害。`);
+        if (hasComboWeapon(player) && target.hp > 0 && Math.random() <= COMBO_PROC_CHANCE) {
+          applyDamageToPlayer(target, dmg);
+          target.flags.lastCombatAt = Date.now();
+          player.send(`连击触发，对 ${target.name} 造成 ${dmg} 点伤害。`);
+          target.send(`${player.name} 连击对你造成 ${dmg} 点伤害。`);
+        }
+        if (!target.combat || target.combat.targetType !== 'player' || target.combat.targetId !== player.name) {
+          target.combat = { targetId: player.name, targetType: 'player', skillId: 'slash' };
+        }
       if (skill && skill.type === 'dot') {
         if (!target.status) target.status = {};
         applyPoison(target, 30, calcPoisonTickDamage(target), player.name);
@@ -1601,9 +1846,12 @@ function combatTick() {
       if (target.hp <= 0 && !tryRevive(target)) {
         const wasRed = isRedName(target);
         if (!player.flags) player.flags = {};
-        if (!wasRed) {
+        if (!wasRed && !isSabakZone(player.position.zone)) {
           player.flags.pkValue = (player.flags.pkValue || 0) + 100;
           savePlayer(player);
+        }
+        if (isSabakZone(player.position.zone)) {
+          recordSabakKill(player, target);
         }
         const droppedBag = wasRed ? transferAllInventory(target, player) : [];
         const droppedEquip = wasRed ? transferOneEquipmentChance(target, player, 0.1) : [];
@@ -1686,6 +1934,10 @@ function combatTick() {
       } else {
         applyDamageToMob(mob, dmg, player.name);
         player.send(`你对 ${mob.name} 造成 ${dmg} 点伤害。`);
+        if (hasComboWeapon(player) && mob.hp > 0 && Math.random() <= COMBO_PROC_CHANCE) {
+          applyDamageToMob(mob, dmg, player.name);
+          player.send(`连击触发，对 ${mob.name} 造成 ${dmg} 点伤害。`);
+        }
         if (mob.hp > 0) {
           sendRoomState(player.position.zone, player.position.room);
         }
@@ -1804,65 +2056,9 @@ function combatTick() {
 setInterval(combatTick, 1000);
 
 async function sabakTick() {
-  const active = isSabakActive();
-  if (active && !sabakState.active) {
-    sabakState.active = true;
-    sabakState.captureGuildId = null;
-    sabakState.captureGuildName = null;
-    sabakState.captureStart = null;
-    emitAnnouncement('沙巴克攻城战开始！', 'announce');
-  }
-  if (!active && sabakState.active) {
-    sabakState.active = false;
-    sabakState.captureGuildId = null;
-    sabakState.captureGuildName = null;
-    sabakState.captureStart = null;
-    await clearSabakRegistrations();
-    emitAnnouncement('沙巴克攻城战结束。', 'announce');
-  }
-
   if (!sabakState.active) return;
-
-  const palacePlayers = listOnlinePlayers().filter(
-    (p) => p.position.zone === 'sb_town' && p.position.room === 'palace' && p.guild
-  );
-  if (palacePlayers.length === 0) {
-    sabakState.captureGuildId = null;
-    sabakState.captureGuildName = null;
-    sabakState.captureStart = null;
-    return;
-  }
-
-  const guildIds = new Set(palacePlayers.map((p) => p.guild.id));
-  if (guildIds.size !== 1) {
-    sabakState.captureGuildId = null;
-    sabakState.captureGuildName = null;
-    sabakState.captureStart = null;
-    return;
-  }
-
-  const guildId = palacePlayers[0].guild.id;
-  const guildName = palacePlayers[0].guild.name;
-  const registered = (await listSabakRegistrations()).some((r) => r.guild_id === guildId);
-  if (!registered) return;
-
-  if (sabakState.captureGuildId !== guildId) {
-    sabakState.captureGuildId = guildId;
-    sabakState.captureGuildName = guildName;
-    sabakState.captureStart = Date.now();
-    emitAnnouncement(`沙巴克皇宫被 ${guildName} 占领，计时开始。`, 'announce');
-    return;
-  }
-
-  const elapsedMin = (Date.now() - sabakState.captureStart) / 60000;
-  if (elapsedMin >= sabakConfig.captureMinutes) {
-    sabakState.ownerGuildId = guildId;
-    sabakState.ownerGuildName = guildName;
-    await setSabakOwner(guildId, guildName);
-    emitAnnouncement(`沙巴克被 ${guildName} 占领！`, 'announce');
-    sabakState.captureGuildId = null;
-    sabakState.captureGuildName = null;
-    sabakState.captureStart = null;
+  if (sabakState.siegeEndsAt && Date.now() >= sabakState.siegeEndsAt) {
+    await finishSabakSiege();
   }
 }
 

@@ -747,9 +747,7 @@ export async function handleCommand({ player, players, input, send, partyApi, gu
         return;
       }
       if (skill.type === 'dot') {
-        const hasGreen = player.inventory.find((i) => i.id === 'powder_green' && i.qty > 0);
-        const hasRed = player.inventory.find((i) => i.id === 'powder_red' && i.qty > 0);
-        if (!hasGreen || !hasRed) return send('施毒术需要绿色药粉和红色药粉。');
+        // 施毒术不再消耗药粉
       }
       const mobs = getAliveMobs(player.position.zone, player.position.room);
       const target = mobs.find((m) => m.name.toLowerCase() === targetName.toLowerCase() || m.id === targetName);

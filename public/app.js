@@ -1490,6 +1490,10 @@ function renderState(state) {
       socket.emit('cmd', { text: `cast ${s.raw.id}` });
       return;
     }
+    if (s.raw.type === 'summon') {
+      socket.emit('cmd', { text: `cast ${s.raw.id}` });
+      return;
+    }
     if (!selectedMob) return;
     socket.emit('cmd', { text: `cast ${s.raw.id} ${selectedMob.name}` });
   });

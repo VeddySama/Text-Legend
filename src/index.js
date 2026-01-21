@@ -2114,7 +2114,7 @@ function combatTick() {
             const wasRed = isRedName(extraTarget);
             if (!player.flags) player.flags = {};
             if (!wasRed && !isSabakZone(player.position.zone)) {
-              player.flags.pkValue = (player.flags.pkValue || 0) + 100;
+              player.flags.pkValue = (player.flags.pkValue || 0) + 50;
               savePlayer(player);
             }
             if (isSabakZone(player.position.zone)) {
@@ -2163,7 +2163,7 @@ function combatTick() {
         const wasRed = isRedName(target);
         if (!player.flags) player.flags = {};
         if (!wasRed && !isSabakZone(player.position.zone)) {
-          player.flags.pkValue = (player.flags.pkValue || 0) + 100;
+          player.flags.pkValue = (player.flags.pkValue || 0) + 50;
           savePlayer(player);
         }
         if (isSabakZone(player.position.zone)) {

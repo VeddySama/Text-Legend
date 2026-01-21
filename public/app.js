@@ -1633,6 +1633,8 @@ function enterGame(name) {
   });
   socket.on('auth_error', (payload) => {
     appendLine(`认证失败: ${payload.error}`);
+    showToast('登录已过期，请重新登录。');
+    exitGame();
   });
   socket.on('output', (payload) => {
     appendLine(payload);

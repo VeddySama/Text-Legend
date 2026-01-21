@@ -277,6 +277,7 @@ function isSetItem(itemId) {
 const EFFECT_SINGLE_CHANCE = 0.009;
 const EFFECT_DOUBLE_CHANCE = 0.001;
 const COMBO_PROC_CHANCE = 0.1;
+const ASSASSINATE_SECONDARY_DAMAGE_RATE = 0.3;
 const SABAK_TAX_RATE = 0.2;
 
 function buildItemView(itemId, effects = null) {
@@ -1304,6 +1305,20 @@ function applyDamageToMob(mob, dmg, attackerName) {
   applyDamage(mob, dmg);
 }
 
+function tickMobRegen(mob) {
+  if (!mob || mob.hp <= 0 || !mob.max_hp) return;
+  const template = MOB_TEMPLATES[mob.templateId];
+  const isBoss = Boolean(template?.worldBoss || template?.sabakBoss);
+  const now = Date.now();
+  if (!mob.status) mob.status = {};
+  const interval = isBoss ? 10000 : 1000;
+  const last = mob.status.lastRegenAt || 0;
+  if (now - last < interval) return;
+  const regen = Math.max(1, Math.floor(mob.max_hp * 0.01));
+  mob.hp = Math.min(mob.max_hp, mob.hp + regen);
+  mob.status.lastRegenAt = now;
+}
+
 function getMagicDefenseMultiplier(target) {
   const debuffs = target.status?.debuffs || {};
   const now = Date.now();
@@ -1932,6 +1947,8 @@ function combatTick() {
     refreshBuffs(player);
     processPotionRegen(player);
     updateRedNameAutoClear(player);
+    const roomMobs = getAliveMobs(player.position.zone, player.position.room);
+    roomMobs.forEach((mob) => tickMobRegen(mob));
     const poisonSource = player.status?.poison?.sourceName;
       const playerPoisonTick = tickStatus(player);
       if (playerPoisonTick && playerPoisonTick.type === 'poison') {
@@ -1952,15 +1969,14 @@ function combatTick() {
 
     if (!player.combat) {
       regenOutOfCombat(player);
-      const mobs = getAliveMobs(player.position.zone, player.position.room);
-      const aggroMob = mobs.find((m) => m.status?.aggroTarget === player.name);
+      const aggroMob = roomMobs.find((m) => m.status?.aggroTarget === player.name);
       if (aggroMob) {
         player.combat = { targetId: aggroMob.id, targetType: 'mob', skillId: null };
       }
       if (player.flags?.autoSkillId) {
         if (!player.combat) {
-          const idle = mobs.filter((m) => !m.status?.aggroTarget);
-          const pool = idle.length ? idle : mobs;
+          const idle = roomMobs.filter((m) => !m.status?.aggroTarget);
+          const pool = idle.length ? idle : roomMobs;
           const target = pool.length ? pool[randInt(0, pool.length - 1)] : null;
           if (target) {
             player.combat = { targetId: target.id, targetType: 'mob', skillId: null };
@@ -2066,6 +2082,59 @@ function combatTick() {
         target.send('你中了毒特效。');
         player.send(`你的毒特效作用于 ${target.name}。`);
       }
+      if (skill && skill.id === 'assassinate') {
+        const extraTargets = online.filter(
+          (p) =>
+            p.name !== player.name &&
+            p.name !== target.name &&
+            p.position.zone === player.position.zone &&
+            p.position.room === player.position.room &&
+            (!isSabakZone(player.position.zone) ||
+              !(player.guild && p.guild && player.guild.id === p.guild.id))
+        );
+        if (extraTargets.length) {
+          const extraTarget = extraTargets[randInt(0, extraTargets.length - 1)];
+          const extraDmg = Math.max(10, Math.floor(dmg * ASSASSINATE_SECONDARY_DAMAGE_RATE));
+          applyDamageToPlayer(extraTarget, extraDmg);
+          extraTarget.flags.lastCombatAt = Date.now();
+          player.send(`刺杀剑术波及 ${extraTarget.name}，造成 ${extraDmg} 点伤害。`);
+          extraTarget.send(`${player.name} 的刺杀剑术波及你，造成 ${extraDmg} 点伤害。`);
+          if (tryApplyHealBlockEffect(player, extraTarget)) {
+            extraTarget.send('你受到禁疗影响，回血降低。');
+            player.send(`禁疗效果作用于 ${extraTarget.name}。`);
+          }
+          if (tryApplyPoisonEffect(player, extraTarget)) {
+            extraTarget.send('你中了毒特效。');
+            player.send(`你的毒特效作用于 ${extraTarget.name}。`);
+          }
+          if (!extraTarget.combat || extraTarget.combat.targetType !== 'player' || extraTarget.combat.targetId !== player.name) {
+            extraTarget.combat = { targetId: player.name, targetType: 'player', skillId: 'slash' };
+          }
+          if (extraTarget.hp <= 0 && !tryRevive(extraTarget)) {
+            const wasRed = isRedName(extraTarget);
+            if (!player.flags) player.flags = {};
+            if (!wasRed && !isSabakZone(player.position.zone)) {
+              player.flags.pkValue = (player.flags.pkValue || 0) + 100;
+              savePlayer(player);
+            }
+            if (isSabakZone(player.position.zone)) {
+              recordSabakKill(player, extraTarget);
+            }
+            const droppedBag = wasRed ? transferAllInventory(extraTarget, player) : [];
+            const droppedEquip = wasRed ? transferOneEquipmentChance(extraTarget, player, 0.1) : [];
+            extraTarget.send('你被击败，返回了城里。');
+            if (wasRed) {
+              extraTarget.send('你是红名，背包物品全部掉落。');
+              if (droppedEquip.length) extraTarget.send(`装备掉落: ${droppedEquip.join(', ')}`);
+            }
+            player.send(`你击败了 ${extraTarget.name}。`);
+            if (wasRed && droppedBag.length) {
+              player.send(`${extraTarget.name} 掉落了: ${droppedBag.join(', ')}`);
+            }
+            handleDeath(extraTarget);
+          }
+        }
+      }
       if (skill && skill.id === 'firestrike') {
         if (!player.status) player.status = {};
         player.status.firestrikeCrit = true;
@@ -2118,8 +2187,8 @@ function combatTick() {
       return;
     }
 
-    const mobs = getAliveMobs(player.position.zone, player.position.room);
-    const mob = mobs.find((m) => m.id === player.combat.targetId);
+    const mobs = roomMobs;
+    const mob = roomMobs.find((m) => m.id === player.combat.targetId);
     if (!mob) {
       player.combat = null;
       player.send('目标已消失。');
@@ -2130,10 +2199,6 @@ function combatTick() {
 
     if (mob.status && mob.status.stunTurns > 0) {
       mob.status.stunTurns -= 1;
-    }
-    if (mob.hp > 0 && mob.max_hp) {
-      const regen = Math.max(1, Math.floor(mob.max_hp * 0.01));
-      mob.hp = Math.min(mob.max_hp, mob.hp + regen);
     }
     let chosenSkillId = pickCombatSkillId(player, player.combat.skillId);
     let skill = skillForPlayer(player, chosenSkillId);
@@ -2195,6 +2260,24 @@ function combatTick() {
         }
         if (tryApplyHealBlockEffect(player, mob)) {
           player.send(`禁疗效果作用于 ${mob.name}。`);
+        }
+        if (skill && skill.id === 'assassinate') {
+          const extraTargets = mobs.filter((m) => m.id !== mob.id);
+          if (extraTargets.length) {
+            const extraTarget = extraTargets[randInt(0, extraTargets.length - 1)];
+            const extraDmg = Math.max(10, Math.floor(dmg * ASSASSINATE_SECONDARY_DAMAGE_RATE));
+            applyDamageToMob(extraTarget, extraDmg, player.name);
+            player.send(`刺杀剑术波及 ${extraTarget.name}，造成 ${extraDmg} 点伤害。`);
+            if (tryApplyHealBlockEffect(player, extraTarget)) {
+              player.send(`禁疗效果作用于 ${extraTarget.name}。`);
+            }
+            if (tryApplyPoisonEffect(player, extraTarget)) {
+              player.send(`你的毒特效作用于 ${extraTarget.name}。`);
+            }
+            if (extraTarget.hp <= 0) {
+              processMobDeath(player, extraTarget, online);
+            }
+          }
         }
         if (mob.hp > 0) {
           sendRoomState(player.position.zone, player.position.room);
@@ -2268,10 +2351,6 @@ function combatTick() {
       return;
     }
 
-    if (mob.hp > 0 && mob.max_hp) {
-      const regen = Math.max(1, Math.floor(mob.max_hp * 0.01));
-      mob.hp = Math.min(mob.max_hp, mob.hp + regen);
-    }
 
     const now = Date.now();
     const summonAlive = Boolean(player.summon && player.summon.hp > 0);

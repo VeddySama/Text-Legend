@@ -356,7 +356,7 @@ export async function handleCommand({ player, players, input, send, partyApi, gu
 
   switch (cmd) {
     case 'help': {
-      send('指令: help, look, go <方向/地点>, say <内容>, who, stats, bag, equip <物品>, unequip <部位>, use <物品>, attack <怪物/玩家>, pk <玩家>, cast <技能> <怪物>, autoskill <技能/off>, autopotion <hp%> <mp%>, shop, buy <物品>, buy list, sell <物品>, consign, train <属性>, quests, accept <id>, complete <id>, party, guild, gsay, sabak, vip, trade, mail, teleport。部位示例: ring_left, ring_right, bracelet_left, bracelet_right。');
+      send('指令: help, look, go <方向/地点>, say <内容>, who, stats, bag, equip <物品>, unequip <部位>, use <物品>, attack <怪物/玩家>, pk <玩家>, cast <技能> <怪物>, autoskill <技能/off>, autopotion <hp%> <mp%>, shop, buy <物品>, buy list, sell <物品>, consign, train <属性>, quests, accept <id>, complete <id>, party, guild, guild kick <玩家>, gsay, sabak, vip, trade, mail, teleport。部位示例: ring_left, ring_right, bracelet_left, bracelet_right。');
       return;
     }
     case 'look': {
@@ -1121,6 +1121,21 @@ export async function handleCommand({ player, players, input, send, partyApi, gu
         return;
       }
 
+      if (sub === 'kick' || sub === 'remove') {
+        if (!player.guild) return send('你不在行会中。');
+        const target = players.find((p) => p.name === nameArg);
+        if (!target) return send('玩家不在线。');
+        if (!target.guild || target.guild.id !== player.guild.id) return send('对方不在你的行会中。');
+        const isLeader = await guildApi.isGuildLeader(player.guild.id, player.userId, player.name);
+        if (!isLeader) return send('只有会长可以踢人。');
+        if (target.guild.role === 'leader') return send('不能踢出会长。');
+        await guildApi.removeGuildMember(player.guild.id, target.userId, target.name);
+        target.guild = null;
+        send(`已将 ${target.name} 移出行会。`);
+        target.send('你已被移出行会。');
+        return;
+      }
+
       if (sub === 'accept') {
         send('行会邀请无需接受，邀请后会自动加入。');
         return;
@@ -1144,7 +1159,7 @@ export async function handleCommand({ player, players, input, send, partyApi, gu
         return;
       }
 
-      send('行会指令: guild create <名>, guild invite <玩家>, guild accept <名>, guild leave, guild info');
+      send('行会指令: guild create <名>, guild invite <玩家>, guild kick <玩家>, guild accept <名>, guild leave, guild info');
       return;
     }
     case 'gsay': {

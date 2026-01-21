@@ -1122,6 +1122,7 @@ function buildState(player) {
       : null,
     equipment,
     guild: player.guild?.name || null,
+    guild_role: player.guild?.role || null,
     party: party ? { size: party.members.length, members: partyMembers } : null,
     training: player.flags?.training || { hp: 0, mp: 0, atk: 0, def: 0, mag: 0, mdef: 0, spirit: 0, dex: 0 },
     online: { count: onlineCount },
@@ -1439,6 +1440,27 @@ io.on('connection', (socket) => {
     }
     sendState(player);
     await savePlayer(player);
+  });
+
+  socket.on('guild_members', async () => {
+    const player = players.get(socket.id);
+    if (!player || !player.guild) {
+      socket.emit('guild_members', { ok: false, error: '你不在行会中。' });
+      return;
+    }
+    const members = await listGuildMembers(player.guild.id);
+    const online = listOnlinePlayers();
+    const memberList = members.map((m) => ({
+      name: m.char_name,
+      role: m.role,
+      online: online.some((p) => p.name === m.char_name)
+    }));
+    socket.emit('guild_members', {
+      ok: true,
+      guild: { id: player.guild.id, name: player.guild.name },
+      role: player.guild.role || 'member',
+      members: memberList
+    });
   });
 
   socket.on('disconnect', async () => {

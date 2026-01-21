@@ -73,6 +73,13 @@ const tradeUi = {
   status: document.getElementById('trade-status'),
   panel: document.getElementById('trade-panel')
 };
+const guildUi = {
+  modal: document.getElementById('guild-modal'),
+  title: document.getElementById('guild-title'),
+  list: document.getElementById('guild-list'),
+  invite: document.getElementById('guild-invite'),
+  close: document.getElementById('guild-close')
+};
 const promptUi = {
   modal: document.getElementById('prompt-modal'),
   title: document.getElementById('prompt-title'),
@@ -154,6 +161,7 @@ let consignMarketPage = 0;
 let consignMyPage = 0;
 let consignInventoryPage = 0;
 let consignMarketFilter = 'all';
+let guildMembers = [];
 const CONSIGN_PAGE_SIZE = 9;
   let bagItems = [];
   let bagPage = 0;
@@ -939,7 +947,7 @@ function handleItemAction(item) {
     return items.filter((i) => i.type === filter);
   }
 
-  function showBagModal() {
+function showBagModal() {
     hideItemTooltip();
     bagFilter = 'all';
     bagPage = 0;
@@ -1181,6 +1189,55 @@ function formatItemTooltip(item) {
     lines.push(`\u4ef7\u683c: ${item.price}\u91d1`);
   }
   return lines.filter(Boolean).join('\n');
+}
+
+function renderGuildModal() {
+  if (!guildUi.modal || !guildUi.list) return;
+  guildUi.list.innerHTML = '';
+  const roleLabel = lastState?.guild_role === 'leader' ? '会长' : '成员';
+  if (guildUi.title) {
+    const guildName = lastState?.guild || '无';
+    guildUi.title.textContent = `行会: ${guildName} (${roleLabel})`;
+  }
+  if (guildUi.invite) {
+    const isLeader = lastState?.guild_role === 'leader';
+    guildUi.invite.classList.toggle('hidden', !isLeader);
+  }
+  if (!guildMembers.length) {
+    const empty = document.createElement('div');
+    empty.textContent = '暂无成员信息。';
+    guildUi.list.appendChild(empty);
+  } else {
+    guildMembers.forEach((member) => {
+      const row = document.createElement('div');
+      row.className = 'guild-member';
+      const name = document.createElement('div');
+      const role = member.role === 'leader' ? '会长' : '成员';
+      const online = member.online ? '在线' : '离线';
+      name.textContent = `${member.name} (${role}/${online})`;
+      row.appendChild(name);
+      const tag = document.createElement('span');
+      tag.className = 'tag';
+      tag.textContent = member.role === 'leader' ? '会长' : '成员';
+      row.appendChild(tag);
+      if (lastState?.guild_role === 'leader' && member.role !== 'leader') {
+        const kickBtn = document.createElement('button');
+        kickBtn.textContent = '踢出';
+        kickBtn.addEventListener('click', () => {
+          if (socket) socket.emit('cmd', { text: `guild kick ${member.name}` });
+        });
+        row.appendChild(kickBtn);
+      }
+      guildUi.list.appendChild(row);
+    });
+  }
+  guildUi.modal.classList.remove('hidden');
+}
+
+function showGuildModal() {
+  hideItemTooltip();
+  if (socket) socket.emit('guild_members');
+  renderGuildModal();
 }
 
 function formatItemName(item) {
@@ -1442,6 +1499,10 @@ function renderState(state) {
       showBagModal();
       return;
     }
+    if (a.id === 'guild') {
+      showGuildModal();
+      return;
+    }
     if (a.id === 'vip activate') {
       const code = await promptModal({
         title: 'VIP\u6fc0\u6d3b',
@@ -1671,6 +1732,20 @@ function enterGame(name) {
     if (payload.text.startsWith('\u4ea4\u6613')) {
       appendChatLine(payload);
       setTradeStatus(payload.text);
+    }
+  });
+  socket.on('guild_members', (payload) => {
+    if (!payload || !payload.ok) {
+      if (payload && payload.error) appendLine(payload.error);
+      guildMembers = [];
+      if (guildUi.modal && !guildUi.modal.classList.contains('hidden')) {
+        renderGuildModal();
+      }
+      return;
+    }
+    guildMembers = payload.members || [];
+    if (guildUi.modal && !guildUi.modal.classList.contains('hidden')) {
+      renderGuildModal();
     }
   });
   socket.on('chat', (payload) => {
@@ -1963,6 +2038,22 @@ if (afkUi.close) {
 if (playerUi.close) {
   playerUi.close.addEventListener('click', () => {
     if (playerUi.modal) playerUi.modal.classList.add('hidden');
+  });
+}
+if (guildUi.invite) {
+  guildUi.invite.addEventListener('click', async () => {
+    const name = await promptModal({
+      title: '行会邀请',
+      text: '请输入玩家名',
+      placeholder: '玩家名'
+    });
+    if (!name) return;
+    if (socket) socket.emit('cmd', { text: `guild invite ${name.trim()}` });
+  });
+}
+if (guildUi.close) {
+  guildUi.close.addEventListener('click', () => {
+    if (guildUi.modal) guildUi.modal.classList.add('hidden');
   });
 }
 if (playerUi.attack) {

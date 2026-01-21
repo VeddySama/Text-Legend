@@ -9,14 +9,23 @@ export function calcDamage(attacker, defender, power = 1) {
   const atk = attacker.atk + randInt(0, Math.max(1, attacker.atk / 2));
   let defBonus = 0;
   const buff = defender.status?.buffs?.defBuff;
-  const debuff = defender.status?.debuffs?.poison;
+  const debuffs = defender.status?.debuffs || {};
   const now = Date.now();
   let defMultiplier = 1;
-  if (debuff) {
-    if (debuff.expiresAt && debuff.expiresAt < now) {
-      delete defender.status.debuffs.poison;
+  const poison = debuffs.poison;
+  if (poison) {
+    if (poison.expiresAt && poison.expiresAt < now) {
+      delete debuffs.poison;
     } else {
-      defMultiplier = debuff.defMultiplier || 1;
+      defMultiplier *= poison.defMultiplier || 1;
+    }
+  }
+  const poisonEffect = debuffs.poisonEffect;
+  if (poisonEffect) {
+    if (poisonEffect.expiresAt && poisonEffect.expiresAt < now) {
+      delete debuffs.poisonEffect;
+    } else {
+      defMultiplier *= poisonEffect.defMultiplier || 1;
     }
   }
   if (buff) {

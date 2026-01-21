@@ -19,6 +19,9 @@ function normalizeEffects(effects) {
   if (effects.combo) normalized.combo = true;
   if (effects.fury) normalized.fury = true;
   if (effects.unbreakable) normalized.unbreakable = true;
+  if (effects.defense) normalized.defense = true;
+  if (effects.dodge) normalized.dodge = true;
+  if (effects.poison) normalized.poison = true;
   return Object.keys(normalized).length ? normalized : null;
 }
 
@@ -28,6 +31,9 @@ function effectsKey(effects) {
   if (effects.combo) parts.push('combo');
   if (effects.fury) parts.push('fury');
   if (effects.unbreakable) parts.push('unbreakable');
+  if (effects.defense) parts.push('defense');
+  if (effects.dodge) parts.push('dodge');
+  if (effects.poison) parts.push('poison');
   return parts.join('+');
 }
 
@@ -149,21 +155,33 @@ export function computeDerived(player) {
     .filter((entry) => entry.item);
 
   const stats = { ...base };
+  let mdefBonus = 0;
+  let evadeChance = 0;
   for (const entry of bonus) {
     const item = entry.item;
     let atk = item.atk || 0;
     let mag = item.mag || 0;
     let spirit = item.spirit || 0;
+    let def = item.def || 0;
+    let mdef = item.mdef || 0;
     if (entry.effects?.fury && item.type === 'weapon') {
       atk = Math.floor(atk * 1.25);
       mag = Math.floor(mag * 1.25);
       spirit = Math.floor(spirit * 1.25);
     }
+    if (entry.effects?.defense && item.type !== 'weapon') {
+      def = Math.floor(def * 1.5);
+      mdef = Math.floor(mdef * 1.5);
+    }
+    if (entry.effects?.dodge) {
+      evadeChance = 0.2;
+    }
     stats.str += atk ? Math.floor(atk / 2) : 0;
     stats.dex += item.dex || 0;
     stats.int += mag ? Math.floor(mag / 2) : 0;
-    stats.con += item.def ? Math.floor(item.def / 2) : 0;
+    stats.con += def ? Math.floor(def / 2) : 0;
     stats.spirit += spirit || 0;
+    mdefBonus += mdef;
   }
   const training = player.flags.training;
   stats.spirit += training.spirit || 0;
@@ -192,7 +210,8 @@ export function computeDerived(player) {
   player.dex = stats.dex;
   player.mag = stats.int * 1.4 + stats.spirit * 0.6 + (training.mag || 0) + bonusMag;
   player.spirit = stats.spirit + bonusSpirit;
-  player.mdef = stats.spirit * 1.1 + level * 0.8 + (training.mdef || 0);
+  player.mdef = stats.spirit * 1.1 + level * 0.8 + (training.mdef || 0) + mdefBonus;
+  player.evadeChance = evadeChance;
 
   player.hp = clamp(player.hp, 1, player.max_hp);
   player.mp = clamp(player.mp, 0, player.max_mp);

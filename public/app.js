@@ -1168,6 +1168,15 @@ function formatItemTooltip(item) {
   if (item.effects && item.effects.unbreakable) {
     lines.push('\u7279\u6548: \u6c38\u4e0d\u78e8\u635f(\u8010\u4e45\u4e0d\u4f1a\u964d\u4f4e)');
   }
+  if (item.effects && item.effects.defense) {
+    lines.push('\u7279\u6548: \u5b88\u62a4(\u9632\u5fa1/\u9b54\u5fa1+50%)');
+  }
+  if (item.effects && item.effects.dodge) {
+    lines.push('\u7279\u6548: \u95ea\u907f(20%\u51e0\u7387\u8eb2\u95ea\u653b\u51fb)');
+  }
+  if (item.effects && item.effects.poison) {
+    lines.push('\u7279\u6548: \u6bd2(10%\u6982\u7387\u65bd\u6bd2\uff0c10\u79d2\u5185\u6389\u8840\uff0c\u9632\u5fa1/\u9b54\u5fa1-5%)');
+  }
   const typeLabel = ITEM_TYPE_LABELS[item.type] || ITEM_TYPE_LABELS.unknown;
   lines.push(`\u7c7b\u578b: ${typeLabel}`);
   if (item.slot) {
@@ -1177,6 +1186,7 @@ function formatItemTooltip(item) {
   const stats = [];
   if (item.atk) stats.push(`\u653b\u51fb+${item.atk}`);
   if (item.def) stats.push(`\u9632\u5fa1+${item.def}`);
+  if (item.mdef) stats.push(`\u9b54\u5fa1+${item.mdef}`);
   if (item.mag) stats.push(`\u9b54\u6cd5+${item.mag}`);
   if (item.spirit) stats.push(`\u9053\u672f+${item.spirit}`);
   if (item.dex) stats.push(`\u654f\u6377+${item.dex}`);
@@ -1246,6 +1256,9 @@ function formatItemName(item) {
   if (item.effects && item.effects.combo) tags.push('\u8fde\u51fb');
   if (item.effects && item.effects.fury) tags.push('\u72C2\u653B');
   if (item.effects && item.effects.unbreakable) tags.push('\u4e0d\u78e8');
+  if (item.effects && item.effects.defense) tags.push('\u5b88\u62a4');
+  if (item.effects && item.effects.dodge) tags.push('\u95ea\u907f');
+  if (item.effects && item.effects.poison) tags.push('\u6bd2');
   return tags.length ? `${item.name}\u00b7${tags.join('\u00b7')}` : item.name;
 }
 

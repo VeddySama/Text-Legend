@@ -293,6 +293,7 @@ function buildItemView(itemId, effects = null) {
     mp: item.mp || 0,
     atk: item.atk || 0,
     def: item.def || 0,
+    mdef: item.mdef || 0,
     mag: item.mag || 0,
     spirit: item.spirit || 0,
     dex: item.dex || 0,
@@ -316,6 +317,9 @@ function formatItemLabel(itemId, effects = null) {
   if (effects.combo) tags.push('连击');
   if (effects.fury) tags.push('狂攻');
   if (effects.unbreakable) tags.push('不磨');
+  if (effects.defense) tags.push('守护');
+  if (effects.dodge) tags.push('闪避');
+  if (effects.poison) tags.push('毒');
   return tags.length ? `${item.name}·${tags.join('·')}` : item.name;
 }
 
@@ -325,7 +329,12 @@ function rollEquipmentEffects(itemId) {
   const candidates = [];
   if (item.type === 'weapon') {
     candidates.push('combo', 'fury');
+    candidates.push('poison');
   }
+  if (item.type !== 'weapon') {
+    candidates.push('defense');
+  }
+  candidates.push('dodge');
   candidates.push('unbreakable');
   if (candidates.length < 1) return null;
   if (Math.random() <= EFFECT_DOUBLE_CHANCE && candidates.length >= 2) {
@@ -344,6 +353,25 @@ function rollEquipmentEffects(itemId) {
   return null;
 }
 
+function forceEquipmentEffects(itemId) {
+  const item = ITEM_TEMPLATES[itemId];
+  if (!item || !['weapon', 'armor', 'accessory'].includes(item.type)) return null;
+  const existing = rollEquipmentEffects(itemId);
+  if (existing) return existing;
+  const candidates = [];
+  if (item.type === 'weapon') {
+    candidates.push('combo', 'fury');
+    candidates.push('poison');
+  }
+  if (item.type !== 'weapon') {
+    candidates.push('defense');
+  }
+  candidates.push('dodge');
+  candidates.push('unbreakable');
+  const pick = candidates[randInt(0, candidates.length - 1)];
+  return { [pick]: true };
+}
+
 function isBossMob(mobTemplate) {
   const id = mobTemplate.id;
   return (
@@ -353,6 +381,14 @@ function isBossMob(mobTemplate) {
     id.includes('demon') ||
     ['bug_queen', 'huangquan', 'evil_snake', 'pig_white'].includes(id)
   );
+}
+
+function isEquipmentItem(item) {
+  return Boolean(item && ['weapon', 'armor', 'accessory'].includes(item.type));
+}
+
+function hasSpecialEffects(effects) {
+  return effects && Object.keys(effects).length > 0;
 }
 
 function rollRarityDrop(mobTemplate, bonus = 1) {
@@ -366,6 +402,26 @@ function rollRarityDrop(mobTemplate, bonus = 1) {
         : ITEM_POOLS[rarity].filter((id) => !isSetItem(id));
       if (!pool.length) return null;
       return pool[randInt(0, pool.length - 1)];
+    }
+  }
+  return null;
+}
+
+function rollRarityEquipmentDrop(mobTemplate, bonus = 1) {
+  if (!isBossMob(mobTemplate)) return null;
+  const table = RARITY_BOSS;
+  const allowSet = true;
+  for (const rarity of RARITY_ORDER) {
+    if (Math.random() <= Math.min(1, table[rarity] * bonus)) {
+      const pool = allowSet
+        ? ITEM_POOLS[rarity]
+        : ITEM_POOLS[rarity].filter((id) => !isSetItem(id));
+      const equipPool = pool.filter((id) => {
+        const item = ITEM_TEMPLATES[id];
+        return item && ['weapon', 'armor', 'accessory'].includes(item.type);
+      });
+      if (!equipPool.length) return null;
+      return equipPool[randInt(0, equipPool.length - 1)];
     }
   }
   return null;
@@ -461,6 +517,9 @@ function normalizeEffects(effects) {
   if (effects.combo) normalized.combo = true;
   if (effects.fury) normalized.fury = true;
   if (effects.unbreakable) normalized.unbreakable = true;
+  if (effects.defense) normalized.defense = true;
+  if (effects.dodge) normalized.dodge = true;
+  if (effects.poison) normalized.poison = true;
   return Object.keys(normalized).length ? normalized : null;
 }
 
@@ -1040,6 +1099,7 @@ function buildState(player) {
       mp: item.mp || 0,
       atk: item.atk || 0,
       def: item.def || 0,
+      mdef: item.mdef || 0,
       mag: item.mag || 0,
       spirit: item.spirit || 0,
       dex: item.dex || 0,
@@ -1224,13 +1284,26 @@ function applyDamageToMob(mob, dmg, attackerName) {
 }
 
 function getMagicDefenseMultiplier(target) {
-  const debuff = target.status?.debuffs?.poison;
-  if (!debuff) return 1;
-  if (debuff.expiresAt && debuff.expiresAt < Date.now()) {
-    delete target.status.debuffs.poison;
-    return 1;
+  const debuffs = target.status?.debuffs || {};
+  const now = Date.now();
+  let multiplier = 1;
+  const poison = debuffs.poison;
+  if (poison) {
+    if (poison.expiresAt && poison.expiresAt < now) {
+      delete debuffs.poison;
+    } else {
+      multiplier *= poison.mdefMultiplier || 1;
+    }
   }
-  return debuff.mdefMultiplier || 1;
+  const poisonEffect = debuffs.poisonEffect;
+  if (poisonEffect) {
+    if (poisonEffect.expiresAt && poisonEffect.expiresAt < now) {
+      delete debuffs.poisonEffect;
+    } else {
+      multiplier *= poisonEffect.mdefMultiplier || 1;
+    }
+  }
+  return multiplier;
 }
 
 function tryConsumePoisonPowders(player) {
@@ -1252,10 +1325,36 @@ function applyPoisonDebuff(target) {
   };
 }
 
+function applyPoisonEffectDebuff(target) {
+  if (!target.status) target.status = {};
+  if (!target.status.debuffs) target.status.debuffs = {};
+  target.status.debuffs.poisonEffect = {
+    defMultiplier: 0.95,
+    mdefMultiplier: 0.95,
+    expiresAt: Date.now() + 10000
+  };
+}
+
 function calcPoisonTickDamage(target) {
   const maxHp = Math.max(1, target.max_hp || 1);
   const total = Math.max(1, Math.floor(maxHp * 0.2));
   return Math.max(1, Math.floor(total / 30));
+}
+
+function calcPoisonEffectTickDamage(target) {
+  const maxHp = Math.max(1, target.max_hp || 1);
+  const total = Math.max(1, Math.floor(maxHp * 0.05));
+  return Math.max(1, Math.floor(total / 10));
+}
+
+function tryApplyPoisonEffect(attacker, target) {
+  if (!attacker || !target) return false;
+  const weapon = attacker.equipment?.weapon;
+  if (!weapon || !weapon.effects || !weapon.effects.poison) return false;
+  if (Math.random() > 0.1) return false;
+  applyPoison(target, 10, calcPoisonEffectTickDamage(target), attacker.name);
+  applyPoisonEffectDebuff(target);
+  return true;
 }
 
 function buildDamageRankMap(mob) {
@@ -1699,6 +1798,37 @@ function processMobDeath(player, mob, online) {
       dropTargets.push({ player: lootOwner, bonus });
     }
 
+    if (isWorldBoss && entries.length) {
+      const topName = entries[0][0];
+      const topPlayer = playersByName(topName);
+      if (topPlayer) {
+        let forcedId = rollRarityEquipmentDrop(template, WORLD_BOSS_DROP_BONUS) || rollRarityEquipmentDrop(template, 1);
+        if (!forcedId) {
+          const equipPool = Object.values(ITEM_TEMPLATES)
+            .filter((i) => i && ['weapon', 'armor', 'accessory'].includes(i.type))
+            .map((i) => i.id);
+          if (equipPool.length) {
+            forcedId = equipPool[randInt(0, equipPool.length - 1)];
+          }
+        }
+        if (forcedId) {
+          const forcedEffects = forceEquipmentEffects(forcedId);
+          addItem(topPlayer, forcedId, 1, forcedEffects);
+          topPlayer.send(`世界BOSS排名第1奖励：${formatItemLabel(forcedId, forcedEffects)}。`);
+          const forcedItem = ITEM_TEMPLATES[forcedId];
+          if (forcedItem) {
+            const forcedRarity = rarityByPrice(forcedItem);
+            if (['epic', 'legendary'].includes(forcedRarity)) {
+              emitAnnouncement(`${topPlayer.name} 获得世界BOSS首位奖励 ${formatItemLabel(forcedId, forcedEffects)}！`, forcedRarity);
+            }
+            if (isEquipmentItem(forcedItem) && hasSpecialEffects(forcedEffects)) {
+              emitAnnouncement(`${topPlayer.name} 获得特效装备 ${formatItemLabel(forcedId, forcedEffects)}！`, 'announce');
+            }
+          }
+        }
+      }
+    }
+
     dropTargets.forEach(({ player: owner, bonus }) => {
       const drops = dropLoot(template, bonus);
       if (!drops.length) return;
@@ -1710,6 +1840,9 @@ function processMobDeath(player, mob, online) {
           const rarity = rarityByPrice(item);
           if (['epic', 'legendary'].includes(rarity)) {
             emitAnnouncement(`${target.name} 击败 ${template.name} 获得${RARITY_LABELS[rarity] || '稀有'}装备 ${formatItemLabel(id, effects)}！`, rarity);
+          }
+          if (isEquipmentItem(item) && hasSpecialEffects(effects)) {
+            emitAnnouncement(`${target.name} 获得特效装备 ${formatItemLabel(id, effects)}！`, 'announce');
           }
         });
       } else {
@@ -1723,6 +1856,9 @@ function processMobDeath(player, mob, online) {
           const rarity = rarityByPrice(item);
           if (['epic', 'legendary'].includes(rarity)) {
             emitAnnouncement(`${owner.name} 击败 ${template.name} 获得${RARITY_LABELS[rarity] || '稀有'}装备 ${formatItemLabel(entry.id, entry.effects)}！`, rarity);
+          }
+          if (isEquipmentItem(item) && hasSpecialEffects(entry.effects)) {
+            emitAnnouncement(`${owner.name} 获得特效装备 ${formatItemLabel(entry.id, entry.effects)}！`, 'announce');
           }
         });
       }
@@ -1816,6 +1952,11 @@ function combatTick() {
 
     const hitChance = calcHitChance(player, target);
     if (Math.random() <= hitChance) {
+      if (target.evadeChance && Math.random() <= target.evadeChance) {
+        player.send(`${target.name} 闪避了你的攻击。`);
+        target.send(`你闪避了 ${player.name} 的攻击。`);
+        return;
+      }
       let dmg = 0;
       let skillPower = 1;
         if (skill && (skill.type === 'attack' || skill.type === 'spell' || skill.type === 'cleave' || skill.type === 'dot' || skill.type === 'aoe')) {
@@ -1858,6 +1999,9 @@ function combatTick() {
         applyPoisonDebuff(target);
         player.send('施毒成功。');
         target.send('你中了施毒术。');
+      } else if (tryApplyPoisonEffect(player, target)) {
+        target.send('你中了毒特效。');
+        player.send(`你的毒特效作用于 ${target.name}。`);
       }
       if (skill && skill.id === 'firestrike') {
         if (!player.status) player.status = {};
@@ -1993,6 +2137,8 @@ function combatTick() {
         applyPoison(mob, 30, calcPoisonTickDamage(mob), player.name);
         applyPoisonDebuff(mob);
         player.send(`施毒成功：${mob.name} 中毒。`);
+      } else if (tryApplyPoisonEffect(player, mob)) {
+        player.send(`你的毒特效作用于 ${mob.name}。`);
       }
       if (skill && skill.id === 'firestrike') {
         if (!player.status) player.status = {};
@@ -2077,6 +2223,14 @@ function combatTick() {
     }
     const mobHitChance = calcHitChance(mob, mobTarget);
     if (Math.random() <= mobHitChance) {
+      if (mobTarget && mobTarget.evadeChance && Math.random() <= mobTarget.evadeChance) {
+        if (mobTarget.userId) {
+          mobTarget.send(`你闪避了 ${mob.name} 的攻击。`);
+        } else {
+          player.send(`${mobTarget.name} 闪避了 ${mob.name} 的攻击。`);
+        }
+        return;
+      }
       const dmg = calcDamage(mob, mobTarget, 1);
       if (mobTarget && mobTarget.userId) {
         applyDamageToPlayer(mobTarget, dmg);

@@ -182,6 +182,14 @@ const authToast = document.getElementById('auth-toast');
 const charMsg = document.getElementById('char-msg');
 const characterList = document.getElementById('character-list');
 const loginUserInput = document.getElementById('login-username');
+const captchaUi = {
+  loginInput: document.getElementById('login-captcha'),
+  loginImg: document.getElementById('login-captcha-img'),
+  loginRefresh: document.getElementById('login-captcha-refresh'),
+  registerInput: document.getElementById('register-captcha'),
+  registerImg: document.getElementById('register-captcha-img'),
+  registerRefresh: document.getElementById('register-captcha-refresh')
+};
 let lastSavedLevel = null;
 const CHAT_CACHE_LIMIT = 200;
 
@@ -192,6 +200,22 @@ function showToast(message) {
   setTimeout(() => {
     authToast.classList.remove('show');
   }, 1600);
+}
+
+async function refreshCaptcha(target) {
+  const img = target === 'login' ? captchaUi.loginImg : captchaUi.registerImg;
+  const input = target === 'login' ? captchaUi.loginInput : captchaUi.registerInput;
+  if (!img || !input) return;
+  try {
+    const res = await fetch('/api/captcha');
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'captcha');
+    img.src = `data:image/svg+xml;utf8,${encodeURIComponent(data.svg)}`;
+    img.dataset.token = data.token || '';
+    input.value = '';
+  } catch {
+    // ignore captcha failures
+  }
 }
 
 function show(section) {
@@ -1712,11 +1736,13 @@ async function apiPost(path, body) {
 async function login() {
   const username = loginUserInput.value.trim();
   const password = document.getElementById('login-password').value.trim();
+  const captchaCode = captchaUi.loginInput ? captchaUi.loginInput.value.trim() : '';
+  const captchaToken = captchaUi.loginImg ? captchaUi.loginImg.dataset.token : '';
   authMsg.textContent = '';
   const loginBtn = document.getElementById('login-btn');
   loginBtn.classList.add('btn-loading');
   try {
-    const data = await apiPost('/api/login', { username, password });
+    const data = await apiPost('/api/login', { username, password, captchaToken, captchaCode });
     localStorage.setItem('rememberedUser', username);
     token = data.token;
     localStorage.setItem('savedToken', token);
@@ -1729,6 +1755,7 @@ async function login() {
     showToast('登录失败');
     loginBtn.classList.add('shake');
     setTimeout(() => loginBtn.classList.remove('shake'), 500);
+    refreshCaptcha('login');
   } finally {
     loginBtn.classList.remove('btn-loading');
   }
@@ -1737,18 +1764,22 @@ async function login() {
 async function register() {
   const username = document.getElementById('register-username').value.trim();
   const password = document.getElementById('register-password').value.trim();
+  const captchaCode = captchaUi.registerInput ? captchaUi.registerInput.value.trim() : '';
+  const captchaToken = captchaUi.registerImg ? captchaUi.registerImg.dataset.token : '';
   authMsg.textContent = '';
   const registerBtn = document.getElementById('register-btn');
   registerBtn.classList.add('btn-loading');
   try {
-    await apiPost('/api/register', { username, password });
+    await apiPost('/api/register', { username, password, captchaToken, captchaCode });
     authMsg.textContent = '注册成功，请登录。';
     showToast('注册成功');
+    refreshCaptcha('register');
   } catch (err) {
     authMsg.textContent = err.message;
     showToast('注册失败');
     registerBtn.classList.add('shake');
     setTimeout(() => registerBtn.classList.remove('shake'), 500);
+    refreshCaptcha('register');
   } finally {
     registerBtn.classList.remove('btn-loading');
   }
@@ -1900,6 +1931,20 @@ function enterGame(name) {
 document.getElementById('login-btn').addEventListener('click', login);
 document.getElementById('register-btn').addEventListener('click', register);
 document.getElementById('create-char-btn').addEventListener('click', createCharacter);
+if (captchaUi.loginRefresh) {
+  captchaUi.loginRefresh.addEventListener('click', () => refreshCaptcha('login'));
+}
+if (captchaUi.registerRefresh) {
+  captchaUi.registerRefresh.addEventListener('click', () => refreshCaptcha('register'));
+}
+if (captchaUi.loginImg) {
+  captchaUi.loginImg.addEventListener('click', () => refreshCaptcha('login'));
+}
+if (captchaUi.registerImg) {
+  captchaUi.registerImg.addEventListener('click', () => refreshCaptcha('register'));
+}
+refreshCaptcha('login');
+refreshCaptcha('register');
 if (chat.sendBtn) {
   chat.sendBtn.addEventListener('click', sendChatMessage);
 }

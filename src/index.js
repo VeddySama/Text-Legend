@@ -4,6 +4,7 @@ import { Server } from 'socket.io';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { mkdir } from 'node:fs/promises';
+import crypto from 'node:crypto';
 
 import config from './config.js';
 import knex from './db/index.js';
@@ -51,9 +52,53 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
+const CAPTCHA_TTL_MS = 5 * 60 * 1000;
+const captchaStore = new Map();
+
+function cleanupCaptchas() {
+  const now = Date.now();
+  for (const [token, entry] of captchaStore.entries()) {
+    if (!entry || entry.expiresAt <= now) {
+      captchaStore.delete(token);
+    }
+  }
+}
+
+function generateCaptcha() {
+  const code = crypto.randomBytes(2).toString('hex').toUpperCase();
+  const token = crypto.randomUUID();
+  captchaStore.set(token, { code, expiresAt: Date.now() + CAPTCHA_TTL_MS });
+  const svg = `
+<svg xmlns="http://www.w3.org/2000/svg" width="120" height="38" viewBox="0 0 120 38">
+  <rect width="120" height="38" rx="8" fill="#fff3e1"/>
+  <path d="M6 10h108" stroke="#f0c79e" stroke-width="2" opacity="0.6"/>
+  <path d="M10 28h100" stroke="#d9b58f" stroke-width="2" opacity="0.6"/>
+  <text x="60" y="25" text-anchor="middle" font-family="Arial" font-size="18" fill="#7a4a1f" font-weight="700">${code}</text>
+</svg>
+`.trim();
+  return { token, svg };
+}
+
+function verifyCaptcha(token, code) {
+  if (!token || !code) return false;
+  const entry = captchaStore.get(token);
+  captchaStore.delete(token);
+  if (!entry || entry.expiresAt <= Date.now()) return false;
+  return String(code).trim().toUpperCase() === entry.code;
+}
+
+app.get('/api/captcha', (req, res) => {
+  cleanupCaptchas();
+  const payload = generateCaptcha();
+  res.json({ ok: true, token: payload.token, svg: payload.svg });
+});
+
 app.post('/api/register', async (req, res) => {
-  const { username, password } = req.body || {};
+  const { username, password, captchaToken, captchaCode } = req.body || {};
   if (!username || !password) return res.status(400).json({ error: '账号或密码缺失。' });
+  if (!verifyCaptcha(captchaToken, captchaCode)) {
+    return res.status(400).json({ error: '验证码错误。' });
+  }
   const exists = await knex('users').where({ username }).first();
   if (exists) return res.status(400).json({ error: '账号已存在。' });
   await createUser(username, password);
@@ -61,8 +106,11 @@ app.post('/api/register', async (req, res) => {
 });
 
 app.post('/api/login', async (req, res) => {
-  const { username, password } = req.body || {};
+  const { username, password, captchaToken, captchaCode } = req.body || {};
   if (!username || !password) return res.status(400).json({ error: '账号或密码缺失。' });
+  if (!verifyCaptcha(captchaToken, captchaCode)) {
+    return res.status(400).json({ error: '验证码错误。' });
+  }
   const user = await verifyUser(username, password);
   if (!user) return res.status(401).json({ error: '账号或密码错误。' });
   const token = await createSession(user.id);
@@ -1730,7 +1778,6 @@ io.on('connection', (socket) => {
 
     players.set(socket.id, loaded);
     loaded.send(`欢迎回来，${loaded.name}。`);
-    loaded.send('输入 help 查看指令。');
     loaded.send(`金币: ${loaded.gold}`);
     if (loaded.guild) loaded.send(`行会: ${loaded.guild.name}`);
     applyOfflineRewards(loaded);
@@ -1739,7 +1786,7 @@ io.on('connection', (socket) => {
     const zone = WORLD[loaded.position.zone];
     const room = zone?.rooms[loaded.position.room];
     const locationName = zone && room ? `${zone.name} - ${room.name}` : `${loaded.position.zone}:${loaded.position.room}`;
-    loaded.send(`你位于 ${locationName}。输入 look 查看。`);
+    loaded.send(`你位于 ${locationName}。`);
     sendState(loaded);
   });
 

@@ -160,6 +160,34 @@ header p {
   font-size: 1.1rem;
 }
 
+.captcha-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.captcha-row input {
+  flex: 1;
+  min-width: 0;
+}
+
+.captcha-img {
+  width: 120px;
+  height: 38px;
+  border-radius: 10px;
+  border: 1px solid #e0c2a0;
+  background: #fff3e1;
+  cursor: pointer;
+}
+
+.captcha-refresh {
+  padding: 8px 10px;
+  font-size: 0.9rem;
+  background: #f0c79e;
+  color: #3b2412;
+  box-shadow: inset 0 0 0 1px rgba(118, 70, 22, 0.25);
+}
+
 input, select {
   font-family: inherit;
   font-size: 1rem;
@@ -321,6 +349,17 @@ button:hover {
 .status-grid-3 .status-row {
   margin: 2px 0;
   font-size: 0.88rem;
+}
+
+.status-grid-3 .status-row.wide {
+  grid-column: span 3;
+  justify-content: flex-start;
+  gap: 10px;
+}
+
+.status-grid-3 .status-row.wide span,
+.status-grid-3 .status-row.wide strong {
+  white-space: nowrap;
 }
 
 .status-row strong {

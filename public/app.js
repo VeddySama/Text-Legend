@@ -263,6 +263,29 @@ function buildLine(payload) {
   return p;
 }
 
+function applyAnnounceMarquee(line) {
+  if (!line || !line.classList.contains('announce-line')) return;
+  const text = line.querySelector('.line-text');
+  if (!text || line.dataset.marqueeApplied) return;
+  requestAnimationFrame(() => {
+    const totalWidth = line.clientWidth;
+    const children = Array.from(line.children).filter((el) => el !== text);
+    const otherWidth = children.reduce((sum, el) => sum + el.offsetWidth, 0);
+    const gap = 6 * Math.max(0, line.children.length - 1);
+    const available = Math.max(0, totalWidth - otherWidth - gap);
+    if (text.scrollWidth <= available) return;
+    const shift = available - text.scrollWidth;
+    text.style.setProperty('--marquee-shift', `${shift}px`);
+    text.style.animationDuration = '10s';
+    text.style.animationTimingFunction = 'ease-in-out';
+    text.style.animationIterationCount = '2';
+    text.style.animationDirection = 'alternate';
+    text.style.animationFillMode = 'both';
+    text.style.animationName = 'announce-bounce';
+    line.dataset.marqueeApplied = 'true';
+  });
+}
+
 const LOCATION_LOOKUP = {
   '盟重省 - 盟重入口': { zoneId: 'mg_plains', roomId: 'gate' },
   '土城集市': { zoneId: 'mg_town', roomId: 'mg_market' },
@@ -291,6 +314,7 @@ function appendLine(payload) {
   const p = buildLine(payload);
   log.appendChild(p);
   log.scrollTop = log.scrollHeight;
+  applyAnnounceMarquee(p);
 }
 
 function formatServerTime(ms) {
@@ -340,6 +364,7 @@ function appendChatLine(payload) {
   chat.log.appendChild(p);
   chat.log.scrollTop = chat.log.scrollHeight;
   if (activeChar) cacheChatLine(activeChar, payload);
+  applyAnnounceMarquee(p);
 }
 
 function parseTradeRequest(text) {

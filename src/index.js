@@ -75,6 +75,8 @@ app.post('/api/character', async (req, res) => {
   const session = await getSession(token);
   if (!session) return res.status(401).json({ error: '登录已过期。' });
   if (!name || !classId) return res.status(400).json({ error: '角色名或职业缺失。' });
+  const existing = await findCharacterByName(name);
+  if (existing) return res.status(400).json({ error: '角色名已存在。' });
 
   const player = newCharacter(name, classId);
   computeDerived(player);

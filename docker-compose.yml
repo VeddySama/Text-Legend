@@ -11,7 +11,7 @@ services:
       - PORT=3000
       - DB_CLIENT=sqlite
       - DB_FILENAME=/app/data/game.sqlite
-      - SESSION_TTL_MIN=120
+      - SESSION_TTL_MIN=0
       - ADMIN_BOOTSTRAP_SECRET=change_me
       - ADMIN_BOOTSTRAP_USER=admin_account
     volumes:

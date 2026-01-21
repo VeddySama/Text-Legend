@@ -1378,6 +1378,14 @@ function tryApplyHealBlockEffect(attacker, target) {
   return true;
 }
 
+function calcMagicDamageFromValue(value, target) {
+  const base = Math.max(0, value || 0);
+  const mdefMultiplier = getMagicDefenseMultiplier(target);
+  const mdef = Math.floor((target.mdef || 0) * mdefMultiplier);
+  const dmg = Math.floor((base + randInt(0, base / 2)) - mdef * 0.6);
+  return Math.max(10, dmg);
+}
+
 function calcPoisonTickDamage(target) {
   const maxHp = Math.max(1, target.max_hp || 1);
   const total = Math.max(1, Math.floor(maxHp * 0.2));
@@ -2302,7 +2310,13 @@ function combatTick() {
         }
         return;
       }
-      const dmg = calcDamage(mob, mobTarget, 1);
+      let dmg = calcDamage(mob, mobTarget, 1);
+      if (mobTemplate && isBossMob(mobTemplate)) {
+        const magicBase = Math.floor(mob.atk * 0.3);
+        const spiritBase = Math.floor(mob.atk * 0.3);
+        dmg += calcMagicDamageFromValue(magicBase, mobTarget);
+        dmg += calcMagicDamageFromValue(spiritBase, mobTarget);
+      }
       if (mobTarget && mobTarget.userId) {
         applyDamageToPlayer(mobTarget, dmg);
         mobTarget.send(`${mob.name} 对你造成 ${dmg} 点伤害。`);

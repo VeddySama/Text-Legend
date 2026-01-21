@@ -11,7 +11,6 @@ import {
   hasSkill,
   ensurePlayerSkills
 } from './skills.js';
-import { QUESTS } from './quests.js';
 import { addItem, removeItem, equipItem, unequipItem, bagLimit, gainExp, computeDerived, getDurabilityMax, getRepairCost, getItemKey } from './player.js';
 import { CLASSES, expForLevel } from './constants.js';
 import { getRoom, getAliveMobs, spawnMobs } from './state.js';
@@ -986,11 +985,6 @@ export async function handleCommand({ player, players, input, send, partyApi, gu
       send(`修理完成，花费 ${total} 金币。`);
       return;
     }
-    case 'quests': {
-      const list = Object.values(QUESTS).map((q) => `任务: ${q.name} - ${q.desc}`);
-      send(list.join('\n'));
-      return;
-    }
     case 'train': {
       if (!player.flags) player.flags = {};
       if (!player.flags.training) {
@@ -1015,42 +1009,6 @@ export async function handleCommand({ player, players, input, send, partyApi, gu
       computeDerived(player);
       send(`修炼成功: ${TRAINING_OPTIONS[key].label} +${TRAINING_OPTIONS[key].inc} (累计 +${player.flags.training[key]})。`);
       send(`消耗 ${cost} 金币。`);
-      return;
-    }
-    case 'accept': {
-      if (!args) return send('要接受哪个任务？');
-      const quest = Object.values(QUESTS).find((q) => q.id === args || q.name === args);
-      if (!quest) return send('未找到任务。');
-      if (player.quests[quest.id]) return send('任务已在进行中。');
-      player.quests[quest.id] = { progress: {}, completed: false };
-      send(`已接受任务: ${quest.name}`);
-      return;
-    }
-    case 'complete': {
-      if (!args) return send('要完成哪个任务？');
-      const quest = Object.values(QUESTS).find((q) => q.id === args || q.name === args);
-      const state = quest ? player.quests[quest.id] : null;
-      if (!quest || !state) return send('该任务未接受。');
-      if (state.completed) return send('任务已完成。');
-      const goals = quest.goals.kill || {};
-      const progress = state.progress.kill || {};
-      const done = Object.keys(goals).every((k) => (progress[k] || 0) >= goals[k]);
-      if (!done) return send('任务尚未完成。');
-      state.completed = true;
-      const expGain = quest.rewards.exp || 0;
-      const goldGain = quest.rewards.gold || 0;
-      const leveled = expGain ? gainExp(player, expGain) : false;
-      player.gold += goldGain;
-      const rewardItems = quest.rewards.items || [];
-      rewardItems.forEach((id) => addItem(player, id, 1));
-      send(`任务完成: ${quest.name}`);
-      if (expGain || goldGain) {
-        send(`获得奖励: 经验 ${expGain}，金币 ${goldGain}`);
-      }
-      if (rewardItems.length) {
-        send(`获得物品: ${rewardItems.map((id) => ITEM_TEMPLATES[id]?.name || id).join(', ')}`);
-      }
-      if (leveled) send('你升级了！');
       return;
     }
     case 'party': {
@@ -1397,19 +1355,10 @@ export async function handleCommand({ player, players, input, send, partyApi, gu
       return;
     }
     default:
-      send('未知指令，请输入 help。');
+      return;
   }
 }
 
 export function awardKill(player, mobTemplateId) {
-  for (const [questId, state] of Object.entries(player.quests)) {
-    if (state.completed) continue;
-    const quest = QUESTS[questId];
-    if (!quest || !quest.goals.kill) continue;
-    state.progress.kill = state.progress.kill || {};
-    if (quest.goals.kill[mobTemplateId]) {
-      state.progress.kill[mobTemplateId] = (state.progress.kill[mobTemplateId] || 0) + 1;
-    }
-  }
   computeDerived(player);
 }

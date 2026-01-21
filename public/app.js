@@ -25,8 +25,7 @@ const ui = {
   guild: document.getElementById('ui-guild'),
   pk: document.getElementById('ui-pk'),
   vip: document.getElementById('ui-vip'),
-  sabakBonus: document.getElementById('ui-sabak-bonus'),
-  setBonus: document.getElementById('ui-set-bonus'),
+  bonusLine: document.getElementById('ui-bonus-line'),
   online: document.getElementById('ui-online'),
   serverTime: document.getElementById('ui-server-time'),
   party: document.getElementById('ui-party'),
@@ -1401,11 +1400,10 @@ function renderState(state) {
     if (ui.mdef) ui.mdef.textContent = state.stats.mdef ?? '-';
     ui.pk.textContent = `${state.stats.pk} (${state.stats.pk >= 100 ? '红名' : '正常'})`;
     ui.vip.textContent = state.stats.vip ? '是' : '否';
-    if (ui.sabakBonus) {
-      ui.sabakBonus.textContent = state.stats.sabak_bonus ? '已生效' : '无';
-    }
-    if (ui.setBonus) {
-      ui.setBonus.textContent = state.stats.set_bonus ? '已激活' : '无';
+    if (ui.bonusLine) {
+      const sabakText = state.stats.sabak_bonus ? '已生效' : '无';
+      const setText = state.stats.set_bonus ? '已激活' : '无';
+      ui.bonusLine.textContent = `沙巴克加成：${sabakText} | 套装加成：${setText}`;
     }
     if (ui.online) {
       ui.online.textContent = state.online ? String(state.online.count || 0) : '0';
@@ -1632,7 +1630,6 @@ function renderState(state) {
   const actions = [
     { id: 'stats', label: '\u72b6\u6001' },
     { id: 'bag', label: '\u80cc\u5305' },
-    { id: 'quests', label: '\u4efb\u52a1' },
     { id: 'party', label: '\u961f\u4f0d' },
     { id: 'guild', label: '\u884c\u4f1a' },
     { id: 'sabak status', label: '\u6c99\u5df4\u514b' },

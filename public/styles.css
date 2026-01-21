@@ -355,11 +355,16 @@ button:hover {
   grid-column: span 3;
   justify-content: flex-start;
   gap: 10px;
+  align-items: center;
 }
 
 .status-grid-3 .status-row.wide span,
 .status-grid-3 .status-row.wide strong {
   white-space: nowrap;
+}
+
+.status-grid-3 .status-row.wide span::after {
+  content: '';
 }
 
 .status-row strong {

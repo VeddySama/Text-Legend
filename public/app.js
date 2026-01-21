@@ -1842,18 +1842,32 @@ async function createCharacter() {
     charMsg.textContent = '请输入角色名。';
     return;
   }
+  if (!token) {
+    charMsg.textContent = '请先登录后创建角色。';
+    show(authSection);
+    return;
+  }
   try {
     await apiPost('/api/character', { token, name, classId });
-    const loginData = await apiPost('/api/login', {
-      username: document.getElementById('login-username').value.trim(),
-      password: document.getElementById('login-password').value.trim()
-    });
-    token = loginData.token;
-    localStorage.setItem('savedToken', token);
-    localStorage.setItem('savedCharacters', JSON.stringify(loginData.characters || []));
-    renderCharacters(loginData.characters || []);
+    let saved = [];
+    try {
+      saved = JSON.parse(localStorage.getItem('savedCharacters') || '[]');
+    } catch {
+      saved = [];
+    }
+    if (!Array.isArray(saved)) saved = [];
+    if (!saved.some((c) => c.name === name)) {
+      saved.push({ name, level: 1, class: classId });
+    }
+    localStorage.setItem('savedCharacters', JSON.stringify(saved));
+    renderCharacters(saved);
     charMsg.textContent = '角色已创建。';
   } catch (err) {
+    if (err.message === '验证码错误。') {
+      charMsg.textContent = '创建角色不需要验证码，请重新登录。';
+      show(authSection);
+      return;
+    }
     charMsg.textContent = err.message;
   }
 }

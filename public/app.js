@@ -59,8 +59,11 @@ const chat = {
   guildCreateBtn: document.getElementById('chat-guild-create'),
   partyToggleBtn: document.getElementById('chat-party-toggle'),
   sabakRegisterBtn: document.getElementById('chat-sabak-register'),
-  locationBtn: document.getElementById('chat-send-location')
+  locationBtn: document.getElementById('chat-send-location'),
+  emojiToggle: document.getElementById('chat-emoji-toggle'),
+  emojiPanel: document.getElementById('chat-emoji-panel')
 };
+const EMOJI_LIST = ['😀', '😁', '😂', '🤣', '😅', '😊', '😍', '😘', '😎', '🤔', '😴', '😡', '😭', '😇', '🤝', '👍', '👎', '🔥', '💯', '🎉'];
 const tradeUi = {
   requestBtn: document.getElementById('chat-trade-request'),
   itemSelect: document.getElementById('trade-item'),
@@ -919,6 +922,23 @@ function sendChatMessage() {
   if (!msg) return;
   socket.emit('cmd', { text: `say ${msg}` });
   chat.input.value = '';
+}
+
+function renderEmojiPanel() {
+  if (!chat.emojiPanel) return;
+  chat.emojiPanel.innerHTML = '';
+  EMOJI_LIST.forEach((emoji) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'emoji-btn';
+    btn.textContent = emoji;
+    btn.addEventListener('click', () => {
+      if (!chat.input) return;
+      chat.input.value = `${chat.input.value}${emoji}`;
+      chat.input.focus();
+    });
+    chat.emojiPanel.appendChild(btn);
+  });
 }
 
 function setBar(el, current, max) {
@@ -1932,6 +1952,22 @@ function enterGame(name) {
 document.getElementById('login-btn').addEventListener('click', login);
 document.getElementById('register-btn').addEventListener('click', register);
 document.getElementById('create-char-btn').addEventListener('click', createCharacter);
+if (chat.emojiToggle) {
+  chat.emojiToggle.addEventListener('click', () => {
+    if (!chat.emojiPanel) return;
+    renderEmojiPanel();
+    chat.emojiPanel.classList.toggle('hidden');
+  });
+}
+if (chat.emojiPanel) {
+  document.addEventListener('click', (evt) => {
+    if (!chat.emojiPanel || chat.emojiPanel.classList.contains('hidden')) return;
+    const target = evt.target;
+    if (target === chat.emojiPanel || chat.emojiPanel.contains(target)) return;
+    if (target === chat.emojiToggle) return;
+    chat.emojiPanel.classList.add('hidden');
+  });
+}
 if (captchaUi.loginRefresh) {
   captchaUi.loginRefresh.addEventListener('click', () => refreshCaptcha('login'));
 }

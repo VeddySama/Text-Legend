@@ -173,7 +173,7 @@ export function computeDerived(player) {
   const levelUp = Math.max(0, level - 1);
   const levelBonusMap = {
     warrior: { hp: 5, mp: 10, atk: 1, def: 1, mag: 0, spirit: 0 },
-    mage: { hp: 3, mp: 10, atk: 0, def: 2, mag: 2, spirit: 0 },
+    mage: { hp: 3, mp: 20, atk: 0, def: 2, mag: 2, spirit: 0 },
     taoist: { hp: 3, mp: 10, atk: 0, def: 2, mag: 0, spirit: 2 }
   };
   const levelBonus = levelBonusMap[player.classId] || levelBonusMap.warrior;

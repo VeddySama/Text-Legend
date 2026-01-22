@@ -45,6 +45,7 @@ const ui = {
   players: document.getElementById('players-list'),
   skills: document.getElementById('skills-list'),
   summon: document.getElementById('summon-panel'),
+  summonDetails: document.getElementById('summon-details'),
   items: document.getElementById('items-list'),
   worldBossRank: document.getElementById('worldboss-rank'),
   training: document.getElementById('training-list'),
@@ -1208,6 +1209,59 @@ function showBagModal() {
     renderStatsModal();
   }
 
+  function renderSummonDetails(summon, levelMax) {
+    if (!ui.summonDetails) return;
+    ui.summonDetails.classList.remove('hidden');
+    ui.summonDetails.innerHTML = '';
+
+    const container = document.createElement('div');
+
+    const nameDiv = document.createElement('div');
+    nameDiv.className = 'summon-name';
+    nameDiv.textContent = summon.name;
+    container.appendChild(nameDiv);
+
+    const levelDiv = document.createElement('div');
+    levelDiv.className = 'summon-level';
+    levelDiv.textContent = `等级: ${summon.level}/${levelMax}`;
+    container.appendChild(levelDiv);
+
+    const hpPct = summon.max_hp > 0 ? (summon.hp / summon.max_hp) * 100 : 0;
+    const expPct = summon.exp && summon.exp_next ? (summon.exp / summon.exp_next) * 100 : 0;
+
+    const hpRow = document.createElement('div');
+    hpRow.className = 'summon-bar-row';
+    hpRow.innerHTML = `
+      <span class="summon-bar-label">生命</span>
+      <div class="summon-bar">
+        <div class="summon-bar-fill hp" style="width: ${hpPct}%"></div>
+      </div>
+    `;
+    container.appendChild(hpRow);
+
+    const expRow = document.createElement('div');
+    expRow.className = 'summon-bar-row';
+    expRow.innerHTML = `
+      <span class="summon-bar-label">经验</span>
+      <div class="summon-bar">
+        <div class="summon-bar-fill exp" style="width: ${expPct}%"></div>
+      </div>
+    `;
+    container.appendChild(expRow);
+
+    const statsDiv = document.createElement('div');
+    statsDiv.className = 'summon-stats';
+    statsDiv.innerHTML = `
+      <div class="summon-stat">
+        <span class="summon-stat-label">攻击</span>
+        <span class="summon-stat-value">${summon.atk || 0}</span>
+      </div>
+    `;
+    container.appendChild(statsDiv);
+
+    ui.summonDetails.appendChild(container);
+  }
+
 // 套装掉落数据
 const SET_DROPS = {
   shengzhan: {
@@ -1740,13 +1794,17 @@ function renderState(state) {
         const levelMax = state.summon.levelMax || 8;
         const summonEntry = [{
           id: 'summon',
-          label: `${state.summon.name} Lv${state.summon.level}/${levelMax} ${state.summon.hp}/${state.summon.max_hp}`,
-          tooltip: `攻击: ${state.summon.atk} 防御: ${state.summon.def}`,
+          label: `${state.summon.name} Lv${state.summon.level}/${levelMax}`,
           raw: state.summon
         }];
         renderChips(ui.summon, summonEntry, () => {});
+        renderSummonDetails(state.summon, levelMax);
       } else {
         ui.summon.textContent = '\u65e0';
+        if (ui.summonDetails) {
+          ui.summonDetails.classList.add('hidden');
+          ui.summonDetails.innerHTML = '';
+        }
       }
     }
   }

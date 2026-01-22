@@ -1000,6 +1000,43 @@ button:hover {
     padding: 4px 8px;
     font-size: 0.75rem;
   }
+
+  .summon-details {
+    padding: 8px;
+  }
+
+  .summon-name {
+    font-size: 0.85rem;
+  }
+
+  .summon-level {
+    font-size: 0.8rem;
+  }
+
+  .summon-bar-label {
+    width: 36px;
+    font-size: 0.75rem;
+  }
+
+  .summon-bar {
+    height: 6px;
+  }
+
+  .summon-stats {
+    font-size: 0.75rem;
+  }
+
+  .summon-stat {
+    padding: 4px;
+  }
+
+  .summon-stat-label {
+    font-size: 0.65rem;
+  }
+
+  .summon-stat-value {
+    font-size: 0.8rem;
+  }
 }
 
 /* 触摸设备优化 */
@@ -1458,6 +1495,43 @@ button:hover {
     padding: 4px 8px;
     font-size: 0.75rem;
   }
+
+  .summon-details {
+    padding: 8px;
+  }
+
+  .summon-name {
+    font-size: 0.85rem;
+  }
+
+  .summon-level {
+    font-size: 0.8rem;
+  }
+
+  .summon-bar-label {
+    width: 36px;
+    font-size: 0.75rem;
+  }
+
+  .summon-bar {
+    height: 6px;
+  }
+
+  .summon-stats {
+    font-size: 0.75rem;
+  }
+
+  .summon-stat {
+    padding: 4px;
+  }
+
+  .summon-stat-label {
+    font-size: 0.65rem;
+  }
+
+  .summon-stat-value {
+    font-size: 0.8rem;
+  }
 }
 
 /* 触摸设备优化 */
@@ -1777,6 +1851,43 @@ button:hover {
     padding: 4px 8px;
     font-size: 0.75rem;
   }
+
+  .summon-details {
+    padding: 8px;
+  }
+
+  .summon-name {
+    font-size: 0.85rem;
+  }
+
+  .summon-level {
+    font-size: 0.8rem;
+  }
+
+  .summon-bar-label {
+    width: 36px;
+    font-size: 0.75rem;
+  }
+
+  .summon-bar {
+    height: 6px;
+  }
+
+  .summon-stats {
+    font-size: 0.75rem;
+  }
+
+  .summon-stat {
+    padding: 4px;
+  }
+
+  .summon-stat-label {
+    font-size: 0.65rem;
+  }
+
+  .summon-stat-value {
+    font-size: 0.8rem;
+  }
 }
 
 /* 触摸设备优化 */
@@ -1958,6 +2069,87 @@ button:hover {
   border-color: #b35a1a;
 }
 
+.summon-details {
+  margin-top: 10px;
+  padding: 10px;
+  border-radius: 10px;
+  background: #fff4e2;
+  border: 1px solid #ead0ad;
+}
+
+.summon-name {
+  font-weight: 600;
+  color: #5b3a1c;
+  margin-bottom: 6px;
+  font-size: 0.9rem;
+}
+
+.summon-level {
+  font-size: 0.85rem;
+  color: #6b4a2a;
+  margin-bottom: 8px;
+}
+
+.summon-bar-row {
+  display: flex;
+  align-items: center;
+  margin: 4px 0;
+}
+
+.summon-bar-label {
+  width: 40px;
+  font-size: 0.8rem;
+  color: #6b4a2a;
+}
+
+.summon-bar {
+  flex: 1;
+  height: 8px;
+  background: #e8d4b9;
+  border-radius: 999px;
+  overflow: hidden;
+  margin-left: 6px;
+}
+
+.summon-bar-fill {
+  height: 100%;
+  width: 0%;
+  border-radius: 999px;
+  transition: width 0.3s ease;
+}
+
+.summon-bar-fill.hp { background: linear-gradient(90deg, #8b1f1f, #d05a2f); }
+.summon-bar-fill.exp { background: linear-gradient(90deg, #1f6b3b, #35b36c); }
+
+.summon-stats {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(118, 70, 22, 0.15);
+  font-size: 0.8rem;
+  color: #6b4a2a;
+  text-align: center;
+}
+
+.summon-stat {
+  padding: 6px;
+  background: rgba(255, 247, 234, 0.5);
+  border-radius: 6px;
+  display: inline-block;
+}
+
+.summon-stat-label {
+  display: block;
+  font-size: 0.7rem;
+  color: #8b6a4a;
+  margin-bottom: 2px;
+}
+
+.summon-stat-value {
+  font-weight: 600;
+  color: #5b3a1c;
+  font-size: 0.9rem;
+}
+
 #player-info {
   white-space: pre-line;
 }
@@ -2081,6 +2273,87 @@ button:hover {
   border-color: rgba(210, 92, 92, 0.55);
   color: #b63c3c;
   background: #fff0f0;
+}
+
+.summon-details {
+  margin-top: 10px;
+  padding: 10px;
+  border-radius: 10px;
+  background: #fff4e2;
+  border: 1px solid #ead0ad;
+}
+
+.summon-name {
+  font-weight: 600;
+  color: #5b3a1c;
+  margin-bottom: 6px;
+  font-size: 0.9rem;
+}
+
+.summon-level {
+  font-size: 0.85rem;
+  color: #6b4a2a;
+  margin-bottom: 8px;
+}
+
+.summon-bar-row {
+  display: flex;
+  align-items: center;
+  margin: 4px 0;
+}
+
+.summon-bar-label {
+  width: 40px;
+  font-size: 0.8rem;
+  color: #6b4a2a;
+}
+
+.summon-bar {
+  flex: 1;
+  height: 8px;
+  background: #e8d4b9;
+  border-radius: 999px;
+  overflow: hidden;
+  margin-left: 6px;
+}
+
+.summon-bar-fill {
+  height: 100%;
+  width: 0%;
+  border-radius: 999px;
+  transition: width 0.3s ease;
+}
+
+.summon-bar-fill.hp { background: linear-gradient(90deg, #8b1f1f, #d05a2f); }
+.summon-bar-fill.exp { background: linear-gradient(90deg, #1f6b3b, #35b36c); }
+
+.summon-stats {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(118, 70, 22, 0.15);
+  font-size: 0.8rem;
+  color: #6b4a2a;
+  text-align: center;
+}
+
+.summon-stat {
+  padding: 6px;
+  background: rgba(255, 247, 234, 0.5);
+  border-radius: 6px;
+  display: inline-block;
+}
+
+.summon-stat-label {
+  display: block;
+  font-size: 0.7rem;
+  color: #8b6a4a;
+  margin-bottom: 2px;
+}
+
+.summon-stat-value {
+  font-weight: 600;
+  color: #5b3a1c;
+  font-size: 0.9rem;
 }
 
 .item-tooltip {

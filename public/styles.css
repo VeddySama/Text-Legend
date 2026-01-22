@@ -1217,6 +1217,35 @@ button:hover {
   margin-top: 4px;
 }
 
+.consign-history-item {
+  border-radius: 12px;
+  border: 1px solid rgba(118, 70, 22, 0.25);
+  background: #f7e2c6;
+  padding: 10px 12px;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.consign-history-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+
+.conign-history-item-item {
+  color: #3a2311;
+}
+
+.consignment-history-meta {
+  color: #6b4a2a;
+  font-size: 0.8rem;
+  display: flex;
+  gap: 12px;
+  margin-top: 6px;
+}
+
 #consign-modal .modal-card {
   max-height: 80vh;
   display: flex;

@@ -910,6 +910,11 @@ export async function handleCommand({ player, players, input, send, partyApi, gu
         if (!items.length) send('你没有寄售物品。');
         return;
       }
+      if (sub === 'history') {
+        const items = await consignApi.listHistory(player);
+        if (!items.length) send('暂无寄售记录。');
+        return;
+      }
         if (sub === 'sell') {
           if (parts.length < 3) return;
           const price = Number(parts.pop());

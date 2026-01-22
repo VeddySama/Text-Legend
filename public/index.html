@@ -224,6 +224,7 @@
           <button class="consign-tab active" data-tab="market">&#x5E02;&#x573A;</button>
           <button class="consign-tab" data-tab="mine">&#x6211;&#x7684;&#x5BC4;&#x552E;</button>
           <button class="consign-tab" data-tab="list">&#x5BC4;&#x552E;&#x4E0A;&#x67B6;</button>
+          <button class="consign-tab" data-tab="history">&#x5BC4;&#x552E;&#x8BB0;&#x5F55;</button>
         </div>
         <div class="consign-panel" data-panel="market">
           <div class="consign-filters">
@@ -249,12 +250,20 @@
           </div>
         </div>
         <div class="consign-panel hidden" data-panel="list">
-          <div class="modal-text">&#x5BC4;&#x552E;&#x80CC;&#x5305;&#x88C5;&#x5907;/&#x6280;&#x80fd;&#x4E66;</div>
+          <div class="modal-text">&#x5BC4;&#x552E;&#x80CC;&#x5305;&#x88C5;&#x5907;/&#x6280;&#x80FD;&#x4E66;</div>
           <div id="consign-inventory-list" class="consign-list"></div>
           <div class="consign-pager">
             <button id="consign-inventory-prev">&#x4e0a;&#x4e00;&#x9875;</button>
             <span id="consign-inventory-page">&#x7B2C 1/1 &#x9875;</span>
             <button id="consign-inventory-next">&#x4e0b;&#x4e00;&#x9875;</button>
+          </div>
+        </div>
+        <div class="consign-panel hidden" data-panel="history">
+          <div id="consign-history-list" class="consign-list" style="grid-template-columns: 1fr;"></div>
+          <div class="consign-pager">
+            <button id="consign-history-prev">&#x4e0a;&#x4e00;&#x9875;</button>
+            <span id="consign-history-page">&#x7B2C 1/1 &#x9875;</span>
+            <button id="consign-history-next">&#x4e0b;&#x4e00;&#x9875;</button>
           </div>
         </div>
       </div>

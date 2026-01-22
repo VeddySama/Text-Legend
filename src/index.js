@@ -23,6 +23,10 @@ import {
   updateConsignmentQty,
   deleteConsignment
 } from './db/consignments.js';
+import {
+  listConsignmentHistory,
+  createConsignmentHistory
+} from './db/consignment_history.js';
 import { runMigrations } from './db/migrate.js';
 import { newCharacter, computeDerived, gainExp, addItem, removeItem, getItemKey, normalizeInventory, normalizeEquipment } from './game/player.js';
 import { handleCommand, awardKill, summonStats } from './game/commands.js';
@@ -946,6 +950,16 @@ const consignApi = {
       await deleteConsignment(listingId);
     }
 
+    // 记录寄售历史
+    await createConsignmentHistory({
+      sellerName: row.seller_name,
+      buyerName: player.name,
+      itemId: row.item_id,
+      qty,
+      price: row.price,
+      effectsJson: row.effects_json
+    });
+
     const seller = playersByName(row.seller_name);
     if (seller) {
       seller.gold += total;
@@ -976,6 +990,21 @@ const consignApi = {
     await consignApi.listMine(player);
     await consignApi.listMarket(player);
     return { ok: true, msg: '寄售已取消，物品已返回背包。' };
+  },
+  async listHistory(player, limit = 50) {
+    const rows = await listConsignmentHistory(player.name, limit);
+    const items = rows.map((row) => ({
+      id: row.id,
+      seller: row.seller_name,
+      buyer: row.buyer_name,
+      qty: row.qty,
+      price: row.price,
+      total: row.price * row.qty,
+      item: buildItemView(row.item_id, parseJson(row.effects_json)),
+      soldAt: row.sold_at
+    }));
+    player.socket.emit('consign_history', { items });
+    return items;
   }
 };
 

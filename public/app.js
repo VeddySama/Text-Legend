@@ -139,6 +139,10 @@ const consignUi = {
   inventoryPrev: document.getElementById('consign-inventory-prev'),
   inventoryNext: document.getElementById('consign-inventory-next'),
   inventoryPage: document.getElementById('consign-inventory-page'),
+  historyList: document.getElementById('consign-history-list'),
+  historyPrev: document.getElementById('consign-history-prev'),
+  historyNext: document.getElementById('consign-history-next'),
+  historyPage: document.getElementById('consign-history-page'),
   close: document.getElementById('consign-close')
 };
   const bagUi = {
@@ -179,9 +183,11 @@ let lastShopItems = [];
 let consignMarketItems = [];
 let consignMyItems = [];
 let consignInventoryItems = [];
+let consignHistoryItems = [];
 let consignMarketPage = 0;
 let consignMyPage = 0;
 let consignInventoryPage = 0;
+let consignHistoryPage = 0;
 let consignMarketFilter = 'all';
 let guildMembers = [];
 const CONSIGN_PAGE_SIZE = 9;
@@ -799,12 +805,56 @@ function renderConsignInventory(items) {
   if (consignUi.inventoryNext) consignUi.inventoryNext.disabled = consignInventoryPage >= totalPages - 1;
 }
 
+function renderConsignHistory(items) {
+  if (!consignUi.historyList) return;
+  consignUi.historyList.innerHTML = '';
+  consignHistoryItems = items || [];
+  const { totalPages, page, slice } = paginateItems(consignHistoryItems, consignHistoryPage);
+  consignHistoryPage = page;
+  if (!slice.length) {
+    const empty = document.createElement('div');
+    empty.textContent = '\u6682\u65E0\u5BC4\u552E\u8BB0\u5F55';
+    consignUi.historyList.appendChild(empty);
+    return;
+  }
+  slice.forEach((entry) => {
+    const div = document.createElement('div');
+    div.className = 'consign-history-item';
+    const date = new Date(entry.soldAt);
+    const dateStr = `${date.getMonth() + 1}/${date.getDate()} ${date.getHours()}:${String(date.getMinutes()).padStart(2, '0')}`;
+    div.innerHTML = `
+      <div class="consign-history-item-header">
+        <span class="consign-history-item-item">${formatItemName(entry.item)} x${entry.qty}</span>
+        <span>${entry.total}\u91D1</span>
+      </div>
+      <div class="consignment-history-meta">
+        <span>\u5356\u5BB6: ${entry.buyer}</span>
+        <span>\u5355\u4EF7: ${entry.price}\u91D1</span>
+        <span>${dateStr}</span>
+      </div>
+    `;
+    const tooltip = formatItemTooltip(entry.item);
+    if (tooltip) {
+      div.addEventListener('mouseenter', (evt) => showItemTooltip(tooltip, evt));
+      div.addEventListener('mousemove', (evt) => positionTooltip(evt.clientX, evt.clientY));
+      div.addEventListener('mouseleave', hideItemTooltip);
+    }
+    consignUi.historyList.appendChild(div);
+  });
+  if (consignUi.historyPage) {
+    consignUi.historyPage.textContent = `\u7B2C ${consignHistoryPage + 1}/${totalPages} \u9875`;
+  }
+  if (consignUi.historyPrev) consignUi.historyPrev.disabled = consignHistoryPage <= 0;
+  if (consignUi.historyNext) consignUi.historyNext.disabled = consignHistoryPage >= totalPages - 1;
+}
+
 function showConsignModal() {
   if (!consignUi.modal) return;
   hideItemTooltip();
   consignMarketPage = 0;
   consignMyPage = 0;
   consignInventoryPage = 0;
+  consignHistoryPage = 0;
   consignMarketFilter = 'all';
   if (consignUi.filters && consignUi.filters.length) {
     consignUi.filters.forEach((btn) => {
@@ -824,6 +874,7 @@ function showConsignModal() {
   if (socket) {
     socket.emit('cmd', { text: 'consign list' });
     socket.emit('cmd', { text: 'consign my' });
+    socket.emit('cmd', { text: 'consign history' });
   }
   renderConsignInventory(lastState ? lastState.items : []);
   consignUi.modal.classList.remove('hidden');
@@ -2300,6 +2351,11 @@ function enterGame(name) {
       renderConsignMine(consignMyItems);
     }
   });
+  socket.on('consign_history', (payload) => {
+    if (!payload || !payload.items) return;
+    consignHistoryItems = payload.items || [];
+    renderConsignHistory(consignHistoryItems);
+  });
   socket.on('state', (payload) => {
     renderState(payload);
   });
@@ -2516,6 +2572,9 @@ if (consignUi.tabs && consignUi.tabs.length) {
       consignUi.panels.forEach((panel) => {
         panel.classList.toggle('hidden', panel.dataset.panel !== tab);
       });
+      if (tab === 'history' && socket) {
+        socket.emit('cmd', { text: 'consign history' });
+      }
     });
   });
 }
@@ -2560,12 +2619,24 @@ if (consignUi.inventoryPrev) {
     renderConsignInventory(consignInventoryItems);
   });
 }
-  if (consignUi.inventoryNext) {
-    consignUi.inventoryNext.addEventListener('click', () => {
-      consignInventoryPage += 1;
-      renderConsignInventory(consignInventoryItems);
-    });
-  }
+if (consignUi.inventoryNext) {
+  consignUi.inventoryNext.addEventListener('click', () => {
+    consignInventoryPage += 1;
+    renderConsignInventory(consignInventoryItems);
+  });
+}
+if (consignUi.historyPrev) {
+  consignUi.historyPrev.addEventListener('click', () => {
+    consignHistoryPage -= 1;
+    renderConsignHistory(consignHistoryItems);
+  });
+}
+if (consignUi.historyNext) {
+  consignUi.historyNext.addEventListener('click', () => {
+    consignHistoryPage += 1;
+    renderConsignHistory(consignHistoryItems);
+  });
+}
   if (bagUi.tabs && bagUi.tabs.length) {
     bagUi.tabs.forEach((btn) => {
       btn.addEventListener('click', () => {

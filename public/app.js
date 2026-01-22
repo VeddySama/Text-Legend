@@ -999,7 +999,7 @@ function renderShopSellList(items) {
           title: '\u51fa\u552e\u7269\u54c1',
           text: `\u8bf7\u8f93\u5165\u51fa\u552e\u6570\u91cf: ${formatItemName(item)}`,
           placeholder: '1',
-          value: '1'
+          value: String(item.qty)
         });
         if (!qtyText) return;
         const qty = Math.max(1, Number(qtyText || 1));

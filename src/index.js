@@ -2857,6 +2857,33 @@ function combatTick() {
         dmg += calcMagicDamageFromValue(magicBase, mobTarget);
         dmg += calcMagicDamageFromValue(spiritBase, mobTarget);
       }
+      // 特殊BOSS麻痹效果：魔龙教主、世界BOSS、沙巴克BOSS攻击时有20%几率麻痹目标2回合
+      const isSpecialBoss = mobTemplate?.id === 'molong_boss' || mobTemplate?.worldBoss || mobTemplate?.sabakBoss;
+      if (isSpecialBoss && Math.random() <= 0.2) {
+        if (!mob.status) mob.status = {};
+        if (!mobTarget.status) mobTarget.status = {};
+        mobTarget.status.stunTurns = 2;
+        if (mobTarget.userId) {
+          mobTarget.send(`你被 ${mob.name} 麻痹了，无法行动2回合。`);
+          if (mobTarget !== player) {
+            player.send(`${mob.name} 麻痹了 ${mobTarget.name}。`);
+          }
+        } else {
+          player.send(`${mob.name} 麻痹了 ${mobTarget.name}。`);
+        }
+      }
+      // 特殊BOSS暴击效果：魔龙教主、世界BOSS、沙巴克BOSS攻击时有15%几率造成2倍暴击伤害
+      if (isSpecialBoss && Math.random() <= 0.15) {
+        dmg = Math.floor(dmg * 2);
+        if (mobTarget.userId) {
+          mobTarget.send(`${mob.name} 的暴击！对你造成 ${dmg} 点伤害。`);
+          if (mobTarget !== player) {
+            player.send(`${mob.name} 对 ${mobTarget.name} 暴击！造成 ${dmg} 点伤害。`);
+          }
+        } else {
+          player.send(`${mob.name} 对 ${mobTarget.name} 暴击！造成 ${dmg} 点伤害。`);
+        }
+      }
       if (mobTarget && mobTarget.userId) {
         applyDamageToPlayer(mobTarget, dmg);
         mobTarget.send(`${mob.name} 对你造成 ${dmg} 点伤害。`);

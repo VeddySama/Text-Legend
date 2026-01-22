@@ -1011,7 +1011,7 @@ const consignApi = {
 function partyMembersInRoom(party, playersList, zone, room) {
   return party.members
     .map((name) => playersList.find((p) => p.name === name))
-    .filter((p) => p && p.position.zone === zone && p.position.room === room);
+    .filter((p) => p);
 }
 
 function distributeLoot(party, partyMembers, drops) {

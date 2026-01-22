@@ -2280,6 +2280,30 @@ if (chat.emojiPanel) {
     chat.emojiPanel.classList.add('hidden');
   });
 }
+
+document.addEventListener('click', (evt) => {
+  const modals = [
+    shopUi?.modal,
+    repairUi?.modal,
+    consignUi?.modal,
+    bagUi?.modal,
+    statsUi?.modal,
+    afkUi?.modal,
+    playerUi?.modal,
+    guildUi?.modal,
+    partyUi?.modal
+  ];
+
+  for (const modal of modals) {
+    if (!modal || modal.classList.contains('hidden')) continue;
+    const card = modal.querySelector('.modal-card');
+    if (!card) continue;
+    if (evt.target === modal || (evt.target !== card && !card.contains(evt.target))) {
+      modal.classList.add('hidden');
+      hideItemTooltip();
+    }
+  }
+});
 if (captchaUi.loginRefresh) {
   captchaUi.loginRefresh.addEventListener('click', () => refreshCaptcha('login'));
 }

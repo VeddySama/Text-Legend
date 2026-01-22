@@ -712,15 +712,26 @@ button:hover {
 }
 
 #shop-modal .modal-card {
-  max-height: 78vh;
-  overflow: auto;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+}
+
+#shop-modal .modal-list-wrapper {
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+  padding-bottom: 10px;
 }
 
 #shop-modal .modal-actions {
   position: sticky;
   bottom: 0;
   background: #fff5e8;
-  padding-top: 10px;
+  padding: 12px 10px;
+  border-top: 1px solid rgba(118, 70, 22, 0.15);
+  flex-shrink: 0;
+  z-index: 10;
 }
 
 /* 手机设备优化 */
@@ -1207,15 +1218,26 @@ button:hover {
 }
 
 #consign-modal .modal-card {
-  max-height: 78vh;
-  overflow: auto;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+}
+
+#consign-modal .modal-list-wrapper {
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+  padding-bottom: 10px;
 }
 
 #consign-modal .modal-actions {
   position: sticky;
   bottom: 0;
   background: #fff5e8;
-  padding-top: 10px;
+  padding: 12px 10px;
+  border-top: 1px solid rgba(118, 70, 22, 0.15);
+  flex-shrink: 0;
+  z-index: 10;
 }
 
 /* 手机设备优化 */
@@ -1563,15 +1585,26 @@ button:hover {
 
 
 #bag-modal .modal-card {
-  max-height: 78vh;
-  overflow: auto;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+}
+
+#bag-modal .modal-list-wrapper {
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+  padding-bottom: 10px;
 }
 
 #bag-modal .modal-actions {
   position: sticky;
   bottom: 0;
   background: #fff5e8;
-  padding-top: 10px;
+  padding: 12px 10px;
+  border-top: 1px solid rgba(118, 70, 22, 0.15);
+  flex-shrink: 0;
+  z-index: 10;
 }
 
 /* 手机设备优化 */
@@ -2516,14 +2549,25 @@ li {
 }
 
 #drops-modal .modal-card {
-  max-height: 78vh;
-  overflow: auto;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+}
+
+#drops-modal .modal-list-wrapper {
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+  padding-bottom: 10px;
 }
 
 #drops-modal .modal-actions {
   position: sticky;
   bottom: 0;
   background: #fff5e8;
-  padding-top: 10px;
+  padding: 12px 10px;
+  border-top: 1px solid rgba(118, 70, 22, 0.15);
+  flex-shrink: 0;
+  z-index: 10;
 }
 

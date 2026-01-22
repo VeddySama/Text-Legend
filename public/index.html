@@ -189,11 +189,13 @@
   <div id="shop-modal" class="modal hidden">
     <div class="modal-card">
       <div class="modal-title">&#x5546;&#x5E97;</div>
-      <div class="modal-text" id="shop-subtitle">&#x70B9;&#x51FB;&#x7269;&#x54C1;&#x8D2D;&#x4E70;</div>
-      <div id="shop-list" class="shop-list"></div>
-      <div class="shop-sell-title">&#x51FA;&#x552E;&#x80CC;&#x5305;&#x7269;&#x54C1;</div>
-      <div class="modal-text shop-sell-tip">&#x70B9;&#x51FB;&#x80CC;&#x5305;&#x7269;&#x54C1;&#x5373;&#x53EF;&#x51FA;&#x552E;</div>
-      <div id="shop-sell-list" class="shop-sell-list"></div>
+      <div class="modal-list-wrapper">
+        <div class="modal-text" id="shop-subtitle">&#x70B9;&#x51FB;&#x7269;&#x54C1;&#x8D2D;&#x4E70;</div>
+        <div id="shop-list" class="shop-list"></div>
+        <div class="shop-sell-title">&#x51FA;&#x552E;&#x80CC;&#x5305;&#x7269;&#x54C1;</div>
+        <div class="modal-text shop-sell-tip">&#x70B9;&#x51FB;&#x80CC;&#x5305;&#x7269;&#x54C1;&#x5373;&#x53EF;&#x51FA;&#x552E;</div>
+        <div id="shop-sell-list" class="shop-sell-list"></div>
+      </div>
       <div class="modal-actions">
         <button id="shop-close">&#x5173;&#x95ED;</button>
       </div>
@@ -203,8 +205,10 @@
   <div id="repair-modal" class="modal hidden">
     <div class="modal-card">
       <div class="modal-title">&#x88C5;&#x5907;&#x4FEE;&#x7406;</div>
-      <div class="modal-text">&#x88C5;&#x5907;&#x8010;&#x4E45;&#x4E0E;&#x4FEE;&#x7406;&#x8D39;&#x7528;</div>
-      <div id="repair-list" class="repair-list"></div>
+      <div class="modal-list-wrapper">
+        <div class="modal-text">&#x88C5;&#x5907;&#x8010;&#x4E45;&#x4E0E;&#x4FEE;&#x7406;&#x8D39;&#x7528;</div>
+        <div id="repair-list" class="repair-list"></div>
+      </div>
       <div class="modal-actions">
         <button id="repair-all">&#x5168;&#x90E8;&#x4FEE;&#x7406;</button>
         <button id="repair-close">&#x5173;&#x95ED;</button>
@@ -215,41 +219,43 @@
   <div id="consign-modal" class="modal hidden">
     <div class="modal-card">
       <div class="modal-title">&#x5BC4;&#x552E;</div>
-      <div class="consign-tabs">
-        <button class="consign-tab active" data-tab="market">&#x5E02;&#x573A;</button>
-        <button class="consign-tab" data-tab="mine">&#x6211;&#x7684;&#x5BC4;&#x552E;</button>
-        <button class="consign-tab" data-tab="list">&#x5BC4;&#x552E;&#x4E0A;&#x67B6;</button>
-      </div>
-      <div class="consign-panel" data-panel="market">
-        <div class="consign-filters">
-          <button class="consign-filter active" data-filter="all">&#x5168;&#x90E8;</button>
-          <button class="consign-filter" data-filter="weapon">&#x6b66;&#x5668;</button>
-          <button class="consign-filter" data-filter="armor">&#x9632;&#x5177;</button>
-          <button class="consign-filter" data-filter="accessory">&#x9970;&#x54C1;</button>
-          <button class="consign-filter" data-filter="book">&#x6280;&#x80fd;&#x4E66;</button>
+      <div class="modal-list-wrapper">
+        <div class="consign-tabs">
+          <button class="consign-tab active" data-tab="market">&#x5E02;&#x573A;</button>
+          <button class="consign-tab" data-tab="mine">&#x6211;&#x7684;&#x5BC4;&#x552E;</button>
+          <button class="consign-tab" data-tab="list">&#x5BC4;&#x552E;&#x4E0A;&#x67B6;</button>
         </div>
-        <div id="consign-market-list" class="consign-list"></div>
-        <div class="consign-pager">
-          <button id="consign-market-prev">&#x4e0a;&#x4e00;&#x9875;</button>
-          <span id="consign-market-page">&#x7B2C 1/1 &#x9875;</span>
-          <button id="consign-market-next">&#x4e0b;&#x4e00;&#x9875;</button>
+        <div class="consign-panel" data-panel="market">
+          <div class="consign-filters">
+            <button class="consign-filter active" data-filter="all">&#x5168;&#x90E8;</button>
+            <button class="consign-filter" data-filter="weapon">&#x6b66;&#x5668;</button>
+            <button class="consign-filter" data-filter="armor">&#x9632;&#x5177;</button>
+            <button class="consign-filter" data-filter="accessory">&#x9970;&#x54C1;</button>
+            <button class="consign-filter" data-filter="book">&#x6280;&#x80fd;&#x4E66;</button>
+          </div>
+          <div id="consign-market-list" class="consign-list"></div>
+          <div class="consign-pager">
+            <button id="consign-market-prev">&#x4e0a;&#x4e00;&#x9875;</button>
+            <span id="consign-market-page">&#x7B2C 1/1 &#x9875;</span>
+            <button id="consign-market-next">&#x4e0b;&#x4e00;&#x9875;</button>
+          </div>
         </div>
-      </div>
-      <div class="consign-panel hidden" data-panel="mine">
-        <div id="consign-my-list" class="consign-list"></div>
-        <div class="consign-pager">
-          <button id="consign-my-prev">&#x4e0a;&#x4e00;&#x9875;</button>
-          <span id="consign-my-page">&#x7B2C 1/1 &#x9875;</span>
-          <button id="consign-my-next">&#x4e0b;&#x4e00;&#x9875;</button>
+        <div class="consign-panel hidden" data-panel="mine">
+          <div id="consign-my-list" class="consign-list"></div>
+          <div class="consign-pager">
+            <button id="consign-my-prev">&#x4e0a;&#x4e00;&#x9875;</button>
+            <span id="consign-my-page">&#x7B2C 1/1 &#x9875;</span>
+            <button id="consign-my-next">&#x4e0b;&#x4e00;&#x9875;</button>
+          </div>
         </div>
-      </div>
-      <div class="consign-panel hidden" data-panel="list">
-        <div class="modal-text">&#x5BC4;&#x552E;&#x80CC;&#x5305;&#x88C5;&#x5907;/&#x6280;&#x80fd;&#x4E66;</div>
-        <div id="consign-inventory-list" class="consign-list"></div>
-        <div class="consign-pager">
-          <button id="consign-inventory-prev">&#x4e0a;&#x4e00;&#x9875;</button>
-          <span id="consign-inventory-page">&#x7B2C 1/1 &#x9875;</span>
-          <button id="consign-inventory-next">&#x4e0b;&#x4e00;&#x9875;</button>
+        <div class="consign-panel hidden" data-panel="list">
+          <div class="modal-text">&#x5BC4;&#x552E;&#x80CC;&#x5305;&#x88C5;&#x5907;/&#x6280;&#x80fd;&#x4E66;</div>
+          <div id="consign-inventory-list" class="consign-list"></div>
+          <div class="consign-pager">
+            <button id="consign-inventory-prev">&#x4e0a;&#x4e00;&#x9875;</button>
+            <span id="consign-inventory-page">&#x7B2C 1/1 &#x9875;</span>
+            <button id="consign-inventory-next">&#x4e0b;&#x4e00;&#x9875;</button>
+          </div>
         </div>
       </div>
       <div class="modal-actions">
@@ -261,17 +267,19 @@
   <div id="bag-modal" class="modal hidden">
     <div class="modal-card">
       <div class="modal-title">背包</div>
-      <div class="bag-tabs">
-        <button class="bag-tab active" data-filter="all">全部</button>
-        <button class="bag-tab" data-filter="consumable">药品</button>
-        <button class="bag-tab" data-filter="weapon">武器</button>
-        <button class="bag-tab" data-filter="armor">防具</button>
-        <button class="bag-tab" data-filter="accessory">饰品</button>
-        <button class="bag-tab" data-filter="book">技能书</button>
-        <button class="bag-tab" data-filter="material">材料</button>
+      <div class="modal-list-wrapper">
+        <div class="bag-tabs">
+          <button class="bag-tab active" data-filter="all">全部</button>
+          <button class="bag-tab" data-filter="consumable">药品</button>
+          <button class="bag-tab" data-filter="weapon">武器</button>
+          <button class="bag-tab" data-filter="armor">防具</button>
+          <button class="bag-tab" data-filter="accessory">饰品</button>
+          <button class="bag-tab" data-filter="book">技能书</button>
+          <button class="bag-tab" data-filter="material">材料</button>
+        </div>
+        <div class="modal-text" id="bag-page">第 1/1 页</div>
+        <div id="bag-list" class="bag-list"></div>
       </div>
-      <div class="modal-text" id="bag-page">第 1/1 页</div>
-      <div id="bag-list" class="bag-list"></div>
       <div class="modal-actions">
         <button id="bag-prev">上一页</button>
         <button id="bag-next">下一页</button>

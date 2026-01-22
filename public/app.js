@@ -2298,12 +2298,12 @@ document.addEventListener('click', (evt) => {
     if (!modal || modal.classList.contains('hidden')) continue;
     const card = modal.querySelector('.modal-card');
     if (!card) continue;
-    if (evt.target === modal || (evt.target !== card && !card.contains(evt.target))) {
+    if (evt.target === modal || (evt.target !== card && !card.contains(evt.target) && !evt.target.closest('.chip'))) {
       modal.classList.add('hidden');
       hideItemTooltip();
     }
   }
-});
+}, true);
 if (captchaUi.loginRefresh) {
   captchaUi.loginRefresh.addEventListener('click', () => refreshCaptcha('login'));
 }

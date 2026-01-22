@@ -1983,10 +1983,8 @@ function renderState(state) {
     { id: 'vip activate', label: 'VIP\u6fc0\u6d3b' },
     { id: 'logout', label: '\u9000\u51fa\u6e38\u620f' }
   ];
-  if (state.stats && state.stats.vip) {
-    const afkLabel = state.stats.autoSkillId ? '\u505c\u6b62\u6302\u673a' : '\u6302\u673a';
-    actions.push({ id: 'afk', label: afkLabel });
-  }
+  const afkLabel = state.stats && state.stats.autoSkillId ? '\u505c\u6b62\u6302\u673a' : '\u6302\u673a';
+  actions.push({ id: 'afk', label: afkLabel });
   renderChips(ui.actions, actions, async (a) => {
     if (a.id === 'stats') {
       showStatsModal();

@@ -1338,7 +1338,7 @@ function buildState(player) {
   let worldBossRank = [];
   const bossMob = getAliveMobs(player.position.zone, player.position.room).find((m) => {
     const tpl = MOB_TEMPLATES[m.templateId];
-    return tpl && tpl.worldBoss;
+    return tpl && (tpl.worldBoss || tpl.sabakBoss || tpl.id === 'molong_boss');
   });
   if (bossMob && bossMob.status?.damageBy) {
     const { entries } = buildDamageRankMap(bossMob);
@@ -1470,6 +1470,7 @@ function recordMobDamage(mob, attackerName, dmg) {
   if (!mob.status.firstHitBy) mob.status.firstHitBy = attackerName;
   if (!attackerName) return;
   mob.status.damageBy[attackerName] = (mob.status.damageBy[attackerName] || 0) + dmg;
+  mob.status.lastHitBy = attackerName;
   const damageBy = mob.status.damageBy;
   let maxName = attackerName;
   let maxDamage = -1;
@@ -2022,6 +2023,62 @@ function selectAutoSkill(player) {
   return usable[0].id;
 }
 
+function tryAutoHeal(player) {
+  if (!player.flags?.autoSkillId) return false;
+  const healSkill = getLearnedSkills(player).find((skill) => skill.type === 'heal');
+  if (!healSkill) return false;
+  if (player.mp < healSkill.mp) return false;
+
+  const healThreshold = 0.2;
+  const candidates = [];
+
+  if (player.hp / player.max_hp < healThreshold) {
+    candidates.push({ target: player, name: player.name });
+  }
+
+  if (player.summon && player.summon.hp > 0 && player.summon.hp / player.summon.max_hp < healThreshold) {
+    candidates.push({ target: player.summon, name: player.summon.name, isSummon: true });
+  }
+
+  const party = getPartyByMember(player.name);
+  if (party && party.members.length > 0) {
+    const online = listOnlinePlayers();
+    party.members.forEach((memberName) => {
+      if (memberName === player.name) return;
+      const member = playersByName(memberName);
+      if (member &&
+          member.position.zone === player.position.zone &&
+          member.position.room === player.position.room &&
+          member.hp / member.max_hp < healThreshold) {
+        candidates.push({ target: member, name: member.name });
+      }
+    });
+  }
+
+  if (candidates.length === 0) return false;
+
+  candidates.sort((a, b) => (a.target.hp / a.target.max_hp) - (b.target.hp / b.target.max_hp));
+  const toHeal = candidates[0];
+
+  player.mp = clamp(player.mp - healSkill.mp, 0, player.max_mp);
+  const baseHeal = Math.floor((player.spirit || 0) * 0.8 * scaledSkillPower(healSkill, getSkillLevel(player, healSkill.id)) + player.level * 4);
+  const heal = Math.max(1, Math.floor(baseHeal * getHealMultiplier(player)));
+
+  if (toHeal.isSummon) {
+    toHeal.target.hp = clamp(toHeal.target.hp + heal, 1, toHeal.target.max_hp);
+    player.send(`自动施放 ${healSkill.name}，为 ${toHeal.name} 恢复 ${heal} 点生命。`);
+  } else {
+    toHeal.target.hp = clamp(toHeal.target.hp + heal, 1, toHeal.target.max_hp);
+    toHeal.target.send(`${player.name} 自动为你施放 ${healSkill.name}，恢复 ${heal} 点生命。`);
+    if (toHeal.name !== player.name) {
+      player.send(`自动施放 ${healSkill.name}，为 ${toHeal.name} 恢复 ${heal} 点生命。`);
+    } else {
+      player.send(`自动施放 ${healSkill.name}，恢复 ${heal} 点生命。`);
+    }
+  }
+  return true;
+}
+
 function pickCombatSkillId(player, combatSkillId) {
   if (player.flags?.autoSkillId) {
     const autoSkill = player.flags.autoSkillId;
@@ -2093,7 +2150,7 @@ function handleDeath(player) {
 
 function processMobDeath(player, mob, online) {
   const damageSnapshot = mob.status?.damageBy ? { ...mob.status.damageBy } : {};
-  const firstHitSnapshot = mob.status?.firstHitBy || null;
+  const lastHitSnapshot = mob.status?.lastHitBy || null;
   const template = MOB_TEMPLATES[mob.templateId];
   removeMob(player.position.zone, player.position.room, mob.id);
   gainSummonExp(player);
@@ -2106,11 +2163,14 @@ function processMobDeath(player, mob, online) {
   const allInRoom = partyMembers.length > 1;
   const isBoss = isBossMob(template);
   const isWorldBoss = Boolean(template.worldBoss);
-  const { rankMap, entries } = isWorldBoss ? buildDamageRankMap(mob, damageSnapshot) : { rankMap: {}, entries: [] };
+  const isSabakBoss = Boolean(template.sabakBoss);
+  const isMolongBoss = template.id === 'molong_boss';
+  const isSpecialBoss = isWorldBoss || isSabakBoss || isMolongBoss;
+  const { rankMap, entries } = isSpecialBoss ? buildDamageRankMap(mob, damageSnapshot) : { rankMap: {}, entries: [] };
   let lootOwner = player;
   if (!party || partyMembers.length === 0) {
     let ownerName = null;
-    if (isBoss) {
+    if (isSpecialBoss) {
       const damageBy = damageSnapshot;
       let maxDamage = -1;
       Object.entries(damageBy).forEach(([name, dmg]) => {
@@ -2120,7 +2180,7 @@ function processMobDeath(player, mob, online) {
         }
       });
     } else {
-      ownerName = firstHitSnapshot;
+      ownerName = lastHitSnapshot;
     }
     if (!ownerName) ownerName = player.name;
     lootOwner = playersByName(ownerName) || player;
@@ -2171,24 +2231,30 @@ function processMobDeath(player, mob, online) {
     }
 
     const dropTargets = [];
-    if (isWorldBoss) {
-      entries
-        .map(([name]) => playersByName(name))
-        .filter(Boolean)
-        .forEach((p) => dropTargets.push({ player: p, bonus: rankDropBonus(rankMap[p.name]) }));
+    let legendaryDropGiven = false;
+    if (isSpecialBoss) {
+      const topEntries = entries.slice(0, 10);
+      const totalDamage = entries.reduce((sum, [, dmg]) => sum + dmg, 0) || 1;
+      const top10Count = topEntries.length;
+      topEntries.forEach(([name, damage]) => {
+        const player = playersByName(name);
+        if (!player) return;
+        const damageRatio = damage / totalDamage;
+        dropTargets.push({ player, damageRatio, rank: entries.findIndex(([n]) => n === name) + 1 });
+      });
       if (!dropTargets.length) {
-        dropTargets.push({ player: lootOwner, bonus: 1 });
+        dropTargets.push({ player: lootOwner, damageRatio: 1, rank: 1 });
       }
     } else {
-      const bonus = 1;
-      dropTargets.push({ player: lootOwner, bonus });
+      dropTargets.push({ player: lootOwner, damageRatio: 1, rank: 1 });
     }
 
-    if (isWorldBoss && entries.length) {
+    if (isSpecialBoss && entries.length) {
       const topName = entries[0][0];
       const topPlayer = playersByName(topName);
       if (topPlayer) {
-        let forcedId = rollRarityEquipmentDrop(template, WORLD_BOSS_DROP_BONUS) || rollRarityEquipmentDrop(template, 1);
+        const bossLabel = isWorldBoss ? '世界BOSS' : (isSabakBoss ? '沙巴克BOSS' : '魔龙教主');
+        let forcedId = rollRarityEquipmentDrop(template, 1);
         if (!forcedId) {
           const equipPool = Object.values(ITEM_TEMPLATES)
             .filter((i) => i && ['weapon', 'armor', 'accessory'].includes(i.type))
@@ -2200,12 +2266,12 @@ function processMobDeath(player, mob, online) {
         if (forcedId) {
           const forcedEffects = forceEquipmentEffects(forcedId);
           addItem(topPlayer, forcedId, 1, forcedEffects);
-          topPlayer.send(`世界BOSS排名第1奖励：${formatItemLabel(forcedId, forcedEffects)}。`);
+          topPlayer.send(`${bossLabel}排名第1奖励：${formatItemLabel(forcedId, forcedEffects)}。`);
           const forcedItem = ITEM_TEMPLATES[forcedId];
           if (forcedItem) {
             const forcedRarity = rarityByPrice(forcedItem);
             if (['epic', 'legendary'].includes(forcedRarity)) {
-              emitAnnouncement(`${topPlayer.name} 获得世界BOSS首位奖励 ${formatItemLabel(forcedId, forcedEffects)}！`, forcedRarity);
+              emitAnnouncement(`${topPlayer.name} 获得${bossLabel}首位奖励 ${formatItemLabel(forcedId, forcedEffects)}！`, forcedRarity);
             }
             if (isEquipmentItem(forcedItem) && hasSpecialEffects(forcedEffects)) {
               emitAnnouncement(`${topPlayer.name} 获得特效装备 ${formatItemLabel(forcedId, forcedEffects)}！`, 'announce');
@@ -2215,10 +2281,10 @@ function processMobDeath(player, mob, online) {
       }
     }
 
-    dropTargets.forEach(({ player: owner, bonus }) => {
-      const drops = dropLoot(template, bonus);
+    dropTargets.forEach(({ player: owner, damageRatio }) => {
+      const drops = dropLoot(template, 1);
       if (!drops.length) return;
-      if (!isWorldBoss && party && partyMembers.length > 0) {
+      if (!isSpecialBoss && party && partyMembers.length > 0) {
         const distributed = distributeLoot(party, partyMembers, drops);
         distributed.forEach(({ id, effects, target }) => {
           const item = ITEM_TEMPLATES[id];
@@ -2232,6 +2298,43 @@ function processMobDeath(player, mob, online) {
             emitAnnouncement(`${target.name} 获得特效装备 ${formatItemLabel(id, effects)}！`, 'announce');
           }
         });
+      } else if (isSpecialBoss) {
+        const actualDrops = [];
+        let itemCount = 0;
+        const maxItemsPerPlayer = 2;
+        drops.forEach((entry) => {
+          if (itemCount >= maxItemsPerPlayer) return;
+          if (Math.random() > owner.damageRatio) return;
+
+          const item = ITEM_TEMPLATES[entry.id];
+          if (item) {
+            const rarity = rarityByPrice(item);
+            if (rarity === 'legendary' && owner.rank > 3) return;
+            if (rarity === 'legendary' && legendaryDropGiven) return;
+          }
+
+          addItem(owner, entry.id, 1, entry.effects);
+          actualDrops.push(entry);
+          itemCount++;
+          if (item) {
+            const rarity = rarityByPrice(item);
+            if (rarity === 'legendary') {
+              legendaryDropGiven = true;
+            }
+          }
+          if (!item) return;
+          const rarity = rarityByPrice(item);
+          if (['epic', 'legendary'].includes(rarity)) {
+            const text = `${owner.name} 击败 ${template.name} 获得${RARITY_LABELS[rarity] || '稀有'}装备 ${formatItemLabel(entry.id, entry.effects)}！`;
+            emitAnnouncement(formatLegendaryAnnouncement(text, rarity), rarity);
+          }
+          if (isEquipmentItem(item) && hasSpecialEffects(entry.effects)) {
+            emitAnnouncement(`${owner.name} 获得特效装备 ${formatItemLabel(entry.id, entry.effects)}！`, 'announce');
+          }
+        });
+        if (actualDrops.length > 0) {
+          owner.send(`掉落: ${actualDrops.map((entry) => formatItemLabel(entry.id, entry.effects)).join(', ')}`);
+        }
       } else {
         drops.forEach((entry) => {
           addItem(owner, entry.id, 1, entry.effects);
@@ -2286,6 +2389,7 @@ function combatTick() {
 
     if (!player.combat) {
       regenOutOfCombat(player);
+      tryAutoHeal(player);
       const aggroMob = roomMobs.find((m) => m.status?.aggroTarget === player.name);
       if (aggroMob) {
         player.combat = { targetId: aggroMob.id, targetType: 'mob', skillId: null };
@@ -2306,6 +2410,7 @@ function combatTick() {
     player.flags.lastCombatAt = Date.now();
 
     tryAutoPotion(player);
+    tryAutoHeal(player);
 
     if (player.status && player.status.stunTurns > 0) {
       player.status.stunTurns -= 1;

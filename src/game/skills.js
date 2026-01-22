@@ -40,7 +40,7 @@ export const SKILLS = {
       mp: 28,
       power: 1.0,
       type: 'summon',
-      summon: { name: '\u795e\u517d', level: 3, baseHp: 320, baseAtk: 26, baseDef: 10 }
+      summon: { name: '\u795e\u517d', level: 3, baseHp: 320, baseAtk: 30, baseDef: 12 }
     }
   }
 };

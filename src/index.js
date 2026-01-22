@@ -1477,12 +1477,15 @@ function checkBossRespawn() {
 
         const bossName = respawned[0]?.name || 'BOSS';
         const tpl = MOB_TEMPLATES[respawned[0]?.templateId];
-        const isWorldBoss = tpl?.worldBoss;
-        const isSabakBoss = tpl?.sabakBoss;
-        const isMolongBoss = tpl?.id === 'molong_boss';
+        const isBoss = tpl && (
+          tpl.worldBoss ||
+          tpl.sabakBoss ||
+          tpl.id.includes('boss') ||
+          tpl.id.includes('leader')
+        );
 
-        // 只有魔龙教主、世界BOSS和沙巴克BOSS刷新时发送公告
-        if (isWorldBoss || isSabakBoss || isMolongBoss) {
+        // 所有BOSS刷新时发送公告
+        if (isBoss) {
           emitAnnouncement(
             `${bossName} 已刷新，点击前往。`,
             'announce',

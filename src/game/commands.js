@@ -850,10 +850,8 @@ export async function handleCommand({ player, players, input, send, partyApi, gu
         }
         if (player.gold < totalPrice) return send('金币不足。');
       player.gold -= totalPrice;
-      const unitQty = ['powder_green', 'powder_red'].includes(item.id) ? 100 : 1;
-      const totalQty = unitQty * qty;
-      addItem(player, item.id, totalQty);
-      send(`购买了 ${item.name} x${totalQty}，花费 ${totalPrice} 金币。`);
+      addItem(player, item.id, qty);
+      send(`购买了 ${item.name} x${qty}，花费 ${totalPrice} 金币。`);
       return;
     }
     case 'shop': {

@@ -1845,6 +1845,7 @@ function renderState(state) {
     });
   }
   if (tradeUi.itemSelect) {
+    const savedValue = tradeUi.itemSelect.value;
     tradeUi.itemSelect.innerHTML = '';
     if (!allItems.length) {
       const opt = document.createElement('option');
@@ -1858,6 +1859,9 @@ function renderState(state) {
         opt.textContent = `${formatItemName(entry)} x${entry.qty}`;
         tradeUi.itemSelect.appendChild(opt);
       });
+    }
+    if (savedValue && allItems.some(e => (e.key || e.id) === savedValue)) {
+      tradeUi.itemSelect.value = savedValue;
     }
   }
 

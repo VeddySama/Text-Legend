@@ -15,9 +15,6 @@
   scroll_random: { id: 'scroll_random', name: '随机卷', type: 'consumable', teleport: { zone: 'bq_plains', room: 'plains' }, price: 220 },
   scroll_recall: { id: 'scroll_recall', name: '召唤卷', type: 'consumable', price: 380 },
 
-  powder_green: { id: 'powder_green', name: '绿色药粉', type: 'material', price: 2000 },
-  powder_red: { id: 'powder_red', name: '红色药粉', type: 'material', price: 2000 },
-
   oil_bless: { id: 'oil_bless', name: '祝福油', type: 'consumable', price: 1800 },
   woma_horn: { id: 'woma_horn', name: '沃玛号角', type: 'material', price: 3000 },
   gold_bar: { id: 'gold_bar', name: '金条', type: 'material', price: 100000 },

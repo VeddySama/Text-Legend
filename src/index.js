@@ -273,7 +273,7 @@ function listOnlinePlayers() {
 
 function listSabakMembersOnline() {
   if (!sabakState.ownerGuildId) return [];
-  return listOnlinePlayers().filter((p) => p.guild && p.guild.id === sabakState.ownerGuildId);
+  return listOnlinePlayers().filter((p) => p.guild && String(p.guild.id) === String(sabakState.ownerGuildId));
 }
 
 function sendTo(player, message) {
@@ -1134,9 +1134,9 @@ function recordSabakKill(attacker, target) {
   if (!attacker || !target) return;
   if (!isSabakZone(attacker.position.zone)) return;
   if (!attacker.guild) return;
-  if (attacker.guild && target.guild && attacker.guild.id === target.guild.id) return;
+  if (attacker.guild && target.guild && String(attacker.guild.id) === String(target.guild.id)) return;
   if (!sabakState.ownerGuildId) return;
-  if (attacker.guild.id !== sabakState.ownerGuildId && !sabakState.active) {
+  if (String(attacker.guild.id) !== String(sabakState.ownerGuildId) && !sabakState.active) {
     startSabakSiege(attacker.guild);
   }
   const entry = sabakState.killStats[attacker.guild.id] || {
@@ -1154,7 +1154,7 @@ async function handleSabakEntry(player) {
     await autoCaptureSabak(player);
     return;
   }
-  if (player.guild.id !== sabakState.ownerGuildId && !sabakState.active) {
+  if (String(player.guild.id) !== String(sabakState.ownerGuildId) && !sabakState.active) {
     startSabakSiege(player.guild);
   }
 }
@@ -1358,7 +1358,7 @@ function buildState(player) {
       }))
     : null;
   const sabakBonus = Boolean(
-    player.guild && sabakState.ownerGuildId && player.guild.id === sabakState.ownerGuildId
+    player.guild && sabakState.ownerGuildId && String(player.guild.id) === String(sabakState.ownerGuildId)
   );
   const onlineCount = players.size;
   const roomPlayers = listOnlinePlayers()
@@ -2419,7 +2419,7 @@ function processMobDeath(player, mob, online) {
     let sabakTaxGold = 0;
     const sabakMembers = listSabakMembersOnline();
     partyMembersForReward.forEach((member) => {
-      const isSabakMember = member.guild && sabakState.ownerGuildId && member.guild.id === sabakState.ownerGuildId;
+      const isSabakMember = member.guild && sabakState.ownerGuildId && String(member.guild.id) === String(sabakState.ownerGuildId);
       const sabakBonus = isSabakMember ? 2 : 1;
       const vipBonus = member.flags?.vip ? 2 : 1;
       let finalExp = Math.floor(shareExp * sabakBonus * vipBonus);

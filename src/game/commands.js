@@ -224,7 +224,7 @@ function canShop(player) {
 
 function isSabakOwnerMember(player, guildApi) {
   return Boolean(
-    player.guild && guildApi?.sabakState?.ownerGuildId && player.guild.id === guildApi.sabakState.ownerGuildId
+    player.guild && guildApi?.sabakState?.ownerGuildId && String(player.guild.id) === String(guildApi.sabakState.ownerGuildId)
   );
 }
 
@@ -410,7 +410,7 @@ export async function handleCommand({ player, players, input, send, partyApi, gu
         const [zoneId, roomId] = dest.split(':');
         const targetRoom = WORLD[zoneId]?.rooms?.[roomId];
         if (targetRoom?.sabakOnly) {
-          if (!player.guild || !guildApi?.sabakState?.ownerGuildId || player.guild.id !== guildApi.sabakState.ownerGuildId) {
+          if (!player.guild || !guildApi?.sabakState?.ownerGuildId || String(player.guild.id) !== String(guildApi.sabakState.ownerGuildId)) {
             send('只有沙巴克城主行会成员可以进入该区域。');
             return;
           }
@@ -420,7 +420,7 @@ export async function handleCommand({ player, players, input, send, partyApi, gu
       } else {
         const targetRoom = WORLD[player.position.zone]?.rooms?.[dest];
         if (targetRoom?.sabakOnly) {
-          if (!player.guild || !guildApi?.sabakState?.ownerGuildId || player.guild.id !== guildApi.sabakState.ownerGuildId) {
+          if (!player.guild || !guildApi?.sabakState?.ownerGuildId || String(player.guild.id) !== String(guildApi.sabakState.ownerGuildId)) {
             send('只有沙巴克城主行会成员可以进入该区域。');
             return;
           }
@@ -1276,7 +1276,7 @@ export async function handleCommand({ player, players, input, send, partyApi, gu
       }
       const targetRoom = WORLD[zoneId].rooms[roomId];
       if (targetRoom?.sabakOnly) {
-        if (!player.guild || !guildApi?.sabakState?.ownerGuildId || player.guild.id !== guildApi.sabakState.ownerGuildId) {
+        if (!player.guild || !guildApi?.sabakState?.ownerGuildId || String(player.guild.id) !== String(guildApi.sabakState.ownerGuildId)) {
           return send('只有沙巴克城主行会成员可以进入该区域。');
         }
       }

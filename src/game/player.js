@@ -41,8 +41,17 @@ function effectsKey(effects) {
 
 export function getItemKey(slot) {
   if (!slot || !slot.id) return '';
+  const item = ITEM_TEMPLATES[slot.id];
+  const isEquipment = item && item.slot;
   const key = effectsKey(slot.effects);
-  return key ? `${slot.id}#${key}` : slot.id;
+  let baseKey = key ? `${slot.id}#${key}` : slot.id;
+  // 装备类型需要包含耐久度信息，避免不同耐久度的装备被合并
+  if (isEquipment && (slot.durability != null || slot.max_durability != null)) {
+    const dur = slot.durability ?? 100;
+    const maxDur = slot.max_durability ?? 100;
+    baseKey += `@${dur}/${maxDur}`;
+  }
+  return baseKey;
 }
 
 function sameEffects(a, b) {

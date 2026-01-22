@@ -1948,7 +1948,7 @@ function renderState(state) {
       socket.emit('cmd', { text: `train ${opt.raw.id}` });
     });
   }
-  if (tradeUi.itemSelect) {
+  if (tradeUi.itemSelect && !tradeUi.modal.classList.contains('hidden')) {
     const savedValue = tradeUi.itemSelect.value;
     tradeUi.itemSelect.innerHTML = '';
     if (!allItems.length) {

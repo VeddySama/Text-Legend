@@ -62,7 +62,7 @@
         name: '平原',
         desc: '开阔的草地上小怪徘徊，城镇在南边。',
         exits: { south: 'bq_town:gate', north: 'forest', east: 'wolfden', west: 'dssv:entrance' },
-        spawns: ['chicken', 'deer', 'sheep', 'scarecrow']
+        spawns: ['chicken', 'chicken', 'chicken', 'chicken', 'chicken', 'chicken', 'chicken', 'chicken', 'chicken', 'chicken', 'deer', 'deer', 'deer', 'deer', 'deer', 'deer', 'deer', 'deer', 'deer', 'deer', 'sheep', 'sheep', 'sheep', 'sheep', 'sheep', 'sheep', 'sheep', 'sheep', 'sheep', 'sheep', 'scarecrow', 'scarecrow', 'scarecrow', 'scarecrow', 'scarecrow', 'scarecrow', 'scarecrow', 'scarecrow', 'scarecrow', 'scarecrow']
       },
       forest: {
         id: 'forest',

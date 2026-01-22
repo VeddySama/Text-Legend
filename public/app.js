@@ -828,7 +828,7 @@ function renderConsignHistory(items) {
         <span>${entry.total}\u91D1</span>
       </div>
       <div class="consignment-history-meta">
-        <span>\u5356\u5BB6: ${entry.buyer}</span>
+        <span>\u4E70\u5BB6: ${entry.buyer}</span>
         <span>\u5355\u4EF7: ${entry.price}\u91D1</span>
         <span>${dateStr}</span>
       </div>

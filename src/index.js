@@ -1655,6 +1655,22 @@ function retaliateMobAgainstPlayer(mob, player, online) {
     }
   }
   
+  // 特殊BOSS毒伤害效果：20%几率使目标持续掉血，每秒掉1%气血，持续5秒
+  if (isSpecialBoss && Math.random() <= 0.2) {
+    if (!mobTarget.status) mobTarget.status = {};
+    const maxHp = Math.max(1, mobTarget.max_hp || 1);
+    const tickDmg = Math.max(1, Math.floor(maxHp * 0.01));
+    applyPoison(mobTarget, 5, tickDmg, mob.name);
+    if (mobTarget.userId) {
+      mobTarget.send(`${mob.name} 的毒性攻击！你将每秒损失1%气血，持续5秒。`);
+      if (mobTarget !== player) {
+        player.send(`${mob.name} 对 ${mobTarget.name} 造成毒性伤害！`);
+      }
+    } else {
+      player.send(`${mob.name} 对 ${mobTarget.name} 造成毒性伤害！`);
+    }
+  }
+  
   if (mobTarget && mobTarget.userId) {
     applyDamageToPlayer(mobTarget, dmg);
     mobTarget.send(`${mob.name} 对你造成 ${dmg} 点伤害。`);
@@ -1665,9 +1681,9 @@ function retaliateMobAgainstPlayer(mob, player, online) {
       handleDeath(mobTarget);
     }
     
-    // 特殊BOSS溅射效果：对房间所有其他玩家和召唤物造成50%溅射伤害
+    // 特殊BOSS溅射效果：对房间所有其他玩家和召唤物造成BOSS攻击力50%的溅射伤害
     if (isSpecialBoss && online && online.length > 0) {
-      const splashDmg = Math.floor(dmg * 0.5);
+      const splashDmg = Math.floor(mob.atk * 0.5);
       const roomPlayers = online.filter((p) => 
         p.name !== mobTarget.name &&
         p.position.zone === player.position.zone &&
@@ -1711,9 +1727,9 @@ function retaliateMobAgainstPlayer(mob, player, online) {
   applyDamage(mobTarget, dmg);
   player.send(`${mob.name} 对 ${mobTarget.name} 造成 ${dmg} 点伤害。`);
   
-  // 特殊BOSS溅射效果：主目标是召唤物时，对玩家和房间所有其他玩家及召唤物造成50%溅射伤害
+  // 特殊BOSS溅射效果：主目标是召唤物时，对玩家和房间所有其他玩家及召唤物造成BOSS攻击力50%的溅射伤害
   if (isSpecialBoss && online && online.length > 0) {
-    const splashDmg = Math.floor(dmg * 0.5);
+    const splashDmg = Math.floor(mob.atk * 0.5);
     
     // 溅射到召唤物的主人
     if (player && player.hp > 0) {
@@ -3060,6 +3076,22 @@ function combatTick() {
           player.send(`${mob.name} 对 ${mobTarget.name} 造成破防效果！`);
         }
       }
+      
+      // 特殊BOSS毒伤害效果：20%几率使目标持续掉血，每秒掉1%气血，持续5秒
+      if (isSpecialBoss && Math.random() <= 0.2) {
+        if (!mobTarget.status) mobTarget.status = {};
+        const maxHp = Math.max(1, mobTarget.max_hp || 1);
+        const tickDmg = Math.max(1, Math.floor(maxHp * 0.01));
+        applyPoison(mobTarget, 5, tickDmg, mob.name);
+        if (mobTarget.userId) {
+          mobTarget.send(`${mob.name} 的毒性攻击！你将每秒损失1%气血，持续5秒。`);
+          if (mobTarget !== player) {
+            player.send(`${mob.name} 对 ${mobTarget.name} 造成毒性伤害！`);
+          }
+        } else {
+          player.send(`${mob.name} 对 ${mobTarget.name} 造成毒性伤害！`);
+        }
+      }
       // 特殊BOSS暴击效果：魔龙教主、世界BOSS、沙巴克BOSS攻击时有15%几率造成2倍暴击伤害
       if (isSpecialBoss && Math.random() <= 0.15) {
         dmg = Math.floor(dmg * 2);
@@ -3082,9 +3114,9 @@ function combatTick() {
           handleDeath(mobTarget);
         }
         
-        // 特殊BOSS溅射效果：对房间所有其他玩家和召唤物造成50%溅射伤害
+        // 特殊BOSS溅射效果：对房间所有其他玩家和召唤物造成BOSS攻击力50%的溅射伤害
         if (isSpecialBoss && online && online.length > 0) {
-          const splashDmg = Math.floor(dmg * 0.5);
+          const splashDmg = Math.floor(mob.atk * 0.5);
           const roomPlayers = online.filter((p) => 
             p.name !== mobTarget.name &&
             p.position.zone === player.position.zone &&
@@ -3126,9 +3158,9 @@ function combatTick() {
         applyDamage(mobTarget, dmg);
         player.send(`${mob.name} 对 ${mobTarget.name} 造成 ${dmg} 点伤害。`);
         
-        // 特殊BOSS溅射效果：主目标是召唤物时，对玩家和房间所有其他玩家及召唤物造成50%溅射伤害
+        // 特殊BOSS溅射效果：主目标是召唤物时，对玩家和房间所有其他玩家及召唤物造成BOSS攻击力50%的溅射伤害
         if (isSpecialBoss && online && online.length > 0) {
-          const splashDmg = Math.floor(dmg * 0.5);
+          const splashDmg = Math.floor(mob.atk * 0.5);
           
           // 溅射到召唤物的主人
           if (player && player.hp > 0) {

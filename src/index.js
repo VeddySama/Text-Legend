@@ -1008,10 +1008,16 @@ const consignApi = {
   }
 };
 
-function partyMembersInRoom(party, playersList, zone, room) {
+function partyMembersOnline(party, playersList) {
   return party.members
     .map((name) => playersList.find((p) => p.name === name))
     .filter((p) => p);
+}
+
+function partyMembersInRoom(party, playersList, zone, room) {
+  return party.members
+    .map((name) => playersList.find((p) => p.name === name))
+    .filter((p) => p && p.position.zone === zone && p.position.room === room);
 }
 
 function distributeLoot(party, partyMembers, drops) {
@@ -2347,9 +2353,12 @@ function processMobDeath(player, mob, online) {
   const gold = randInt(template.gold[0], template.gold[1]);
 
   const party = getPartyByMember(player.name);
-  let partyMembers = party ? partyMembersInRoom(party, online, player.position.zone, player.position.room) : [];
-  const inRoomCount = partyMembers.length || 1;
-  const allInRoom = partyMembers.length > 1;
+  // 物品分配使用同房间的队友
+  let partyMembersInSameRoom = party ? partyMembersInRoom(party, online, player.position.zone, player.position.room) : [];
+  // 经验金币分配使用全图在线的队友
+  let partyMembersForReward = party ? partyMembersOnline(party, online) : [];
+  const onlineCount = partyMembersForReward.length || 1;
+  const hasParty = partyMembersForReward.length > 1;
   const isBoss = isBossMob(template);
   const isWorldBoss = Boolean(template.worldBoss);
   const isSabakBoss = Boolean(template.sabakBoss);
@@ -2357,7 +2366,7 @@ function processMobDeath(player, mob, online) {
   const isSpecialBoss = isWorldBoss || isSabakBoss || isMolongBoss;
   const { rankMap, entries } = isSpecialBoss ? buildDamageRankMap(mob, damageSnapshot) : { rankMap: {}, entries: [] };
   let lootOwner = player;
-  if (!party || partyMembers.length === 0) {
+  if (!party || partyMembersForReward.length === 0) {
     let ownerName = null;
     if (isSpecialBoss) {
       const damageBy = damageSnapshot;
@@ -2373,19 +2382,20 @@ function processMobDeath(player, mob, online) {
     }
     if (!ownerName) ownerName = player.name;
     lootOwner = playersByName(ownerName) || player;
-    partyMembers = [lootOwner];
+    partyMembersForReward = [lootOwner];
+    partyMembersInSameRoom = [lootOwner];
   }
-  const eligibleCount = allInRoom ? 1 : inRoomCount;
-  const bonus = inRoomCount > 1 ? Math.min(0.2 * inRoomCount, 1.0) : 0;
+  const eligibleCount = hasParty ? 1 : onlineCount;
+  const bonus = onlineCount > 1 ? Math.min(0.2 * onlineCount, 1.0) : 0;
   const totalExp = Math.floor(exp * (1 + bonus));
   const totalGold = Math.floor(gold * (1 + bonus));
-  const shareExp = allInRoom ? totalExp : Math.floor(totalExp / eligibleCount);
-  const shareGold = allInRoom ? totalGold : Math.floor(totalGold / eligibleCount);
+  const shareExp = hasParty ? totalExp : Math.floor(totalExp / eligibleCount);
+  const shareGold = hasParty ? totalGold : Math.floor(totalGold / eligibleCount);
 
     let sabakTaxExp = 0;
     let sabakTaxGold = 0;
     const sabakMembers = listSabakMembersOnline();
-    partyMembers.forEach((member) => {
+    partyMembersForReward.forEach((member) => {
       const isSabakMember = member.guild && sabakState.ownerGuildId && member.guild.id === sabakState.ownerGuildId;
       const sabakBonus = isSabakMember ? 2 : 1;
       const vipBonus = member.flags?.vip ? 2 : 1;
@@ -2473,8 +2483,8 @@ function processMobDeath(player, mob, online) {
     dropTargets.forEach(({ player: owner, damageRatio }) => {
       const drops = dropLoot(template, 1);
       if (!drops.length) return;
-      if (!isSpecialBoss && party && partyMembers.length > 0) {
-        const distributed = distributeLoot(party, partyMembers, drops);
+      if (!isSpecialBoss && party && partyMembersInSameRoom.length > 0) {
+        const distributed = distributeLoot(party, partyMembersInSameRoom, drops);
         distributed.forEach(({ id, effects, target }) => {
           const item = ITEM_TEMPLATES[id];
           if (!item) return;

@@ -356,6 +356,25 @@
     </div>
   </div>
 
+  <div id="drops-modal" class="modal hidden">
+    <div class="modal-card">
+      <div class="modal-title">套装掉落表</div>
+      <div class="drops-tabs">
+        <button class="drops-tab active" data-set="shengzhan">圣战套装</button>
+        <button class="drops-tab" data-set="fashen">法神套装</button>
+        <button class="drops-tab" data-set="tianzun">天尊套装</button>
+        <button class="drops-tab" data-set="zhanshen">战神套装</button>
+        <button class="drops-tab" data-set="shengmo">圣魔套装</button>
+        <button class="drops-tab" data-set="zhenhun">真魂套装</button>
+        <button class="drops-tab" data-set="special">特戒</button>
+      </div>
+      <div id="drops-content" class="drops-content"></div>
+      <div class="modal-actions">
+        <button id="drops-close">关闭</button>
+      </div>
+    </div>
+  </div>
+
   <div id="item-tooltip" class="item-tooltip hidden"></div>
 
   <script src="/socket.io/socket.io.js"></script>

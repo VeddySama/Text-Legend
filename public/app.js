@@ -50,6 +50,12 @@ const ui = {
   training: document.getElementById('training-list'),
   actions: document.getElementById('actions-list')
 };
+const dropsUi = {
+  modal: document.getElementById('drops-modal'),
+  tabs: document.querySelectorAll('.drops-tab'),
+  content: document.getElementById('drops-content'),
+  closeBtn: document.getElementById('drops-close')
+};
 const chat = {
   log: document.getElementById('chat-log'),
   input: document.getElementById('chat-input'),
@@ -1194,6 +1200,142 @@ function showBagModal() {
     renderStatsModal();
   }
 
+// 套装掉落数据
+const SET_DROPS = {
+  shengzhan: {
+    name: '圣战套装',
+    items: [
+      { id: 'armor_taishan', name: '圣战宝甲', drops: [{ mob: '赤月恶魔', chance: '6%' }, { mob: '魔龙教主', chance: '6%' }, { mob: '世界BOSS', chance: '6%' }, { mob: '沙巴克BOSS', chance: '8%' }] },
+      { id: 'helm_holy', name: '圣战头盔(套)', drops: [{ mob: '赤月恶魔', chance: '2%' }, { mob: '魔龙教主', chance: '2%' }, { mob: '世界BOSS', chance: '2%' }, { mob: '沙巴克BOSS', chance: '3%' }] },
+      { id: 'boots_holy', name: '圣战靴(套)', drops: [{ mob: '赤月恶魔', chance: '2%' }, { mob: '魔龙教主', chance: '2%' }, { mob: '世界BOSS', chance: '2%' }, { mob: '沙巴克BOSS', chance: '3%' }] },
+      { id: 'belt_holy', name: '圣战腰带(套)', drops: [{ mob: '赤月恶魔', chance: '2%' }, { mob: '魔龙教主', chance: '2%' }, { mob: '世界BOSS', chance: '2%' }, { mob: '沙巴克BOSS', chance: '3%' }] },
+      { id: 'ring_holy', name: '圣战戒指(套)', drops: [{ mob: '黄泉教主', chance: '4%' }, { mob: '赤月恶魔', chance: '6%' }, { mob: '世界BOSS', chance: '4%' }, { mob: '沙巴克BOSS', chance: '6%' }] },
+      { id: 'necklace_soldier', name: '圣战项链(套)', drops: [{ mob: '赤月恶魔', chance: '8%' }, { mob: '世界BOSS', chance: '4%' }, { mob: '沙巴克BOSS', chance: '6%' }] },
+      { id: 'bracelet_soldier', name: '圣战手镯(套)', drops: [{ mob: '赤月恶魔', chance: '4%' }, { mob: '魔龙教主', chance: '4%' }, { mob: '世界BOSS', chance: '4%' }, { mob: '沙巴克BOSS', chance: '6%' }] }
+    ]
+  },
+  fashen: {
+    name: '法神套装',
+    items: [
+      { id: 'armor_mage', name: '法神披风', drops: [{ mob: '赤月恶魔', chance: '6%' }, { mob: '双头金刚', chance: '8%' }, { mob: '魔龙教主', chance: '6%' }, { mob: '世界BOSS', chance: '6%' }, { mob: '沙巴克BOSS', chance: '8%' }] },
+      { id: 'helm_mage', name: '法神头盔(套)', drops: [{ mob: '赤月恶魔', chance: '2%' }, { mob: '魔龙教主', chance: '2%' }, { mob: '世界BOSS', chance: '2%' }, { mob: '沙巴克BOSS', chance: '3%' }] },
+      { id: 'boots_mage', name: '法神靴(套)', drops: [{ mob: '赤月恶魔', chance: '2%' }, { mob: '魔龙教主', chance: '2%' }, { mob: '世界BOSS', chance: '2%' }, { mob: '沙巴克BOSS', chance: '3%' }] },
+      { id: 'belt_mage', name: '法神腰带(套)', drops: [{ mob: '赤月恶魔', chance: '2%' }, { mob: '魔龙教主', chance: '2%' }, { mob: '世界BOSS', chance: '2%' }, { mob: '沙巴克BOSS', chance: '3%' }] },
+      { id: 'ring_fashen', name: '法神戒指(套)', drops: [{ mob: '黄泉教主', chance: '4%' }, { mob: '赤月恶魔', chance: '6%' }, { mob: '世界BOSS', chance: '4%' }, { mob: '沙巴克BOSS', chance: '6%' }] },
+      { id: 'necklace_fashen', name: '法神项链(套)', drops: [{ mob: '赤月恶魔', chance: '8%' }, { mob: '世界BOSS', chance: '4%' }, { mob: '沙巴克BOSS', chance: '6%' }] },
+      { id: 'bracelet_fashen', name: '法神手镯(套)', drops: [{ mob: '赤月恶魔', chance: '4%' }, { mob: '魔龙教主', chance: '4%' }, { mob: '世界BOSS', chance: '4%' }, { mob: '沙巴克BOSS', chance: '6%' }] }
+    ]
+  },
+  tianzun: {
+    name: '天尊套装',
+    items: [
+      { id: 'armor_tao', name: '天尊道袍', drops: [{ mob: '赤月恶魔', chance: '6%' }, { mob: '双头金刚', chance: '8%' }, { mob: '魔龙教主', chance: '6%' }, { mob: '世界BOSS', chance: '6%' }, { mob: '沙巴克BOSS', chance: '8%' }] },
+      { id: 'helm_tao', name: '天尊头盔(套)', drops: [{ mob: '赤月恶魔', chance: '2%' }, { mob: '魔龙教主', chance: '2%' }, { mob: '世界BOSS', chance: '2%' }, { mob: '沙巴克BOSS', chance: '3%' }] },
+      { id: 'boots_tao', name: '天尊靴(套)', drops: [{ mob: '赤月恶魔', chance: '2%' }, { mob: '魔龙教主', chance: '2%' }, { mob: '世界BOSS', chance: '2%' }, { mob: '沙巴克BOSS', chance: '3%' }] },
+      { id: 'belt_tao', name: '天尊腰带(套)', drops: [{ mob: '赤月恶魔', chance: '2%' }, { mob: '魔龙教主', chance: '2%' }, { mob: '世界BOSS', chance: '2%' }, { mob: '沙巴克BOSS', chance: '3%' }] },
+      { id: 'ring_tianzun', name: '天尊戒指(套)', drops: [{ mob: '虹魔教主', chance: '6%' }, { mob: '赤月恶魔', chance: '6%' }, { mob: '双头血魔', chance: '6%' }, { mob: '世界BOSS', chance: '4%' }, { mob: '沙巴克BOSS', chance: '6%' }] },
+      { id: 'necklace_tianzun', name: '天尊项链(套)', drops: [{ mob: '赤月恶魔', chance: '8%' }, { mob: '世界BOSS', chance: '4%' }, { mob: '沙巴克BOSS', chance: '6%' }] },
+      { id: 'bracelet_tianzun', name: '天尊手镯(套)', drops: [{ mob: '赤月恶魔', chance: '4%' }, { mob: '魔龙教主', chance: '4%' }, { mob: '世界BOSS', chance: '4%' }, { mob: '沙巴克BOSS', chance: '6%' }] }
+    ]
+  },
+  zhanshen: {
+    name: '战神套装',
+    items: [
+      { id: 'armor_thunder', name: '雷霆战甲', drops: [{ mob: '魔龙教主', chance: '2%' }, { mob: '世界BOSS', chance: '1.5%' }, { mob: '沙巴克BOSS', chance: '2%' }] },
+      { id: 'helm_wargod', name: '战神头盔(套)', drops: [{ mob: '魔龙教主', chance: '0.5%' }, { mob: '世界BOSS', chance: '0.8%' }, { mob: '沙巴克BOSS', chance: '1%' }] },
+      { id: 'boots_wargod', name: '战神靴子(套)', drops: [{ mob: '魔龙教主', chance: '0.5%' }, { mob: '世界BOSS', chance: '0.8%' }, { mob: '沙巴克BOSS', chance: '1%' }] },
+      { id: 'belt_wargod', name: '战神腰带(套)', drops: [{ mob: '魔龙教主', chance: '0.5%' }, { mob: '世界BOSS', chance: '0.8%' }, { mob: '沙巴克BOSS', chance: '1%' }] },
+      { id: 'ring_wargod', name: '战神戒指(套)', drops: [{ mob: '魔龙教主', chance: '0.3%' }, { mob: '世界BOSS', chance: '0.5%' }, { mob: '沙巴克BOSS', chance: '0.6%' }] },
+      { id: 'necklace_wargod', name: '战神项链(套)', drops: [{ mob: '魔龙教主', chance: '0.3%' }, { mob: '世界BOSS', chance: '0.5%' }, { mob: '沙巴克BOSS', chance: '0.6%' }] },
+      { id: 'bracelet_wargod', name: '战神手镯(套)', drops: [{ mob: '魔龙教主', chance: '0.3%' }, { mob: '世界BOSS', chance: '0.5%' }, { mob: '沙巴克BOSS', chance: '0.6%' }] }
+    ]
+  },
+  shengmo: {
+    name: '圣魔套装',
+    items: [
+      { id: 'armor_flame', name: '烈焰魔衣', drops: [{ mob: '魔龙教主', chance: '2%' }, { mob: '世界BOSS', chance: '1.5%' }, { mob: '沙巴克BOSS', chance: '2%' }] },
+      { id: 'helm_sacred', name: '圣魔头盔(套)', drops: [{ mob: '魔龙教主', chance: '0.5%' }, { mob: '世界BOSS', chance: '0.8%' }, { mob: '沙巴克BOSS', chance: '1%' }] },
+      { id: 'boots_sacred', name: '圣魔靴子(套)', drops: [{ mob: '魔龙教主', chance: '0.5%' }, { mob: '世界BOSS', chance: '0.8%' }, { mob: '沙巴克BOSS', chance: '1%' }] },
+      { id: 'belt_sacred', name: '圣魔腰带(套)', drops: [{ mob: '魔龙教主', chance: '0.5%' }, { mob: '世界BOSS', chance: '0.8%' }, { mob: '沙巴克BOSS', chance: '1%' }] },
+      { id: 'ring_sacred', name: '圣魔戒指(套)', drops: [{ mob: '魔龙教主', chance: '0.3%' }, { mob: '世界BOSS', chance: '0.5%' }, { mob: '沙巴克BOSS', chance: '0.6%' }] },
+      { id: 'necklace_sacred', name: '圣魔项链(套)', drops: [{ mob: '魔龙教主', chance: '0.3%' }, { mob: '世界BOSS', chance: '0.5%' }, { mob: '沙巴克BOSS', chance: '0.6%' }] },
+      { id: 'bracelet_sacred', name: '圣魔手镯(套)', drops: [{ mob: '魔龙教主', chance: '0.3%' }, { mob: '世界BOSS', chance: '0.5%' }, { mob: '沙巴克BOSS', chance: '0.6%' }] }
+    ]
+  },
+  zhenhun: {
+    name: '真魂套装',
+    items: [
+      { id: 'armor_glow', name: '光芒道袍', drops: [{ mob: '魔龙教主', chance: '2%' }, { mob: '世界BOSS', chance: '1.5%' }, { mob: '沙巴克BOSS', chance: '2%' }] },
+      { id: 'helm_true', name: '真魂头盔(套)', drops: [{ mob: '魔龙教主', chance: '0.5%' }, { mob: '世界BOSS', chance: '0.8%' }, { mob: '沙巴克BOSS', chance: '1%' }] },
+      { id: 'boots_true', name: '真魂靴子(套)', drops: [{ mob: '魔龙教主', chance: '0.5%' }, { mob: '世界BOSS', chance: '0.8%' }, { mob: '沙巴克BOSS', chance: '1%' }] },
+      { id: 'belt_true', name: '真魂腰带(套)', drops: [{ mob: '魔龙教主', chance: '0.5%' }, { mob: '世界BOSS', chance: '0.8%' }, { mob: '沙巴克BOSS', chance: '1%' }] },
+      { id: 'ring_true', name: '真魂戒指(套)', drops: [{ mob: '魔龙教主', chance: '0.3%' }, { mob: '世界BOSS', chance: '0.5%' }, { mob: '沙巴克BOSS', chance: '0.6%' }] },
+      { id: 'necklace_true', name: '真魂项链(套)', drops: [{ mob: '魔龙教主', chance: '0.3%' }, { mob: '世界BOSS', chance: '0.5%' }, { mob: '沙巴克BOSS', chance: '0.6%' }] },
+      { id: 'bracelet_true', name: '真魂手镯(套)', drops: [{ mob: '魔龙教主', chance: '0.3%' }, { mob: '世界BOSS', chance: '0.5%' }, { mob: '沙巴克BOSS', chance: '0.6%' }] }
+    ]
+  },
+  special: {
+    name: '特殊戒指',
+    items: [
+      { id: 'ring_dodge', name: '躲避戒指', drops: [{ mob: '祖玛教主', chance: '0.8%' }, { mob: '牛魔王', chance: '0.8%' }, { mob: '世界BOSS', chance: '1.5%' }, { mob: '沙巴克BOSS', chance: '2%' }] },
+      { id: 'ring_def', name: '防御戒指', drops: [{ mob: '祖玛教主', chance: '0.8%' }, { mob: '世界BOSS', chance: '1.5%' }, { mob: '沙巴克BOSS', chance: '2%' }] },
+      { id: 'ring_fire', name: '火焰戒指', drops: [{ mob: '祖玛教主', chance: '0.8%' }, { mob: '世界BOSS', chance: '1.5%' }, { mob: '沙巴克BOSS', chance: '2%' }] },
+      { id: 'ring_stealth', name: '隐身戒指', drops: [{ mob: '赤月恶魔', chance: '0.8%' }, { mob: '世界BOSS', chance: '1.5%' }, { mob: '沙巴克BOSS', chance: '2%' }] },
+      { id: 'ring_heal', name: '治愈戒指', drops: [{ mob: '赤月恶魔', chance: '0.8%' }, { mob: '世界BOSS', chance: '1.5%' }, { mob: '沙巴克BOSS', chance: '2%' }] },
+      { id: 'ring_magic', name: '麻痹戒指', drops: [{ mob: '魔龙教主', chance: '0.3%' }, { mob: '牛魔王', chance: '0.5%' }, { mob: '世界BOSS', chance: '1%' }, { mob: '沙巴克BOSS', chance: '2%' }] },
+      { id: 'ring_teleport', name: '传送戒指', drops: [{ mob: '魔龙教主', chance: '0.3%' }, { mob: '牛魔王', chance: '0.6%' }, { mob: '世界BOSS', chance: '1%' }, { mob: '沙巴克BOSS', chance: '2%' }] },
+      { id: 'ring_protect', name: '护身戒指', drops: [{ mob: '魔龙教主', chance: '0.3%' }, { mob: '世界BOSS', chance: '1%' }, { mob: '沙巴克BOSS', chance: '2%' }] },
+      { id: 'ring_revival', name: '复活戒指', drops: [{ mob: '沃玛教主', chance: '0.5%' }, { mob: '魔龙教主', chance: '0.3%' }, { mob: '世界BOSS', chance: '1%' }, { mob: '沙巴克BOSS', chance: '2%' }] },
+      { id: 'ring_recall', name: '记忆戒指', drops: [{ mob: '赤月恶魔', chance: '0.5%' }, { mob: '世界BOSS', chance: '0.8%' }, { mob: '沙巴克BOSS', chance: '1.5%' }] },
+      { id: 'ring_rebirth', name: '复活戒指', drops: [{ mob: '赤月恶魔', chance: '0.3%' }, { mob: '世界BOSS', chance: '0.6%' }, { mob: '沙巴克BOSS', chance: '1.2%' }] }
+    ]
+  }
+};
+
+function showDropsModal() {
+  if (!dropsUi.modal || !dropsUi.content) return;
+  hideItemTooltip();
+  renderDropsContent('shengzhan');
+  dropsUi.modal.classList.remove('hidden');
+  
+  // 绑定tab点击事件
+  dropsUi.tabs.forEach((tab) => {
+    tab.addEventListener('click', () => {
+      dropsUi.tabs.forEach((t) => t.classList.remove('active'));
+      tab.classList.add('active');
+      const setId = tab.dataset.set;
+      renderDropsContent(setId);
+    });
+  });
+  
+  // 绑定关闭按钮
+  dropsUi.closeBtn.addEventListener('click', () => {
+    dropsUi.modal.classList.add('hidden');
+  });
+}
+
+function renderDropsContent(setId) {
+  if (!dropsUi.content) return;
+  const setData = SET_DROPS[setId];
+  if (!setData) return;
+  
+  dropsUi.content.innerHTML = `
+    <div class="drops-header">${setData.name}</div>
+  `;
+  
+  setData.items.forEach((item) => {
+    const itemDiv = document.createElement('div');
+    itemDiv.className = 'drops-item';
+    itemDiv.innerHTML = `
+      <div class="drops-item-name">${item.name}</div>
+      <div class="drops-item-mobs">
+        ${item.drops.map((drop) => `<span class="drops-drop">${drop.mob}: ${drop.chance}</span>`).join('')}
+      </div>
+    `;
+    dropsUi.content.appendChild(itemDiv);
+  });
+}
+
 const ITEM_TYPE_LABELS = {
   consumable: '\u6d88\u8017\u54c1',
   weapon: '\u6b66\u5668',
@@ -1665,6 +1807,7 @@ function renderState(state) {
     { id: 'shop', label: '\u5546\u5e97' },
     { id: 'repair', label: '\u4FEE\u7406' },
     { id: 'consign', label: '\u5BC4\u552E' },
+    { id: 'drops', label: '\u5957\u88c5\u6389\u843d' },
     { id: 'vip activate', label: 'VIP\u6fc0\u6d3b' },
     { id: 'logout', label: '\u9000\u51fa\u6e38\u620f' }
   ];
@@ -1723,6 +1866,10 @@ function renderState(state) {
     }
     if (a.id === 'repair') {
       showRepairModal();
+      return;
+    }
+    if (a.id === 'drops') {
+      showDropsModal();
       return;
     }
     socket.emit('cmd', { text: a.id });

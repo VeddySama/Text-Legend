@@ -1244,3 +1244,90 @@ li {
     min-height: 300px;
   }
 }
+
+/* 套装掉落表样式 */
+.drops-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.drops-tab {
+  flex: 1;
+  min-width: 70px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid rgba(118, 70, 22, 0.25);
+  background: #f7e2c6;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: all 0.12s ease;
+}
+
+.drops-tab:hover {
+  background: #e8d4b8;
+}
+
+.drops-tab.active {
+  background: #c56b2a;
+  color: #fff7ea;
+  border-color: #b35a1a;
+}
+
+.drops-content {
+  max-height: 55vh;
+  overflow-y: auto;
+  padding: 4px 0;
+}
+
+.drops-header {
+  font-weight: 600;
+  color: #8f5a12;
+  padding: 8px 0;
+  font-size: 1rem;
+  border-bottom: 1px solid rgba(118, 70, 22, 0.15);
+  margin-bottom: 10px;
+}
+
+.drops-item {
+  background: #fff4e2;
+  border: 1px solid rgba(118, 70, 22, 0.15);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+}
+
+.drops-item-name {
+  font-weight: 600;
+  color: #5b3a1c;
+  margin-bottom: 6px;
+  font-size: 0.9rem;
+}
+
+.drops-item-mobs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: #6b4a2a;
+}
+
+.drops-drop {
+  background: #fff7ea;
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(118, 70, 22, 0.1);
+}
+
+#drops-modal .modal-card {
+  max-height: 78vh;
+  overflow: auto;
+}
+
+#drops-modal .modal-actions {
+  position: sticky;
+  bottom: 0;
+  background: #fff5e8;
+  padding-top: 10px;
+}

@@ -1782,6 +1782,28 @@ io.on('connection', (socket) => {
       return;
     }
 
+    // 检查是否已有同名角色在线，如果有则踢掉之前的连接
+    const existingPlayer = Array.from(players.values()).find(p => p.name === name);
+    if (existingPlayer) {
+      const existingSocketId = Object.keys(players).find(key => players.get(key)?.name === name);
+      if (existingSocketId) {
+        // 保存并移除之前的会话
+        await savePlayer(existingPlayer);
+        // 断开旧连接
+        existingPlayer.socket.disconnect();
+        // 移除旧的玩家数据
+        players.delete(existingSocketId);
+        // 从队伍中移除
+        const party = getPartyByMember(name);
+        if (party) {
+          party.members = party.members.filter(m => m !== name);
+          if (party.members.length === 0) {
+            parties.delete(party.id);
+          }
+        }
+      }
+    }
+
     computeDerived(loaded);
     loaded.userId = session.user_id;
     loaded.socket = socket;

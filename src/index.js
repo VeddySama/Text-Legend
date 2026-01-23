@@ -1388,7 +1388,7 @@ function transferOneEquipmentChance(from, to, chance) {
   return [formatItemLabel(equipped.id, equipped.effects)];
 }
 
-function buildState(player) {
+async function buildState(player) {
   const zone = WORLD[player.position.zone];
   const room = zone?.rooms[player.position.room];
   if (zone && room) spawnMobs(player.position.zone, player.position.room);
@@ -1549,15 +1549,17 @@ function buildState(player) {
   };
 }
 
-function sendState(player) {
+async function sendState(player) {
   if (!player.socket) return;
-  player.socket.emit('state', buildState(player));
+  player.socket.emit('state', await buildState(player));
 }
 
-function sendRoomState(zoneId, roomId) {
-  listOnlinePlayers()
-    .filter((p) => p.position.zone === zoneId && p.position.room === roomId)
-    .forEach((p) => sendState(p));
+async function sendRoomState(zoneId, roomId) {
+  const players = listOnlinePlayers()
+    .filter((p) => p.position.zone === zoneId && p.position.room === roomId);
+  for (const p of players) {
+    await sendState(p);
+  }
 }
 
 const WORLD_BOSS_ROOM = { zoneId: 'wb', roomId: 'lair' };
@@ -2208,7 +2210,7 @@ io.on('connection', (socket) => {
     const room = zone?.rooms[loaded.position.room];
     const locationName = zone && room ? `${zone.name} - ${room.name}` : `${loaded.position.zone}:${loaded.position.room}`;
     loaded.send(`你位于 ${locationName}。`);
-    sendState(loaded);
+    await sendState(loaded);
   });
 
   socket.on('cmd', async (payload) => {
@@ -2264,7 +2266,7 @@ io.on('connection', (socket) => {
     ) {
       await handleSabakEntry(player);
     }
-    sendState(player);
+    await sendState(player);
     await savePlayer(player);
   });
 
@@ -2992,8 +2994,8 @@ function combatTick() {
         }
         handleDeath(target);
       }
-      sendState(player);
-      sendState(target);
+      await sendState(player);
+      await sendState(target);
       return;
     }
 
@@ -3413,7 +3415,7 @@ function combatTick() {
     if (player.hp <= 0 && !tryRevive(player)) {
       handleDeath(player);
     }
-    sendState(player);
+    await sendState(player);
   });
 }
 

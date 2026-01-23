@@ -255,6 +255,21 @@ app.get('/admin/vip/list', async (req, res) => {
   res.json({ ok: true, codes });
 });
 
+app.get('/admin/vip/self-claim-status', async (req, res) => {
+  const admin = await requireAdmin(req);
+  if (!admin) return res.status(401).json({ error: '无管理员权限。' });
+  const enabled = await getVipSelfClaimEnabled();
+  res.json({ ok: true, enabled });
+});
+
+app.post('/admin/vip/self-claim-toggle', async (req, res) => {
+  const admin = await requireAdmin(req);
+  if (!admin) return res.status(401).json({ error: '无管理员权限。' });
+  const { enabled } = req.body || {};
+  await setVipSelfClaimEnabled(enabled === true);
+  res.json({ ok: true, enabled: enabled === true });
+});
+
 const players = new Map();
 const parties = new Map();
 const partyInvites = new Map();

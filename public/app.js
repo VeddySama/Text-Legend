@@ -2345,6 +2345,12 @@ async function createCharacter() {
 }
 
 function enterGame(name) {
+  // 断开旧的 socket 连接
+  if (socket) {
+    socket.disconnect();
+    socket = null;
+  }
+  
   activeChar = name;
   const username = localStorage.getItem('rememberedUser');
   const storageKey = getUserStorageKey('lastCharacter', username);

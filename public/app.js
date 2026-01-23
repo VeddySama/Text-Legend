@@ -268,11 +268,18 @@ function exitGame() {
   show(authSection);
 }
 
+function getUserStorageKey(key, username) {
+  const user = username || localStorage.getItem('rememberedUser');
+  return user ? `${key}_${user}` : key;
+}
+
 function updateSavedCharacters(player) {
   if (!player || !player.name) return;
+  const username = localStorage.getItem('rememberedUser');
+  const storageKey = getUserStorageKey('savedCharacters', username);
   let chars = [];
   try {
-    chars = JSON.parse(localStorage.getItem('savedCharacters') || '[]');
+    chars = JSON.parse(localStorage.getItem(storageKey) || '[]');
   } catch {
     chars = [];
   }
@@ -281,7 +288,7 @@ function updateSavedCharacters(player) {
   if (idx === -1) return;
   if (chars[idx].level === player.level && chars[idx].class === player.classId) return;
   chars[idx] = { ...chars[idx], level: player.level, class: player.classId };
-  localStorage.setItem('savedCharacters', JSON.stringify(chars));
+  localStorage.setItem(storageKey, JSON.stringify(chars));
   if (!characterSection.classList.contains('hidden')) {
     renderCharacters(chars);
   }
@@ -2143,16 +2150,19 @@ const remembered = localStorage.getItem('rememberedUser');
 if (remembered) {
   loginUserInput.value = remembered;
 }
-const savedToken = localStorage.getItem('savedToken');
+const tokenKey = getUserStorageKey('savedToken', remembered);
+const savedToken = localStorage.getItem(tokenKey);
 if (savedToken) {
   token = savedToken;
+  const charsKey = getUserStorageKey('savedCharacters', remembered);
   let savedChars = [];
   try {
-    savedChars = JSON.parse(localStorage.getItem('savedCharacters') || '[]');
+    savedChars = JSON.parse(localStorage.getItem(charsKey) || '[]');
   } catch {
     savedChars = [];
   }
-  const lastChar = localStorage.getItem('lastCharacter');
+  const lastCharKey = getUserStorageKey('lastCharacter', remembered);
+  const lastChar = localStorage.getItem(lastCharKey);
   const hasLastChar = lastChar && savedChars.some((c) => c.name === lastChar);
   if (hasLastChar) {
     enterGame(lastChar);
@@ -2185,8 +2195,10 @@ async function login() {
     const data = await apiPost('/api/login', { username, password, captchaToken, captchaCode });
     localStorage.setItem('rememberedUser', username);
     token = data.token;
-    localStorage.setItem('savedToken', token);
-    localStorage.setItem('savedCharacters', JSON.stringify(data.characters || []));
+    const storageKey = getUserStorageKey('savedToken', username);
+    localStorage.setItem(storageKey, token);
+    const charsKey = getUserStorageKey('savedCharacters', username);
+    localStorage.setItem(charsKey, JSON.stringify(data.characters || []));
     renderCharacters(data.characters || []);
     show(characterSection);
     showToast('登录成功');
@@ -2260,9 +2272,11 @@ async function createCharacter() {
   }
   try {
     await apiPost('/api/character', { token, name, classId });
+    const username = localStorage.getItem('rememberedUser');
+    const charsKey = getUserStorageKey('savedCharacters', username);
     let saved = [];
     try {
-      saved = JSON.parse(localStorage.getItem('savedCharacters') || '[]');
+      saved = JSON.parse(localStorage.getItem(charsKey) || '[]');
     } catch {
       saved = [];
     }
@@ -2270,7 +2284,7 @@ async function createCharacter() {
     if (!saved.some((c) => c.name === name)) {
       saved.push({ name, level: 1, class: classId });
     }
-    localStorage.setItem('savedCharacters', JSON.stringify(saved));
+    localStorage.setItem(charsKey, JSON.stringify(saved));
     renderCharacters(saved);
     charMsg.textContent = '角色已创建。';
   } catch (err) {
@@ -2285,7 +2299,9 @@ async function createCharacter() {
 
 function enterGame(name) {
   activeChar = name;
-  localStorage.setItem('lastCharacter', name);
+  const username = localStorage.getItem('rememberedUser');
+  const storageKey = getUserStorageKey('lastCharacter', username);
+  localStorage.setItem(storageKey, name);
   lastSavedLevel = null;
   show(gameSection);
   log.innerHTML = '';

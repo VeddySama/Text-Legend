@@ -637,6 +637,9 @@ function updateTradePartnerStatus(text) {
     if (match && match[1] !== activeChar) {
       // 对方锁定了
       setTradePartnerStatus(`对方（${match[1]}）已锁定交易`);
+    } else if (match && match[1] === activeChar) {
+      // 自己锁定了，确保物品显示仍然可见
+      updateTradeDisplay();
     }
   } else if (text.includes('已确认交易')) {
     const match = text.match(/^(.+?) 已确认/);
@@ -646,6 +649,7 @@ function updateTradePartnerStatus(text) {
     }
   } else if (text.includes('双方已锁定')) {
     setTradePartnerStatus('双方已锁定');
+    updateTradeDisplay();
   } else if (text.includes('交易建立')) {
     // 重置交易数据
     tradeData = {

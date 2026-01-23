@@ -224,6 +224,34 @@ body.dark .trade-status {
   color: #a89888;
 }
 
+body.dark .trade-partner-status {
+  color: #a89888;
+}
+
+body.dark .trade-offers {
+  background: rgba(42, 36, 32, 0.5);
+  border-color: #4a3a30;
+}
+
+body.dark .trade-offer-title {
+  color: #d4c4b8;
+  border-bottom-color: #4a3a30;
+}
+
+body.dark .trade-item {
+  color: #d4c4b8;
+  background: rgba(42, 36, 32, 0.6);
+}
+
+body.dark .trade-empty {
+  color: #6a5a50;
+}
+
+body.dark .trade-gold {
+  color: #d4a868;
+  background: rgba(212, 168, 104, 0.15);
+}
+
 body.dark #bag-page {
   color: #a89888;
 }

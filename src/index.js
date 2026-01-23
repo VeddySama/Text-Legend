@@ -1153,6 +1153,14 @@ function partyMembersInRoom(party, playersList, zone, room) {
     .filter((p) => p && p.position.zone === zone && p.position.room === room);
 }
 
+// 检查队伍成员是否都在同一个房间
+function partyMembersInSameRoom(party, playersList, zone, room) {
+  const membersInRoom = party.members
+    .map((name) => playersList.find((p) => p.name === name))
+    .filter((p) => p && p.position.zone === zone && p.position.room === room);
+  return membersInRoom.length === party.members.length;
+}
+
 // 获取队伍中所有成员的数量（包括离线的），用于计算经验金币加成
 function partyMembersTotalCount(party) {
   return party ? party.members.length : 0;
@@ -2618,8 +2626,10 @@ function processMobDeath(player, mob, online) {
   const gold = randInt(template.gold[0], template.gold[1]);
 
   const party = getPartyByMember(player.name);
-  // 物品分配使用同房间的队友
-  let partyMembersInSameRoom = party ? partyMembersInRoom(party, online, player.position.zone, player.position.room) : [];
+  // 检查队伍成员是否都在同一个房间
+  const allPartyInSameRoom = party ? partyMembersInSameRoom(party, online, player.position.zone, player.position.room) : false;
+  // 物品分配：只有队友都在同一个房间才能分掉落的物品
+  let partyMembersForLoot = allPartyInSameRoom ? partyMembersInRoom(party, online, player.position.zone, player.position.room) : [];
   // 经验金币分配使用全图在线的队友
   let partyMembersForReward = party ? partyMembersOnline(party, online) : [];
   // 计算加成使用队伍总人数（包括离线的）
@@ -2649,7 +2659,7 @@ function processMobDeath(player, mob, online) {
     if (!ownerName) ownerName = player.name;
     lootOwner = playersByName(ownerName) || player;
     partyMembersForReward = [lootOwner];
-    partyMembersInSameRoom = [lootOwner];
+    partyMembersForLoot = [lootOwner];
   }
   const eligibleCount = hasParty ? 1 : partyMembersForReward.length;
   const bonus = totalPartyCount > 1 ? Math.min(0.2 * totalPartyCount, 1.0) : 0;
@@ -2749,8 +2759,8 @@ function processMobDeath(player, mob, online) {
     dropTargets.forEach(({ player: owner, damageRatio }) => {
       const drops = dropLoot(template, 1);
       if (!drops.length) return;
-      if (!isSpecialBoss && party && partyMembersInSameRoom.length > 0) {
-        const distributed = distributeLoot(party, partyMembersInSameRoom, drops);
+      if (!isSpecialBoss && party && partyMembersForLoot.length > 0) {
+        const distributed = distributeLoot(party, partyMembersForLoot, drops);
         distributed.forEach(({ id, effects, target }) => {
           const item = ITEM_TEMPLATES[id];
           if (!item) return;

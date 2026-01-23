@@ -97,6 +97,7 @@ const partyUi = {
   title: document.getElementById('party-title'),
   list: document.getElementById('party-list'),
   invite: document.getElementById('party-invite'),
+  inviteAllFollow: document.getElementById('party-invite-all-follow'),
   leave: document.getElementById('party-leave'),
   close: document.getElementById('party-close')
 };
@@ -454,12 +455,16 @@ function parseTradeRequest(text) {
   return match[1];
 }
 
-function parseFollowRequest(text) {
+
+function parseFollowInvite(text) {
   if (!text) return null;
   const match = text.match(/^(.+?) 邀请你跟随/);
-  if (!match) return null;
-  return match[1];
+  if (match) {
+    return match[1];
+  }
+  return null;
 }
+
 
 function chatCacheKey(name) {
   return `chat_cache_${name}`;
@@ -1693,8 +1698,10 @@ function renderPartyModal() {
     partyUi.title.textContent = `队伍 (${party?.members?.length || 0}/5) - 队长: ${leaderName}`;
   }
 
-  if (partyUi.kick) {
-    partyUi.kick.classList.toggle('hidden', !isLeader);
+  // 为队长显示"一键邀请跟随"按钮
+  if (partyUi.inviteAllFollow) {
+    const onlineMemberCount = party?.members?.filter(m => m.name !== party.leader && m.online).length || 0;
+    partyUi.inviteAllFollow.classList.toggle('hidden', !isLeader || onlineMemberCount === 0);
   }
 
   if (!party || !party.members || !party.members.length) {
@@ -1717,6 +1724,17 @@ function renderPartyModal() {
       tag.textContent = role;
       row.appendChild(tag);
 
+      // 队长可以邀请在线队员跟随
+      if (isLeader && !isLeaderName && member.online) {
+        const followBtn = document.createElement('button');
+        followBtn.textContent = '邀请跟随';
+        followBtn.addEventListener('click', () => {
+          if (socket) socket.emit('cmd', { text: `party follow ${member.name}` });
+        });
+        row.appendChild(followBtn);
+      }
+
+      // 队长可以踢出队员
       if (isLeader && !isLeaderName) {
         const kickBtn = document.createElement('button');
         kickBtn.textContent = '踢出';
@@ -1728,6 +1746,19 @@ function renderPartyModal() {
 
       partyUi.list.appendChild(row);
     });
+
+    // 为队员添加"跟随队长"按钮（在列表底部）
+    if (!isLeader && party.members.some(m => m.name === party.leader && m.online)) {
+      const followLeaderDiv = document.createElement('div');
+      followLeaderDiv.className = 'party-follow-leader';
+      const followLeaderBtn = document.createElement('button');
+      followLeaderBtn.textContent = '跟随队长';
+      followLeaderBtn.addEventListener('click', () => {
+        if (socket) socket.emit('cmd', { text: `party follow ${party.leader}` });
+      });
+      followLeaderDiv.appendChild(followLeaderBtn);
+      partyUi.list.appendChild(followLeaderDiv);
+    }
   }
   partyUi.modal.classList.remove('hidden');
 }
@@ -2315,7 +2346,7 @@ function enterGame(name) {
         socket.emit('cmd', { text: `trade accept ${targetName}` });
       });
     }
-    const followFrom = parseFollowRequest(payload.text);
+    const followFrom = parseFollowInvite(payload.text);
     if (followFrom && socket) {
       promptModal({
         title: '跟随邀请',
@@ -2325,7 +2356,8 @@ function enterGame(name) {
         allowEmpty: true
       }).then((res) => {
         if (res === '__extra__' || res === null) return;
-        socket.emit('cmd', { text: `party follow accept ${followFrom}` });
+        // 队员接受队长的跟随邀请
+        socket.emit('cmd', { text: `party follow accept` });
       });
     }
     const shopItems = parseShopLine(payload.text);
@@ -2773,6 +2805,16 @@ if (partyUi.leave) {
   partyUi.leave.addEventListener('click', () => {
     if (socket) socket.emit('cmd', { text: 'party leave' });
     if (partyUi.modal) partyUi.modal.classList.add('hidden');
+  });
+}
+if (partyUi.inviteAllFollow) {
+  partyUi.inviteAllFollow.addEventListener('click', () => {
+    const party = lastState?.party;
+    if (!party || !party.members) return;
+    const onlineMembers = party.members.filter(m => m.name !== party.leader && m.online);
+    onlineMembers.forEach(member => {
+      if (socket) socket.emit('cmd', { text: `party follow ${member.name}` });
+    });
   });
 }
 if (playerUi.attack) {

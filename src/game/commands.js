@@ -1128,6 +1128,18 @@ export async function handleCommand({ player, players, input, send, partyApi, gu
           partyApi.followInvites?.delete(player.name);
           return;
         }
+        // 队员主动跟随队长（不需要确认）
+        if (targetName && party && party.leader && party.leader === targetName) {
+          const leader = players.find((p) => p.name === targetName);
+          if (!leader) return send('队长不在线。');
+          if (!party.members.includes(player.name)) return send('你不在队伍中。');
+          player.position.zone = leader.position.zone;
+          player.position.room = leader.position.room;
+          send(`已跟随队长前往 ${leader.name} 的位置。`);
+          leader.send(`${player.name} 已跟随你。`);
+          return;
+        }
+        // 队长邀请队员跟随（需要队员确认）
         if (!party) return send('你不在队伍中。');
         if (!party.leader || party.leader !== player.name) return send('只有队长可以邀请跟随。');
         if (!targetName) return send('邀请谁跟随？');

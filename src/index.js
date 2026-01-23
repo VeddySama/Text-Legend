@@ -2704,7 +2704,7 @@ function processMobDeath(player, mob, online) {
     });
 }
 
-function combatTick() {
+async function combatTick() {
   const online = listOnlinePlayers();
   online.forEach((player) => {
     if (player.hp <= 0) {

@@ -78,7 +78,7 @@ export const BOOK_SKILLS = {
   book_tao_summon: { classId: 'taoist', skillId: 'summon' }
 };
 
-const SKILL_MASTERY_LEVELS = [0, 100, 400];
+export const SKILL_MASTERY_LEVELS = [0, 100, 400];
 
 function ensureSkillMastery(player) {
   if (!player.flags) player.flags = {};

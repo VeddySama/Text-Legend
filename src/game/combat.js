@@ -122,11 +122,23 @@ export function tickStatus(target) {
     let totalDamage = 0;
     const remainingPoisons = [];
 
+    // 按玩家分组计算毒伤害总和，每个玩家上限1000
+    const damageBySource = {};
     for (const poison of target.status.activePoisons) {
+      const source = poison.sourceName || 'unknown';
+      if (!damageBySource[source]) {
+        damageBySource[source] = 0;
+      }
+      damageBySource[source] += poison.tickDamage;
+    }
+
+    for (const poison of target.status.activePoisons) {
+      const source = poison.sourceName || 'unknown';
       let damage = poison.tickDamage;
-      // 特殊BOSS中毒伤害上限为1000
-      if (isSpecialBoss && damage > 1000) {
-        damage = 1000;
+
+      // 特殊BOSS：同一玩家的毒效果总和上限为1000
+      if (isSpecialBoss && damageBySource[source] > 1000) {
+        damage = Math.floor(damage * (1000 / damageBySource[source]));
       }
 
       applyDamage(target, damage);

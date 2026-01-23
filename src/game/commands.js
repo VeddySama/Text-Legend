@@ -156,7 +156,9 @@ function isBossRoom(zoneId, roomId) {
            tpl.id.includes('leader') || tpl.id === 'chiyue_demon' ||
            tpl.id === 'tree_demon' || tpl.id === 'fmg_demon' ||
            tpl.id === 'huangquan' || tpl.id === 'nm_boss' ||
-           tpl.id === 'chiyue_guard' || tpl.id === 'chiyue_blood';
+           tpl.id === 'chiyue_guard' || tpl.id === 'chiyue_blood' ||
+           tpl.id === 'bug_queen' || tpl.id === 'evil_snake' ||
+           tpl.id === 'pig_white';
   });
 }
 

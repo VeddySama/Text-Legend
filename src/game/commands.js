@@ -1361,7 +1361,7 @@ export async function handleCommand({ player, players, input, send, partyApi, gu
         const isLeader = await guildApi.isGuildLeader(player.guild.id, player.userId, player.name);
         if (!isLeader) return send('只有会长可以邀请。');
         const members = await guildApi.listGuildMembers(player.guild.id);
-        if (members.length >= 5) return send('行会人数已满(5人)。');
+        if (members.length >= 20) return send('行会人数已满(20人)。');
         await guildApi.addGuildMember(player.guild.id, target.userId, target.name);
         target.guild = { id: player.guild.id, name: player.guild.name, role: 'member' };
         send(`${target.name} 已加入行会。`);

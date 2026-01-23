@@ -7,6 +7,11 @@ let lastState = null;
 let serverTimeBase = null;
 let serverTimeLocal = null;
 let serverTimeTimer = null;
+let vipSelfClaimEnabled = true;
+
+// 主题和日志折叠
+let isDarkMode = localStorage.getItem('darkMode') === 'true';
+let isLogCollapsed = localStorage.getItem('logCollapsed') === 'true';
 const directionLabels = {
   north: '北',
   south: '南',
@@ -316,7 +321,8 @@ function buildLine(payload) {
   }
   const textValue = data.text || '';
   const guildMatch = textValue.match(/^\[(行会)\]\[([^\]]+)\]\s*(.*)$/);
-  const normalMatch = textValue.match(/^\[([^\]]+)\]\s*(.*)$/);
+  // 修复：使用更严格的正则，避免匹配系统消息
+  const normalMatch = textValue.match(/^\[([^\[\]]{1,20})\]\s*(.*)$/);
   if (guildMatch) {
     const tag = document.createElement('span');
     tag.className = 'chat-tag';
@@ -1797,6 +1803,10 @@ function shopDisplayPrice(item) {
 function renderState(state) {
   const prevState = lastState;
   lastState = state;
+  // 更新VIP自助领取开关状态
+  if (state.vip_self_claim_enabled !== undefined) {
+    vipSelfClaimEnabled = state.vip_self_claim_enabled;
+  }
   if (state.player) {
     ui.name.textContent = state.player.name || '-';
     const classLabel = classNames[state.player.classId] || state.player.classId || '-';
@@ -2076,8 +2086,11 @@ function renderState(state) {
     { id: 'drops', label: '\u5957\u88c5\u6389\u843d' },
     { id: 'logout', label: '\u9000\u51fa\u6e38\u620f' }
   ];
-  // 只对非VIP玩家显示VIP激活按钮
+  // 只对非VIP玩家显示VIP激活按钮，并且自助领取功能开启时显示领取按钮
   if (!state.stats || !state.stats.vip) {
+    if (vipSelfClaimEnabled) {
+      actions.splice(actions.length - 1, 0, { id: 'vip claim', label: 'VIP\u9886\u53d6' });
+    }
     actions.splice(actions.length - 1, 0, { id: 'vip activate', label: 'VIP\u6fc0\u6d3b' });
   }
   const afkLabel = state.stats && state.stats.autoSkillId ? '\u505c\u6b62\u6302\u673a' : '\u6302\u673a';
@@ -2097,6 +2110,10 @@ function renderState(state) {
     }
     if (a.id === 'guild') {
       showGuildModal();
+      return;
+    }
+    if (a.id === 'vip claim') {
+      socket.emit('cmd', { text: 'vip claim' });
       return;
     }
     if (a.id === 'vip activate') {
@@ -2862,6 +2879,57 @@ if (ui.party) {
     renderPartyModal();
   });
 }
+
+// 主题切换功能
+const themeToggle = document.getElementById('theme-toggle');
+if (themeToggle) {
+  // 应用初始主题
+  function applyTheme(dark) {
+    if (dark) {
+      document.body.classList.add('dark');
+      document.documentElement.classList.add('dark');
+      themeToggle.textContent = '☀️';
+    } else {
+      document.body.classList.remove('dark');
+      document.documentElement.classList.remove('dark');
+      themeToggle.textContent = '🌙';
+    }
+  }
+
+  applyTheme(isDarkMode);
+
+  themeToggle.addEventListener('click', () => {
+    isDarkMode = !isDarkMode;
+    localStorage.setItem('darkMode', isDarkMode.toString());
+    applyTheme(isDarkMode);
+  });
+}
+
+// 日志折叠功能
+const logWrap = document.getElementById('log-wrap');
+const logToggle = document.getElementById('log-toggle');
+if (logWrap && logToggle) {
+  // 应用初始状态
+  function applyLogCollapsed(collapsed) {
+    if (collapsed) {
+      logWrap.classList.add('collapsed');
+      logToggle.textContent = '▼';
+    } else {
+      logWrap.classList.remove('collapsed');
+      logToggle.textContent = '▲';
+    }
+  }
+
+  applyLogCollapsed(isLogCollapsed);
+
+  logToggle.addEventListener('click', () => {
+    isLogCollapsed = !isLogCollapsed;
+    localStorage.setItem('logCollapsed', isLogCollapsed.toString());
+    applyLogCollapsed(isLogCollapsed);
+  });
+}
+
+
 
 
 

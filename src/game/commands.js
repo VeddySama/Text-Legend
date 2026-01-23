@@ -1328,6 +1328,28 @@ export async function handleCommand({ player, players, input, send, partyApi, gu
         send('VIP 已开通。');
         return;
       }
+      if (sub === 'claim') {
+        // VIP自助领取
+        if (!guildApi?.getVipSelfClaimEnabled || !(await guildApi.getVipSelfClaimEnabled())) {
+          return send('VIP自助领取功能已关闭。');
+        }
+        if (player.flags.vip) {
+          return send('你已经是VIP了。');
+        }
+        if (!guildApi?.canUserClaimVip || !(await guildApi.canUserClaimVip(player.userId))) {
+          return send('每个账号只能领取一次VIP激活码。');
+        }
+        const codes = await guildApi?.createVipCodes?.(1);
+        if (!codes || codes.length === 0) {
+          return send('领取失败，请稍后重试。');
+        }
+        const used = await guildApi.useVipCode(codes[0], player.userId);
+        if (!used) return send('激活失败，请稍后重试。');
+        await guildApi.incrementUserVipClaimCount(player.userId);
+        player.flags.vip = true;
+        send(`VIP 激活码领取成功！激活码: ${codes[0]}，已自动激活。`);
+        return;
+      }
       return;
     }
     case 'teleport': {
@@ -1486,6 +1508,23 @@ export async function handleCommand({ player, players, input, send, partyApi, gu
       }
 
       send('交易指令不可用。');
+      return;
+    }
+    case 'vipclaim': {
+      // 管理员控制VIP自助领取开关
+      if (!guildApi?.setVipSelfClaimEnabled) return send('VIP设置功能不可用。');
+      if (args === 'on' || args === 'open' || args === '启用') {
+        await guildApi.setVipSelfClaimEnabled(true);
+        send('VIP自助领取功能已开启。');
+        return;
+      }
+      if (args === 'off' || args === 'close' || args === '关闭') {
+        await guildApi.setVipSelfClaimEnabled(false);
+        send('VIP自助领取功能已关闭。');
+        return;
+      }
+      const enabled = await guildApi.getVipSelfClaimEnabled();
+      send(`VIP自助领取功能状态: ${enabled ? '开启' : '关闭'}。`);
       return;
     }
     case 'rest': {

@@ -3,20 +3,23 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>文字传奇</title>
+  <title>这是一个神奇的文字页面</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <div id="app">
     <header>
-      <h1>文字传奇</h1>
-      <p>致敬 1.76 时代的网页文字版传奇。</p>
+      <div class="header-top">
+        <h1>这是一个神奇的文字页面</h1>
+        <button id="theme-toggle" class="theme-toggle" type="button">🌙</button>
+      </div>
+      <p>致敬 1.76 时代。</p>
     </header>
 
     <section id="auth" class="panel">
       <div class="auth-hero">
         <div class="auth-copy">
-          <span class="badge">文字传奇</span>
+          <span class="badge">这是一个神奇的文字页面</span>
           <h2>踏入玛法</h2>
           <p>创建角色，进入比奇城，与你的同伴一起探索沙巴克与赤月。</p>
           <div class="auth-ornament"></div>
@@ -105,10 +108,13 @@
       </div>
       <div class="game-grid">
         <div class="main-column">
-          <div class="log-wrap">
+          <div class="log-wrap" id="log-wrap">
             <div class="log-header">
               <span>&#x6218;&#x6597;&#x4E0E;&#x7CFB;&#x7EDF;&#x65E5;&#x5FD7;</span>
-              <span class="tag">&#x5B9E;&#x65F6;</span>
+              <div class="log-header-right">
+                <span class="tag">&#x5B9E;&#x65F6;</span>
+                <button id="log-toggle" class="log-toggle" type="button">▲</button>
+              </div>
             </div>
             <div class="log" id="log"></div>
           </div>

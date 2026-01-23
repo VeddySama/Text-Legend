@@ -14,6 +14,7 @@ import { addGuildMember, createGuild, getGuildByName, getGuildMember, getSabakOw
 import { createAdminSession, listUsers, verifyAdminSession } from './db/admin.js';
 import { sendMail, listMail, markMailRead } from './db/mail.js';
 import { createVipCodes, listVipCodes, useVipCode } from './db/vip.js';
+import { getVipSelfClaimEnabled, setVipSelfClaimEnabled, canUserClaimVip, incrementUserVipClaimCount } from './db/settings.js';
 import { listMobRespawns, upsertMobRespawn, clearMobRespawn } from './db/mobs.js';
 import {
   listConsignments,
@@ -1543,7 +1544,8 @@ function buildState(player) {
     },
     worldBossRank,
     players: roomPlayers,
-    server_time: Date.now()
+    server_time: Date.now(),
+    vip_self_claim_enabled: await getVipSelfClaimEnabled()
   };
 }
 
@@ -2242,7 +2244,12 @@ io.on('connection', (socket) => {
         sabakState,
         sabakConfig,
         sabakWindowInfo,
-        useVipCode
+        useVipCode,
+        createVipCodes,
+        getVipSelfClaimEnabled,
+        setVipSelfClaimEnabled,
+        canUserClaimVip,
+        incrementUserVipClaimCount
       },
       tradeApi,
       consignApi,

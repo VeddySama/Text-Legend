@@ -2887,8 +2887,13 @@ function combatTick() {
 
       if (skill && skill.type === 'aoe') {
         mobs.forEach((target) => {
-          applyDamageToMob(target, dmg, player.name);
-          player.send(`你对 ${target.name} 造成 ${dmg} 点伤害。`);
+          // AOE伤害应该对每个目标独立计算，而不是使用主目标的伤害
+          const mdefMultiplier = getMagicDefenseMultiplier(target);
+          const mdef = Math.floor((target.mdef || 0) * mdefMultiplier);
+          const powerStat = skill.id === 'soul' ? (player.spirit || 0) : (player.mag || 0);
+          const aoeDmg = Math.max(1, Math.floor((powerStat + randInt(0, powerStat / 2)) * skillPower - mdef * 0.6));
+          applyDamageToMob(target, aoeDmg, player.name);
+          player.send(`你对 ${target.name} 造成 ${aoeDmg} 点伤害。`);
           if (tryApplyHealBlockEffect(player, target)) {
             player.send(`禁疗效果作用于 ${target.name}。`);
           }
@@ -2896,7 +2901,7 @@ function combatTick() {
             retaliateMobAgainstPlayer(target, player, online);
           }
         });
-        player.send(`你施放了 ${skill.name}，造成范围伤害 ${dmg}。`);
+        player.send(`你施放了 ${skill.name}，造成范围伤害。`);
         const deadTargets = mobs.filter((target) => target.hp <= 0);
         if (deadTargets.length) {
           deadTargets.forEach((target) => processMobDeath(player, target, online));
@@ -2959,7 +2964,9 @@ function combatTick() {
       }
       if (skill && skill.type === 'cleave') {
         mobs.filter((m) => m.id !== mob.id).forEach((other) => {
-          const cleaveDmg = Math.max(1, Math.floor(dmg * 0.3));
+          // cleave伤害基于玩家攻击力的30%，而不是主目标受伤的30%
+          const cleaveBaseDmg = Math.floor(player.atk * 0.3 * skillPower);
+          const cleaveDmg = Math.max(1, Math.floor(calcDamage(player, other, 0.3 * skillPower)));
           applyDamageToMob(other, cleaveDmg, player.name);
           player.send(`你对 ${other.name} 造成 ${cleaveDmg} 点伤害。`);
           retaliateMobAgainstPlayer(other, player, online);

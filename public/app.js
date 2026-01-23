@@ -1691,7 +1691,8 @@ function renderPartyModal() {
   if (!partyUi.modal || !partyUi.list) return;
   partyUi.list.innerHTML = '';
   const party = lastState?.party;
-  const isLeader = party?.leader === lastState?.name;
+  const myName = lastState?.player?.name;
+  const isLeader = party?.leader === myName;
 
   if (partyUi.title) {
     const leaderName = party?.leader || '无';

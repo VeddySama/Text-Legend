@@ -1442,6 +1442,7 @@ function transferOneEquipmentChance(from, to, chance) {
 }
 
 async function buildState(player) {
+  computeDerived(player);
   const zone = WORLD[player.position.zone];
   const room = zone?.rooms[player.position.room];
   if (zone && room) spawnMobs(player.position.zone, player.position.room);
@@ -1589,6 +1590,7 @@ async function buildState(player) {
       mdef: Math.floor(player.mdef || 0),
       pk: player.flags?.pkValue || 0,
       vip: Boolean(player.flags?.vip),
+      dodge: Math.round((player.evadeChance || 0) * 100),
       autoSkillId: player.flags?.autoSkillId || null,
       sabak_bonus: sabakBonus,
       set_bonus: Boolean(player.flags?.setBonusActive)

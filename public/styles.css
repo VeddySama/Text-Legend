@@ -809,25 +809,38 @@ button:hover {
 }
 
 .status-row.compact {
-  margin: 2px 0;
-  gap: 6px;
+  margin: 1px 0;
+  gap: 4px;
 }
 
 .status-grid-3 {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 6px;
+  gap: 4px 6px;
 }
 
 .status-grid-3 .status-row {
-  margin: 2px 0;
-  font-size: 0.88rem;
+  margin: 1px 0;
+  font-size: 0.85rem;
+}
+
+.status-grid-3 .status-row span {
+  font-size: 0.82rem;
+  flex-shrink: 0;
+  min-width: 32px;
+}
+
+.status-grid-3 .status-row strong {
+  font-size: 0.85rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .status-grid-3 .status-row.wide {
   grid-column: span 3;
   justify-content: flex-start;
-  gap: 10px;
+  gap: 6px;
   align-items: center;
 }
 
@@ -1180,6 +1193,61 @@ button:hover {
 
 .trade-partner-status .unlocked {
   color: #6b4a2a;
+}
+
+.trade-offers {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 12px;
+  border: 1px solid #d4b896;
+  border-radius: 8px;
+  padding: 12px;
+  background: rgba(255, 250, 241, 0.5);
+}
+
+.trade-offer {
+  flex: 1;
+  min-width: 0;
+}
+
+.trade-offer-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #5b3a1c;
+  margin-bottom: 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid #e0d4c0;
+}
+
+.trade-items {
+  max-height: 120px;
+  overflow-y: auto;
+  margin-bottom: 8px;
+}
+
+.trade-item {
+  padding: 4px 8px;
+  font-size: 0.85rem;
+  color: #5b3a1c;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.6);
+  margin-bottom: 4px;
+}
+
+.trade-empty {
+  padding: 8px;
+  font-size: 0.85rem;
+  color: #999;
+  font-style: italic;
+}
+
+.trade-gold {
+  padding: 4px 8px;
+  font-size: 0.85rem;
+  color: #c9a86c;
+  font-weight: 600;
+  background: rgba(201, 168, 108, 0.1);
+  border-radius: 4px;
 }
 
 .modal {

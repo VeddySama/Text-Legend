@@ -92,6 +92,10 @@ const tradeUi = {
   cancelBtn: document.getElementById('trade-cancel'),
   status: document.getElementById('trade-status'),
   partnerStatus: document.getElementById('trade-partner-status'),
+  myItems: document.getElementById('trade-my-items'),
+  partnerItems: document.getElementById('trade-partner-items'),
+  myGold: document.getElementById('trade-my-gold'),
+  partnerGold: document.getElementById('trade-partner-gold'),
   panel: document.getElementById('trade-panel'),
   modal: document.getElementById('trade-modal')
 };
@@ -206,6 +210,15 @@ let consignMyPage = 0;
 let consignInventoryPage = 0;
 let consignHistoryPage = 0;
 let consignMarketFilter = 'all';
+
+// 交易数据
+let tradeData = {
+  myItems: [],
+  myGold: 0,
+  partnerItems: [],
+  partnerGold: 0,
+  partnerName: ''
+};
 let guildMembers = [];
 const CONSIGN_PAGE_SIZE = 9;
   let bagItems = [];
@@ -573,6 +586,46 @@ function setTradePartnerStatus(text) {
   tradeUi.partnerStatus.textContent = text;
 }
 
+function updateTradeDisplay() {
+  if (!tradeUi.myItems || !tradeUi.partnerItems) return;
+
+  // 更新我方物品
+  tradeUi.myItems.innerHTML = '';
+  if (tradeData.myItems.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'trade-empty';
+    empty.textContent = '暂无物品';
+    tradeUi.myItems.appendChild(empty);
+  } else {
+    tradeData.myItems.forEach((item) => {
+      const itemDiv = document.createElement('div');
+      itemDiv.className = 'trade-item';
+      itemDiv.textContent = `${item.name} x${item.qty}`;
+      tradeUi.myItems.appendChild(itemDiv);
+    });
+  }
+
+  // 更新对方物品
+  tradeUi.partnerItems.innerHTML = '';
+  if (tradeData.partnerItems.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'trade-empty';
+    empty.textContent = '暂无物品';
+    tradeUi.partnerItems.appendChild(empty);
+  } else {
+    tradeData.partnerItems.forEach((item) => {
+      const itemDiv = document.createElement('div');
+      itemDiv.className = 'trade-item';
+      itemDiv.textContent = `${item.name} x${item.qty}`;
+      tradeUi.partnerItems.appendChild(itemDiv);
+    });
+  }
+
+  // 更新金币
+  if (tradeUi.myGold) tradeUi.myGold.textContent = `金币: ${tradeData.myGold}`;
+  if (tradeUi.partnerGold) tradeUi.partnerGold.textContent = `金币: ${tradeData.partnerGold}`;
+}
+
 function updateTradePartnerStatus(text) {
   // 解析交易消息并更新对方锁定/确认状态
   if (!activeChar) return;
@@ -593,9 +646,78 @@ function updateTradePartnerStatus(text) {
   } else if (text.includes('双方已锁定')) {
     setTradePartnerStatus('双方已锁定');
   } else if (text.includes('交易建立')) {
+    // 重置交易数据
+    tradeData = {
+      myItems: [],
+      myGold: 0,
+      partnerItems: [],
+      partnerGold: 0,
+      partnerName: ''
+    };
+    updateTradeDisplay();
     setTradePartnerStatus('');
   } else if (text.includes('交易完成') || text.includes('交易已取消') || text.includes('交易失败')) {
+    // 重置交易数据
+    tradeData = {
+      myItems: [],
+      myGold: 0,
+      partnerItems: [],
+      partnerGold: 0,
+      partnerName: ''
+    };
+    updateTradeDisplay();
     setTradePartnerStatus('');
+  }
+}
+
+function parseTradeItems(text) {
+  // 解析交易消息，更新物品和金币显示
+  if (!activeChar) return;
+
+  // 解析"你放入: 物品名 x数量"
+  const myItemMatch = text.match(/^你放入: (.+) x(\d+)$/);
+  if (myItemMatch) {
+    const name = myItemMatch[1];
+    const qty = parseInt(myItemMatch[2], 10);
+    const existing = tradeData.myItems.find((item) => item.name === name);
+    if (existing) {
+      existing.qty += qty;
+    } else {
+      tradeData.myItems.push({ name, qty });
+    }
+    updateTradeDisplay();
+  }
+
+  // 解析"你放入金币: 数量 (总计 总数量)"
+  const myGoldMatch = text.match(/^你放入金币: (\d+)/);
+  if (myGoldMatch) {
+    tradeData.myGold = parseInt(myGoldMatch[1], 10);
+    updateTradeDisplay();
+  }
+
+  // 解析对方放入的物品
+  const partnerMatch = text.match(/^(.+?) 放入: (.+) x(\d+)$/);
+  if (partnerMatch) {
+    const playerName = partnerMatch[1];
+    const name = partnerMatch[2];
+    const qty = parseInt(partnerMatch[3], 10);
+    tradeData.partnerName = playerName;
+    const existing = tradeData.partnerItems.find((item) => item.name === name);
+    if (existing) {
+      existing.qty += qty;
+    } else {
+      tradeData.partnerItems.push({ name, qty });
+    }
+    updateTradeDisplay();
+  }
+
+  // 解析对方放入的金币
+  const partnerGoldMatch = text.match(/^(.+?) 放入金币: (\d+)/);
+  if (partnerGoldMatch) {
+    const playerName = partnerGoldMatch[1];
+    tradeData.partnerName = playerName;
+    tradeData.partnerGold = parseInt(partnerGoldMatch[2], 10);
+    updateTradeDisplay();
   }
 }
 
@@ -1903,21 +2025,21 @@ function renderState(state) {
     setBar(ui.hp, state.stats.hp, state.stats.max_hp);
     setBar(ui.mp, state.stats.mp, state.stats.max_mp);
 
-    // 经验条：满级时隐藏
-    const isMaxLevel = state.player && state.player.level >= 100;
-    if (isMaxLevel) {
-      ui.exp.style.width = '0%';
-      ui.exp.style.display = 'none';
-    } else {
+    // 不限制最大等级，始终显示经验条
+    if (state.stats.exp_next && state.stats.exp_next > 0) {
       ui.exp.style.display = '';
       setBar(ui.exp, state.stats.exp, state.stats.exp_next);
+    } else {
+      ui.exp.style.display = 'none';
     }
 
     ui.gold.textContent = state.stats.gold;
     if (ui.hpValue) ui.hpValue.textContent = `${state.stats.hp}/${state.stats.max_hp}`;
     if (ui.mpValue) ui.mpValue.textContent = `${state.stats.mp}/${state.stats.max_mp}`;
     if (ui.expValue) {
-      ui.expValue.textContent = isMaxLevel ? '已满级' : `${state.stats.exp}/${state.stats.exp_next}`;
+      ui.expValue.textContent = state.stats.exp_next && state.stats.exp_next > 0
+        ? `${state.stats.exp}/${state.stats.exp_next}`
+        : `${state.stats.exp}`;
     }
     if (ui.atk) ui.atk.textContent = state.stats.atk ?? '-';
     if (ui.def) ui.def.textContent = state.stats.def ?? '-';
@@ -2535,6 +2657,7 @@ function enterGame(name) {
       appendChatLine(payload);
       setTradeStatus(payload.text);
       updateTradePartnerStatus(payload.text);
+      parseTradeItems(payload.text);
     }
   });
   socket.on('guild_members', (payload) => {

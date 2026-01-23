@@ -416,14 +416,13 @@ function appendLine(payload) {
   // 兼容字符串和对象两种参数
   const text = typeof payload === 'string' ? payload : payload.text;
   if (!text) return;
-  
+
   // 过滤聊天信息，不显示在实时日志中
   if (isChatLine(text)) {
     return;
   }
 
   // 过滤伤害信息
-  const text = payload.text;
   const isDamageLine = /对.*造成.*点伤害|受到.*点伤害/.test(text);
   if (!showDamage && isDamageLine) {
     return;
@@ -435,7 +434,9 @@ function appendLine(payload) {
     return;
   }
 
-  const p = buildLine(payload);
+  // 确保传给 buildLine 的是对象格式
+  const normalizedPayload = typeof payload === 'string' ? { text: payload } : payload;
+  const p = buildLine(normalizedPayload);
   log.appendChild(p);
   log.scrollTop = log.scrollHeight;
   applyAnnounceMarquee(p);

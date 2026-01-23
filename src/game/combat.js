@@ -65,16 +65,29 @@ export function applyHealing(target, amount) {
 }
 
 export function applyPoison(target, turns, tickDamage, sourceName = null) {
-  // 特殊BOSS（魔龙教主、世界BOSS、沙巴克BOSS）免疫毒伤害
+  // 检查是否是特殊BOSS（魔龙教主、世界BOSS、沙巴克BOSS）
   const isSpecialBoss = Boolean(
     target.templateId &&
     (MOB_TEMPLATES[target.templateId]?.id === 'molong_boss' ||
      MOB_TEMPLATES[target.templateId]?.worldBoss ||
      MOB_TEMPLATES[target.templateId]?.sabakBoss)
   );
+
   if (isSpecialBoss) {
+    // 特殊BOSS中毒冷却检查：1分钟内不能再次中毒
+    const now = Date.now();
+    if (target.status.poisonCooldown && target.status.poisonCooldown > now) {
+      return false;
+    }
+    // 设置冷却时间为1分钟后
+    target.status.poisonCooldown = now + 60000;
+  }
+
+  // 如果已经有中毒效果，不叠加（直接替换或保持）
+  if (target.status.poison) {
     return false;
   }
+
   target.status.poison = { turns, tickDamage, sourceName };
   return true;
 }
@@ -88,5 +101,12 @@ export function tickStatus(target) {
     }
     return { type: 'poison', dmg: target.status.poison?.tickDamage || 0 };
   }
+
+  // 清理过期的中毒冷却
+  const now = Date.now();
+  if (target.status.poisonCooldown && target.status.poisonCooldown <= now) {
+    delete target.status.poisonCooldown;
+  }
+
   return null;
 }

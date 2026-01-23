@@ -557,7 +557,7 @@ function isBossMob(mobTemplate) {
 }
 
 function isSpecialBoss(mobTemplate) {
-  return mobTemplate?.id === 'molong_boss' || mobTemplate?.worldBoss || mobTemplate?.sabakBoss;
+  return Boolean(mobTemplate?.specialBoss);
 }
 
 function isEquipmentItem(item) {
@@ -1550,17 +1550,17 @@ async function buildState(player) {
     }));
   let worldBossRank = [];
   let worldBossNextRespawn = null;
-  // 检查魔龙教主、世界BOSS、沙巴克BOSS的刷新时间
+  // 检查魔龙教主、世界BOSS、沙巴克BOSS、暗之BOSS的刷新时间
   const deadSpecialBosses = deadBosses.filter((m) => {
     const tpl = MOB_TEMPLATES[m.templateId];
-    return tpl && (tpl.id === 'molong_boss' || tpl.worldBoss || tpl.sabakBoss);
+    return tpl && tpl.specialBoss;
   });
   if (deadSpecialBosses.length > 0) {
     worldBossNextRespawn = deadSpecialBosses.sort((a, b) => (a.respawnAt || Infinity) - (b.respawnAt || Infinity))[0]?.respawnAt;
   }
   const bossMob = getAliveMobs(player.position.zone, player.position.room).find((m) => {
     const tpl = MOB_TEMPLATES[m.templateId];
-    return tpl && (tpl.id === 'molong_boss' || tpl.worldBoss || tpl.sabakBoss);
+    return tpl && tpl.specialBoss;
   });
   if (bossMob) {
     const { entries } = buildDamageRankMap(bossMob);
@@ -1848,8 +1848,8 @@ function retaliateMobAgainstPlayer(mob, player, online) {
     dmg += calcMagicDamageFromValue(spiritBase, mobTarget);
   }
   
-  // 特殊BOSS破防效果：魔龙教主、世界BOSS、沙巴克BOSS攻击时有20%几率破防
-  const isSpecialBoss = mobTemplate?.id === 'molong_boss' || mobTemplate?.worldBoss || mobTemplate?.sabakBoss;
+  // 特殊BOSS破防效果：魔龙教主、世界BOSS、沙巴克BOSS、暗之BOSS攻击时有20%几率破防
+  const isSpecialBoss = Boolean(mobTemplate?.specialBoss);
   if (isSpecialBoss && Math.random() <= 0.2) {
     if (!mobTarget.status) mobTarget.status = {};
     if (!mobTarget.status.debuffs) mobTarget.status.debuffs = {};
@@ -2181,7 +2181,7 @@ function tryAutoPotion(player) {
   const roomMobs = getAliveMobs(player.position.zone, player.position.room);
   const isSpecialBossRoom = roomMobs.some((m) => {
     const tpl = MOB_TEMPLATES[m.templateId];
-    return tpl && (tpl.id === 'molong_boss' || tpl.worldBoss || tpl.sabakBoss);
+    return tpl && tpl.specialBoss;
   });
 
   // 特殊BOSS房间优先使用太阳水和万年雪霜
@@ -3435,8 +3435,8 @@ async function combatTick() {
         dmg += calcMagicDamageFromValue(magicBase, mobTarget);
         dmg += calcMagicDamageFromValue(spiritBase, mobTarget);
       }
-      // 特殊BOSS麻痹效果：魔龙教主、世界BOSS、沙巴克BOSS攻击时有20%几率麻痹目标2回合
-      const isSpecialBoss = mobTemplate?.id === 'molong_boss' || mobTemplate?.worldBoss || mobTemplate?.sabakBoss;
+      // 特殊BOSS麻痹效果：魔龙教主、世界BOSS、沙巴克BOSS、暗之BOSS攻击时有20%几率麻痹目标2回合
+      const isSpecialBoss = Boolean(mobTemplate?.specialBoss);
       if (isSpecialBoss && Math.random() <= 0.2) {
         if (!mob.status) mob.status = {};
         if (!mobTarget.status) mobTarget.status = {};

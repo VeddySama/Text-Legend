@@ -65,12 +65,10 @@ export function applyHealing(target, amount) {
 }
 
 export function applyPoison(target, turns, tickDamage, sourceName = null) {
-  // 检查是否是特殊BOSS（魔龙教主、世界BOSS、沙巴克BOSS）
+  // 检查是否是特殊BOSS（魔龙教主、世界BOSS、沙巴克BOSS、暗之BOSS）
   const isSpecialBoss = Boolean(
     target.templateId &&
-    (MOB_TEMPLATES[target.templateId]?.id === 'molong_boss' ||
-     MOB_TEMPLATES[target.templateId]?.worldBoss ||
-     MOB_TEMPLATES[target.templateId]?.sabakBoss)
+    MOB_TEMPLATES[target.templateId]?.specialBoss
   );
 
   if (isSpecialBoss) {
@@ -114,9 +112,7 @@ export function tickStatus(target) {
   if (target.status.activePoisons && target.status.activePoisons.length > 0) {
     const isSpecialBoss = Boolean(
       target.templateId &&
-      (MOB_TEMPLATES[target.templateId]?.id === 'molong_boss' ||
-       MOB_TEMPLATES[target.templateId]?.worldBoss ||
-       MOB_TEMPLATES[target.templateId]?.sabakBoss)
+      MOB_TEMPLATES[target.templateId]?.specialBoss
     );
 
     let totalDamage = 0;

@@ -2189,7 +2189,13 @@ function renderState(state) {
     const inWorldBossRoom = state.room && state.room.zoneId === 'wb' && state.room.roomId === 'lair';
     const inMolongRoom = state.room && state.room.zoneId === 'plains' && state.room.roomId === 'boss';
     const inSabakBossRoom = state.room && state.room.zoneId === 'sb_guild' && state.room.roomId === 'sanctum';
-    const inSpecialBossRoom = inWorldBossRoom || inMolongRoom || inSabakBossRoom;
+    const inDarkWomaRoom = state.room && state.room.zoneId === 'dark_bosses' && state.room.roomId === 'dark_woma_lair';
+    const inDarkZumaRoom = state.room && state.room.zoneId === 'dark_bosses' && state.room.roomId === 'dark_zuma_lair';
+    const inDarkHongmoRoom = state.room && state.room.zoneId === 'dark_bosses' && state.room.roomId === 'dark_hongmo_lair';
+    const inDarkHuangquanRoom = state.room && state.room.zoneId === 'dark_bosses' && state.room.roomId === 'dark_huangquan_lair';
+    const inDarkDoubleheadRoom = state.room && state.room.zoneId === 'dark_bosses' && state.room.roomId === 'dark_doublehead_lair';
+    const inDarkSkeletonRoom = state.room && state.room.zoneId === 'dark_bosses' && state.room.roomId === 'dark_skeleton_lair';
+    const inSpecialBossRoom = inWorldBossRoom || inMolongRoom || inSabakBossRoom || inDarkWomaRoom || inDarkZumaRoom || inDarkHongmoRoom || inDarkHuangquanRoom || inDarkDoubleheadRoom || inDarkSkeletonRoom;
     const rankBlock = ui.worldBossRank.closest('.action-group');
 
     // 根据所在的BOSS房间设置不同的标题
@@ -2200,6 +2206,18 @@ function renderState(state) {
         ui.worldBossRankTitle.textContent = '魔龙教主伤害排行';
       } else if (inSabakBossRoom) {
         ui.worldBossRankTitle.textContent = '沙巴克守护·玄武伤害排行';
+      } else if (inDarkWomaRoom) {
+        ui.worldBossRankTitle.textContent = '暗之沃玛教主伤害排行';
+      } else if (inDarkZumaRoom) {
+        ui.worldBossRankTitle.textContent = '暗之祖玛教主伤害排行';
+      } else if (inDarkHongmoRoom) {
+        ui.worldBossRankTitle.textContent = '暗之虹魔教主伤害排行';
+      } else if (inDarkHuangquanRoom) {
+        ui.worldBossRankTitle.textContent = '暗之黄泉教主伤害排行';
+      } else if (inDarkDoubleheadRoom) {
+        ui.worldBossRankTitle.textContent = '暗之双头血魔伤害排行';
+      } else if (inDarkSkeletonRoom) {
+        ui.worldBossRankTitle.textContent = '暗之骷髅精灵伤害排行';
       }
     }
 

@@ -1008,6 +1008,61 @@
       }
     }
   }
+  ,
+
+  dark_bosses: {
+    id: 'dark_bosses',
+    name: '暗之BOSS领域',
+    rooms: {
+      dark_woma_lair: {
+        id: 'dark_woma_lair',
+        name: '暗之沃玛神殿',
+        desc: '暗之沃玛教主在此守望。',
+        exits: { southeast: 'mg_town:gate' },
+        spawns: ['dark_woma_boss']
+      }
+      ,
+      dark_zuma_lair: {
+        id: 'dark_zuma_lair',
+        name: '暗之祖玛神殿',
+        desc: '暗之祖玛教主在此守望。',
+        exits: { southeast: 'mg_town:gate' },
+        spawns: ['dark_zuma_boss']
+      }
+      ,
+      dark_hongmo_lair: {
+        id: 'dark_hongmo_lair',
+        name: '暗之虹魔神殿',
+        desc: '暗之虹魔教主在此守望。',
+        exits: { southeast: 'mg_town:gate' },
+        spawns: ['dark_hongmo_boss']
+      }
+      ,
+      dark_huangquan_lair: {
+        id: 'dark_huangquan_lair',
+        name: '暗之黄泉神殿',
+        desc: '暗之黄泉教主在此守望。',
+        exits: { southeast: 'mg_town:gate' },
+        spawns: ['dark_huangquan_boss']
+      }
+      ,
+      dark_doublehead_lair: {
+        id: 'dark_doublehead_lair',
+        name: '暗之血魔神殿',
+        desc: '暗之双头血魔在此守望。',
+        exits: { southeast: 'mg_town:gate' },
+        spawns: ['dark_doublehead_boss']
+      }
+      ,
+      dark_skeleton_lair: {
+        id: 'dark_skeleton_lair',
+        name: '暗之骷髅神殿',
+        desc: '暗之骷髅精灵在此守望。',
+        exits: { southeast: 'mg_town:gate' },
+        spawns: ['dark_skeleton_boss']
+      }
+    }
+  }
 };
 
 export const NPCS = {

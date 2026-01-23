@@ -1196,7 +1196,7 @@ export async function handleCommand({ player, players, input, send, partyApi, gu
       }
       const raw = args.trim();
       const key = TRAINING_ALIASES[raw] || TRAINING_ALIASES[raw.toLowerCase()];
-      if (!key || !TRAINING_OPTIONS[key]) return send('可修炼属性: 生命, 魔法值, 攻击, 防御, 魔法, 魔御, 道术, 躲闪');
+      if (!key || !TRAINING_OPTIONS[key]) return send('可修炼属性: 生命, 魔法值, 攻击, 防御, 魔法, 魔御, 道术, 敏捷');
       const cost = trainingCost(player, key);
       if (player.gold < cost) return send('金币不足。');
       player.gold -= cost;

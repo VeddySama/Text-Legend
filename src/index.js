@@ -1199,10 +1199,20 @@ function applyDamageToPlayer(target, dmg) {
       dmg -= convert;
     }
   }
-  if (hasEquipped(target, 'ring_protect') && target.mp > 0) {
-    const convert = Math.min(Math.floor(dmg * 0.7), target.mp);
-    target.mp = Math.max(0, target.mp - convert);
-    dmg -= convert;
+  // 护身戒指：受到攻击时10%几率减免伤害20%，持续2秒
+  if (hasEquipped(target, 'ring_protect') && Math.random() <= 0.1) {
+    const now = Date.now();
+    if (!target.status.buffs) target.status.buffs = {};
+    target.status.buffs.protectShield = { expiresAt: now + 2000, dmgReduction: 0.2 };
+    target.send('护身戒指生效，伤害减免20%！');
+  }
+  if (target.status?.buffs?.protectShield) {
+    const buff = target.status.buffs.protectShield;
+    if (buff.expiresAt && buff.expiresAt < Date.now()) {
+      delete target.status.buffs.protectShield;
+    } else {
+      dmg = Math.floor(dmg * (1 - (buff.dmgReduction || 0)));
+    }
   }
   applyDamage(target, dmg);
 }
@@ -1210,15 +1220,22 @@ function applyDamageToPlayer(target, dmg) {
 function tryRevive(player) {
   if (player.hp > 0) return false;
   if (hasEquipped(player, 'ring_revival')) {
-    for (const [slot, equipped] of Object.entries(player.equipment)) {
-      if (equipped && equipped.id === 'ring_revival') {
-        player.equipment[slot] = null;
-        break;
-      }
+    const now = Date.now();
+    const lastRevive = player.flags?.lastReviveAt || 0;
+    const reviveCooldown = 60 * 1000; // 1分钟CD
+
+    if (lastRevive > 0 && (now - lastRevive) < reviveCooldown) {
+      const remaining = Math.ceil((reviveCooldown - (now - lastRevive)) / 1000);
+      player.send(`复活戒指冷却中，还需等待 ${remaining} 秒。`);
+      return false;
     }
-    player.hp = Math.max(1, Math.floor(player.max_hp * 0.1));
-    player.mp = Math.max(0, Math.floor(player.max_mp * 0.1));
-    player.send('复活戒指生效，你重新站了起来。');
+
+    if (!player.flags) player.flags = {};
+    player.flags.lastReviveAt = now;
+
+    player.hp = player.max_hp;
+    player.mp = player.max_mp;
+    player.send('复活戒指生效，你完全恢复了生命和魔法！');
     return true;
   }
   return false;
@@ -1694,7 +1711,17 @@ function retaliateMobAgainstPlayer(mob, player, online) {
       player.send(`${mob.name} 对 ${mobTarget.name} 造成毒性伤害！`);
     }
   }
-  
+
+  // 检查弱化效果（玩家佩戴弱化戒指对怪物施加）
+  if (mob.status?.debuffs?.weak) {
+    const weak = mob.status.debuffs.weak;
+    if (weak.expiresAt && weak.expiresAt < Date.now()) {
+      delete mob.status.debuffs.weak;
+    } else {
+      dmg = Math.floor(dmg * (1 - (weak.dmgReduction || 0)));
+    }
+  }
+
   if (mobTarget && mobTarget.userId) {
     applyDamageToPlayer(mobTarget, dmg);
     mobTarget.send(`${mob.name} 对你造成 ${dmg} 点伤害。`);
@@ -2729,6 +2756,16 @@ function combatTick() {
         dmg = Math.floor(calcDamage(player, target, 1) * crit);
       }
 
+      // 检查攻击者的弱化效果（来自破防戒指）
+      if (player.status?.debuffs?.weak) {
+        const weak = player.status.debuffs.weak;
+        if (weak.expiresAt && weak.expiresAt < Date.now()) {
+          delete player.status.debuffs.weak;
+        } else {
+          dmg = Math.floor(dmg * (1 - (weak.dmgReduction || 0)));
+        }
+      }
+
         applyDamageToPlayer(target, dmg);
         target.flags.lastCombatAt = Date.now();
         player.send(`你对 ${target.name} 造成 ${dmg} 点伤害。`);
@@ -2824,6 +2861,22 @@ function combatTick() {
         target.status.stunTurns = 2;
         player.send(`${target.name} 被麻痹戒指定身。`);
         target.send('你被麻痹了，无法行动。');
+      }
+      // 弱化戒指：攻击时10%几率使目标伤害降低20%，持续2秒
+      if (hasEquipped(player, 'ring_teleport') && Math.random() <= 0.1) {
+        if (!target.status) target.status = {};
+        if (!target.status.debuffs) target.status.debuffs = {};
+        target.status.debuffs.weak = { expiresAt: Date.now() + 2000, dmgReduction: 0.2 };
+        player.send(`弱化戒指生效，${target.name} 伤害降低20%！`);
+        target.send('你受到弱化效果，伤害降低20%！');
+      }
+      // 破防戒指：攻击时10%几率使目标防御魔御降低20%，持续2秒
+      if (hasEquipped(player, 'ring_break') && Math.random() <= 0.1) {
+        if (!target.status) target.status = {};
+        if (!target.status.debuffs) target.status.debuffs = {};
+        target.status.debuffs.armorBreak = { expiresAt: Date.now() + 2000, defMultiplier: 1.2 };
+        player.send(`破防戒指生效，${target.name} 防御降低20%！`);
+        target.send('你受到破防效果，防御和魔御降低20%！');
       }
     } else {
       player.send(`${target.name} 躲过了你的攻击。`);
@@ -2974,6 +3027,20 @@ function combatTick() {
         if (!mob.status) mob.status = {};
         mob.status.stunTurns = 2;
         player.send(`${mob.name} 被麻痹戒指定身。`);
+      }
+      // 弱化戒指：攻击时10%几率使目标伤害降低20%，持续2秒
+      if (hasEquipped(player, 'ring_teleport') && Math.random() <= 0.1) {
+        if (!mob.status) mob.status = {};
+        if (!mob.status.debuffs) mob.status.debuffs = {};
+        mob.status.debuffs.weak = { expiresAt: Date.now() + 2000, dmgReduction: 0.2 };
+        player.send(`弱化戒指生效，${mob.name} 伤害降低20%！`);
+      }
+      // 破防戒指：攻击时10%几率使目标防御魔御降低20%，持续2秒
+      if (hasEquipped(player, 'ring_break') && Math.random() <= 0.1) {
+        if (!mob.status) mob.status = {};
+        if (!mob.status.debuffs) mob.status.debuffs = {};
+        mob.status.debuffs.armorBreak = { expiresAt: Date.now() + 2000, defMultiplier: 1.2 };
+        player.send(`破防戒指生效，${mob.name} 防御降低20%！`);
       }
       if (skill && skill.type === 'dot') {
         if (!mob.status) mob.status = {};

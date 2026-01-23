@@ -189,10 +189,11 @@
     { id: 'bracelet_wargod', chance: 0.003 },
     { id: 'bracelet_sacred', chance: 0.003 },
     { id: 'bracelet_true', chance: 0.003 },
-    { id: 'ring_magic', chance: 0.003 },
-    { id: 'ring_teleport', chance: 0.003 },
-    { id: 'ring_protect', chance: 0.003 },
-    { id: 'ring_revival', chance: 0.003 },
+    { id: 'ring_magic', chance: 0.005 },
+    { id: 'ring_teleport', chance: 0.005 },
+    { id: 'ring_protect', chance: 0.005 },
+    { id: 'ring_revival', chance: 0.005 },
+    { id: 'ring_break', chance: 0.005 },
     { id: 'ring_recall', chance: 0.003 },
     { id: 'book_mage_shield', chance: 0.04 },
     { id: 'book_tao_summon', chance: 0.04 }
@@ -263,14 +264,13 @@
       { id: 'ring_dodge', chance: 0.015 },
       { id: 'ring_def', chance: 0.015 },
       { id: 'ring_fire', chance: 0.015 },
-      { id: 'ring_stealth', chance: 0.015 },
       { id: 'ring_heal', chance: 0.015 },
-      { id: 'ring_magic', chance: 0.01 },
-      { id: 'ring_teleport', chance: 0.01 },
-      { id: 'ring_protect', chance: 0.01 },
-      { id: 'ring_revival', chance: 0.01 },
+      { id: 'ring_magic', chance: 0.015 },
+      { id: 'ring_teleport', chance: 0.015 },
+      { id: 'ring_protect', chance: 0.015 },
+      { id: 'ring_revival', chance: 0.015 },
+      { id: 'ring_break', chance: 0.015 },
       { id: 'ring_recall', chance: 0.008 },
-      { id: 'ring_rebirth', chance: 0.006 },
       { id: 'book_mage_ice', chance: 0.05 }
     ]
   },
@@ -339,14 +339,13 @@
       { id: 'ring_dodge', chance: 0.02 },
       { id: 'ring_def', chance: 0.02 },
       { id: 'ring_fire', chance: 0.02 },
-      { id: 'ring_stealth', chance: 0.02 },
       { id: 'ring_heal', chance: 0.02 },
       { id: 'ring_magic', chance: 0.02 },
       { id: 'ring_teleport', chance: 0.02 },
       { id: 'ring_protect', chance: 0.02 },
       { id: 'ring_revival', chance: 0.02 },
-      { id: 'ring_recall', chance: 0.015 },
-      { id: 'ring_rebirth', chance: 0.012 }
+      { id: 'ring_break', chance: 0.02 },
+      { id: 'ring_recall', chance: 0.015 }
     ]
   }
 };

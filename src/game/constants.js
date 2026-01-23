@@ -45,7 +45,13 @@ export function maxBagSlots(level) {
   return 500;
 }
 
-export const START_POSITION = {
-  zone: 'bq_town',
-  room: 'gate'
-};
+export function getStartPosition() {
+  const plainsVariants = ['plains', 'plains1', 'plains2', 'plains3'];
+  const randomPlains = plainsVariants[Math.floor(Math.random() * plainsVariants.length)];
+  return {
+    zone: 'bq_plains',
+    room: randomPlains
+  };
+}
+
+export const START_POSITION = getStartPosition();

@@ -1,4 +1,4 @@
-import { CLASSES, START_POSITION, expForLevel, maxBagSlots } from './constants.js';
+import { CLASSES, getStartPosition, expForLevel, maxBagSlots } from './constants.js';
 import { ITEM_TEMPLATES } from './items.js';
 import { DEFAULT_SKILLS } from './skills.js';
 import { clamp } from './utils.js';
@@ -116,7 +116,7 @@ export function newCharacter(name, classId) {
     max_hp: maxHp,
     max_mp: maxMp,
     stats,
-    position: { ...START_POSITION },
+    position: { ...getStartPosition() },
     inventory: [
       { id: 'potion_small', qty: 3 },
       { id: 'potion_mana', qty: 2 }

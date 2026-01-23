@@ -413,8 +413,12 @@ function parseStaticLocationLink(text) {
 }
 
 function appendLine(payload) {
+  // 兼容字符串和对象两种参数
+  const text = typeof payload === 'string' ? payload : payload.text;
+  if (!text) return;
+  
   // 过滤聊天信息，不显示在实时日志中
-  if (isChatLine(payload.text)) {
+  if (isChatLine(text)) {
     return;
   }
 

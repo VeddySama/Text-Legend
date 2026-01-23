@@ -54,4 +54,12 @@ export function getStartPosition() {
   };
 }
 
-export const START_POSITION = getStartPosition();
+// 保持向后兼容，但每次调用都会随机
+export const START_POSITION = {
+  get zone() {
+    return getStartPosition().zone;
+  },
+  get room() {
+    return getStartPosition().room;
+  }
+};

@@ -96,8 +96,8 @@ const partyUi = {
   modal: document.getElementById('party-modal'),
   title: document.getElementById('party-title'),
   list: document.getElementById('party-list'),
-  invite: document.getElementById('party-invite'),
   inviteAllFollow: document.getElementById('party-invite-all-follow'),
+  followLeader: document.getElementById('party-follow-leader'),
   leave: document.getElementById('party-leave'),
   close: document.getElementById('party-close')
 };
@@ -1698,10 +1698,14 @@ function renderPartyModal() {
     partyUi.title.textContent = `队伍 (${party?.members?.length || 0}/5) - 队长: ${leaderName}`;
   }
 
-  // 为队长显示"一键邀请跟随"按钮
+  // 为队长显示"一键邀请跟随"按钮，为队员显示"跟随队长"按钮
   if (partyUi.inviteAllFollow) {
     const onlineMemberCount = party?.members?.filter(m => m.name !== party.leader && m.online).length || 0;
     partyUi.inviteAllFollow.classList.toggle('hidden', !isLeader || onlineMemberCount === 0);
+  }
+  if (partyUi.followLeader) {
+    const leaderOnline = party?.members?.some(m => m.name === party.leader && m.online);
+    partyUi.followLeader.classList.toggle('hidden', isLeader || !leaderOnline);
   }
 
   if (!party || !party.members || !party.members.length) {
@@ -1746,19 +1750,6 @@ function renderPartyModal() {
 
       partyUi.list.appendChild(row);
     });
-
-    // 为队员添加"跟随队长"按钮（在列表底部）
-    if (!isLeader && party.members.some(m => m.name === party.leader && m.online)) {
-      const followLeaderDiv = document.createElement('div');
-      followLeaderDiv.className = 'party-follow-leader';
-      const followLeaderBtn = document.createElement('button');
-      followLeaderBtn.textContent = '跟随队长';
-      followLeaderBtn.addEventListener('click', () => {
-        if (socket) socket.emit('cmd', { text: `party follow ${party.leader}` });
-      });
-      followLeaderDiv.appendChild(followLeaderBtn);
-      partyUi.list.appendChild(followLeaderDiv);
-    }
   }
   partyUi.modal.classList.remove('hidden');
 }
@@ -2790,17 +2781,6 @@ if (partyUi.close) {
     if (partyUi.modal) partyUi.modal.classList.add('hidden');
   });
 }
-if (partyUi.invite) {
-  partyUi.invite.addEventListener('click', async () => {
-    const name = await promptModal({
-      title: '邀请队员',
-      text: '请输入玩家名',
-      placeholder: '玩家名'
-    });
-    if (!name) return;
-    if (socket) socket.emit('cmd', { text: `party invite ${name.trim()}` });
-  });
-}
 if (partyUi.leave) {
   partyUi.leave.addEventListener('click', () => {
     if (socket) socket.emit('cmd', { text: 'party leave' });
@@ -2815,6 +2795,13 @@ if (partyUi.inviteAllFollow) {
     onlineMembers.forEach(member => {
       if (socket) socket.emit('cmd', { text: `party follow ${member.name}` });
     });
+  });
+}
+if (partyUi.followLeader) {
+  partyUi.followLeader.addEventListener('click', () => {
+    const party = lastState?.party;
+    if (!party || !party.leader) return;
+    if (socket) socket.emit('cmd', { text: `party follow ${party.leader}` });
   });
 }
 if (playerUi.attack) {

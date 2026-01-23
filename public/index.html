@@ -365,9 +365,9 @@
       <div class="modal-title">队伍管理</div>
       <div class="modal-text" id="party-title"></div>
       <div id="party-list" class="guild-list"></div>
-      <div class="modal-actions">
-        <button id="party-invite">邀请队员</button>
+      <div class="modal-actions party-actions">
         <button id="party-invite-all-follow" class="hidden">一键邀请跟随</button>
+        <button id="party-follow-leader" class="hidden">跟随队长</button>
         <button id="party-leave">退出队伍</button>
         <button id="party-close">关闭</button>
       </div>
@@ -409,10 +409,12 @@
 
   <div id="item-tooltip" class="item-tooltip hidden"></div>
 
-  <footer style="text-align: center; padding: 12px; background: rgba(120, 64, 20, 0.9); color: #fff3df; font-size: 0.85rem; margin-top: 20px;">
+  <footer style="display: flex; justify-content: center; align-items: center; gap: 30px; padding: 12px; background: rgba(120, 64, 20, 0.9); color: #fff3df; font-size: 0.85rem; margin-top: 20px;">
     <a href="https://github.com/e5sub/Text-Legend" target="_blank" rel="noopener noreferrer" style="color: #ffd699; text-decoration: none;">
       GitHub: e5sub/Text-Legend
     </a>
+    <span style="color: #fff3df;">玩家QQ群: 169924359</span>
+    <span style="color: #fff3df;">微信公众号: 菜芽创作小助手</span>
   </footer>
 
   <script src="/socket.io/socket.io.js"></script>

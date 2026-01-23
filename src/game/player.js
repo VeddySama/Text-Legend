@@ -395,8 +395,24 @@ export function normalizeInventory(player) {
     const qty = Number(slot.qty || 0);
     if (qty <= 0) return;
     const effects = normalizeEffects(slot.effects);
-    const key = `${id}|${effectsKey(effects)}`;
+    const itemTemplate = ITEM_TEMPLATES[id];
+    const isEquipment = itemTemplate && itemTemplate.slot;
+    
+    let finalDur = slot.durability;
+    let finalMaxDur = slot.max_durability;
+    
+    // 只为装备添加默认耐久度
+    if (isEquipment) {
+      finalDur = slot.durability !== null ? slot.durability : 100;
+      finalMaxDur = slot.max_durability !== null ? slot.max_durability : 100;
+    }
+    
+    const key = `${id}|${effectsKey(effects)}|${finalDur}|${finalMaxDur}`;
     const cur = merged.get(key) || { id, qty: 0, effects };
+    if (isEquipment) {
+      cur.durability = finalDur;
+      cur.max_durability = finalMaxDur;
+    }
     cur.qty += qty;
     merged.set(key, cur);
   });

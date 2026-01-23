@@ -135,7 +135,8 @@ function formatInventory(player) {
   return player.inventory
     .map((i) => {
       const item = ITEM_TEMPLATES[i.id];
-      const durStr = (i.durability != null && i.max_durability != null)
+      const isEquipment = item && item.slot;
+      const durStr = (isEquipment && i.durability != null && i.max_durability != null)
         ? ` [${i.durability}/${i.max_durability}]`
         : '';
       return `${item.name} x${i.qty}${durStr}`;

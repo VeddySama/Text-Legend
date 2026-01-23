@@ -47,7 +47,6 @@
     { id: 'magestaff', chance: 0.05 },
     { id: 'silver_snake', chance: 0.05 },
     { id: 'woma_horn', chance: 0.2 },
-    { id: 'ring_revival', chance: 0.005 },
     { id: 'book_war_halfmoon', chance: 0.04 },
     { id: 'book_mage_explode', chance: 0.04 },
     { id: 'book_tao_invis', chance: 0.04 }
@@ -108,10 +107,6 @@
     { id: 'bracelet_tianzun', chance: 0.04 },
     { id: 'nujian', chance: 0.02 },
     { id: 'blood_drink', chance: 0.02 },
-    { id: 'ring_stealth', chance: 0.008 },
-    { id: 'ring_heal', chance: 0.008 },
-    { id: 'ring_recall', chance: 0.005 },
-    { id: 'ring_rebirth', chance: 0.003 },
     { id: 'book_war_savage', chance: 0.03 },
     { id: 'book_mage_flash', chance: 0.03 },
     { id: 'book_tao_group_invis', chance: 0.03 }
@@ -149,8 +144,6 @@
     { id: 'longwen', chance: 0.04 },
     { id: 'gold_bar', chance: 0.1 },
     { id: 'ring_dodge', chance: 0.008 },
-    { id: 'ring_teleport', chance: 0.006 },
-    { id: 'ring_magic', chance: 0.005 },
     { id: 'book_mage_thunder', chance: 0.03 },
     { id: 'book_tao_skeleton', chance: 0.03 }
   ] },
@@ -200,6 +193,7 @@
     { id: 'ring_teleport', chance: 0.003 },
     { id: 'ring_protect', chance: 0.003 },
     { id: 'ring_revival', chance: 0.003 },
+    { id: 'ring_recall', chance: 0.003 },
     { id: 'book_mage_shield', chance: 0.04 },
     { id: 'book_tao_summon', chance: 0.04 }
   ] }

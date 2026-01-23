@@ -1216,8 +1216,8 @@ function handleItemAction(item) {
     btn.addEventListener('click', () => onClick(item));
     container.appendChild(btn);
 
-    // 技能进度条
-    if (container === ui.skills && item.exp !== undefined) {
+    // 技能进度条（满级不显示）
+    if (container === ui.skills && item.exp !== undefined && item.level < 3) {
       const progressContainer = document.createElement('div');
       progressContainer.className = 'skill-progress';
       const progressBar = document.createElement('div');
@@ -1636,7 +1636,7 @@ const TRAINING_OPTIONS = [
   { id: 'mag', label: '\u9b54\u6cd5', inc: 1 },
   { id: 'mdef', label: '\u9b54\u5fa1', inc: 1 },
   { id: 'spirit', label: '\u9053\u672f', inc: 1 },
-  { id: 'dex', label: '\u8eb2\u95ea', inc: 1 }
+  { id: 'dex', label: '\u654f\u6377', inc: 1 }
 ];
 
 function trainingCost(current, inc) {

@@ -639,8 +639,8 @@ function dropLoot(mobTemplate, bonus = 1) {
       }
     });
   }
-  // 全地图怪物都有2%概率掉落修炼果
-  if (Math.random() <= 0.02) {
+  // 全地图怪物都有5%概率掉落修炼果
+  if (Math.random() <= 0.05) {
     loot.push({ id: 'training_fruit', effects: null });
   }
   const rarityDrop = rollRarityDrop(mobTemplate, finalBonus);

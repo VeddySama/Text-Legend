@@ -39,29 +39,6 @@ let vipSelfClaimEnabled = true;
     return false;
   });
 
-  // 检测开发者工具
-  const devtools = {
-    open: false,
-    threshold: 160
-  };
-
-  const checkDevtools = () => {
-    const widthThreshold = window.outerWidth - window.innerWidth > devtools.threshold;
-    const heightThreshold = window.outerHeight - window.innerHeight > devtools.threshold;
-
-    if (widthThreshold || heightThreshold) {
-      if (!devtools.open) {
-        devtools.open = true;
-        alert('开发者工具已禁用，请勿尝试打开！');
-        window.location.reload();
-      }
-    } else {
-      devtools.open = false;
-    }
-  };
-
-  setInterval(checkDevtools, 1000);
-
   // 禁用常见的调试快捷键
   document.addEventListener('keydown', function(e) {
     if (e.ctrlKey && e.key === 'u') {
@@ -85,8 +62,6 @@ let vipSelfClaimEnabled = true;
       e.preventDefault();
     }
   });
-
-  console.log('开发者工具已禁用');
 })();
 
 // 主题和日志折叠

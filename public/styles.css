@@ -2771,7 +2771,7 @@ button:hover {
   flex-direction: column;
   gap: 8px;
   margin: 12px 0;
-  max-height: 200px;
+  max-height: 300px;
   overflow-y: auto;
 }
 
@@ -2815,9 +2815,11 @@ button:hover {
   font-size: 0.85rem;
 }
 
-/* 沙巴克模态框加宽 */
+/* 沙巴克模态框加宽和调整高度 */
 #sabak-modal .modal-card {
-  width: min(450px, 90vw);
+  width: min(480px, 90vw);
+  max-height: 85vh;
+  overflow-y: auto;
 }
 
 /* 守城方行会样式 */

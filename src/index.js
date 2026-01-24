@@ -1398,14 +1398,6 @@ function hasSpecialRingEquipped(player, itemId) {
       player.send(`注意：你装备了多个${ringName}，只有第一个会生效。`);
     }
   }
-      if (!player.flags) player.flags = {};
-      if (!player.flags.ringWarningTime) player.flags.ringWarningTime = {};
-      player.flags.ringWarningTime[itemId] = now;
-
-      const ringName = ITEM_TEMPLATES[itemId]?.name || itemId;
-      player.send(`注意：你装备了多个${ringName}，只有第一个会生效。`);
-    }
-  }
 
   return hasThisRing;
 }

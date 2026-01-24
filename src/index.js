@@ -1384,12 +1384,20 @@ function hasSpecialRingEquipped(player, itemId) {
 
   // 如果有多个相同特戒，给玩家发送提示（带冷却，避免重复提示）
   if (count > 1) {
-    const now = Date.now();
+    const warnNow = Date.now();
     const lastWarning = player.flags?.ringWarningTime || {};
     const lastTime = lastWarning[itemId] || 0;
     const cooldown = 30000; // 30秒冷却
 
-    if (now - lastTime >= cooldown) {
+    if (warnNow - lastTime >= cooldown) {
+      if (!player.flags) player.flags = {};
+      if (!player.flags.ringWarningTime) player.flags.ringWarningTime = {};
+      player.flags.ringWarningTime[itemId] = warnNow;
+
+      const ringName = ITEM_TEMPLATES[itemId]?.name || itemId;
+      player.send(`注意：你装备了多个${ringName}，只有第一个会生效。`);
+    }
+  }
       if (!player.flags) player.flags = {};
       if (!player.flags.ringWarningTime) player.flags.ringWarningTime = {};
       player.flags.ringWarningTime[itemId] = now;

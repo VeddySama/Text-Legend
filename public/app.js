@@ -2014,24 +2014,16 @@ function renderSabakModal(payload) {
   if (sabakUi.info) {
     sabakUi.info.innerHTML = `
       <div class="sabak-info-section">
-        <div class="sabak-info-title">⚔️ 攻城时间</div>
-        <div class="sabak-info-content">每天 20:00 - 20:30</div>
+        <div class="sabak-info-title">攻城时间</div>
+        <div class="sabak-info-content">每日 20:00-20:30</div>
       </div>
       <div class="sabak-info-section">
-        <div class="sabak-info-title">🏰 当前城主</div>
+        <div class="sabak-info-title">当前城主</div>
         <div class="sabak-info-content ${ownerGuildName ? 'sabak-owner' : ''}">${ownerGuildName || '暂无'}</div>
       </div>
       <div class="sabak-info-section">
-        <div class="sabak-info-title">⏰ 报名时间</div>
-        <div class="sabak-info-content">每日 0:00 - 19:50</div>
-      </div>
-      <div class="sabak-info-section">
-        <div class="sabak-info-title">💰 报名费用</div>
-        <div class="sabak-info-content">${isOwner ? '守城行会免费' : '500万金币'}</div>
-      </div>
-      <div class="sabak-info-section">
-        <div class="sabak-info-title">🏆 胜利条件</div>
-        <div class="sabak-info-content">占领沙城皇宫持续5分钟<br>或在沙城皇宫内击杀敌方行会会员最多</div>
+        <div class="sabak-info-title">报名</div>
+        <div class="sabak-info-content">0:00-19:50 · ${isOwner ? '守城免费' : '500万金币'}</div>
       </div>
     `;
   }

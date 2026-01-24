@@ -2817,9 +2817,28 @@ button:hover {
 
 /* 沙巴克模态框加宽和调整高度 */
 #sabak-modal .modal-card {
-  width: min(480px, 90vw);
-  max-height: 85vh;
+  width: min(450px, 90vw);
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+}
+
+#sabak-modal .modal-title {
+  flex-shrink: 0;
+}
+
+#sabak-modal .modal-text {
+  flex-shrink: 0;
+}
+
+#sabak-modal .sabak-guild-list {
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
+}
+
+#sabak-modal .modal-actions {
+  flex-shrink: 0;
 }
 
 /* 守城方行会样式 */

@@ -2594,6 +2594,9 @@ io.on('connection', (socket) => {
     // 将守城方行会添加到报名列表中显示
     let displayRegistrations = registrations || [];
     if (sabakState.ownerGuildId && sabakState.ownerGuildName) {
+      // 过滤掉守城方行会（如果它在报名列表中）
+      displayRegistrations = displayRegistrations.filter(r => String(r.guild_id) !== String(sabakState.ownerGuildId));
+      // 将守城方添加到列表最前面
       displayRegistrations = [
         { guild_id: sabakState.ownerGuildId, guild_name: sabakState.ownerGuildName, isDefender: true },
         ...displayRegistrations.map(r => ({ ...r, isDefender: false }))

@@ -3171,7 +3171,7 @@ function updateSpecialBossStatsBasedOnPlayers() {
       let defBonus = 0;
       let mdefBonus = 0;
 
-      // 房间人数少于2人时，增加1000攻击、5000防御、5000魔御
+      // 单人时增加1000攻击、5000防御、5000魔御
       if (playersInRoom < 2) {
         atkBonus = 1000;
         defBonus = 5000;
@@ -3183,8 +3183,8 @@ function updateSpecialBossStatsBasedOnPlayers() {
           specialBoss.mdef = baseMdef + mdefBonus;
         }
       }
-      // 房间人数超过3人时，只增加1000攻击
-      else if (playersInRoom > 3) {
+      // 2人及以上时增加1000攻击，防御魔御保持基础值
+      else {
         atkBonus = 1000;
         defBonus = 0;
         mdefBonus = 0;
@@ -3193,15 +3193,6 @@ function updateSpecialBossStatsBasedOnPlayers() {
           specialBoss.atk = baseAtk + atkBonus;
           specialBoss.def = baseDef + defBonus;
           specialBoss.mdef = baseMdef + mdefBonus;
-        }
-      }
-      // 房间人数2-3人时，恢复基础属性
-      else {
-        if (specialBoss.status?.enhancedMode) {
-          specialBoss.status.enhancedMode = false;
-          specialBoss.atk = baseAtk;
-          specialBoss.def = baseDef;
-          specialBoss.mdef = baseMdef;
         }
       }
     });

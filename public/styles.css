@@ -1588,6 +1588,17 @@ button:hover {
     padding: 8px;
     font-size: 0.85rem;
   }
+
+  /* 移动端沙巴克弹窗优化 */
+  #sabak-modal .modal-card {
+    width: calc(100vw - 20px);
+    max-height: 88vh;
+  }
+
+  #sabak-modal .sabak-guild-list {
+    max-height: 55vh;
+    overflow-y: auto;
+  }
 }
 
 @media (max-width: 480px) {
@@ -2123,6 +2134,17 @@ button:hover {
     padding: 8px;
     font-size: 0.85rem;
   }
+
+  /* 移动端沙巴克弹窗优化 */
+  #sabak-modal .modal-card {
+    width: calc(100vw - 20px);
+    max-height: 88vh;
+  }
+
+  #sabak-modal .sabak-guild-list {
+    max-height: 55vh;
+    overflow-y: auto;
+  }
 }
 
 @media (max-width: 480px) {
@@ -2490,6 +2512,17 @@ button:hover {
     padding: 8px;
     font-size: 0.85rem;
   }
+
+  /* 移动端沙巴克弹窗优化 */
+  #sabak-modal .modal-card {
+    width: calc(100vw - 20px);
+    max-height: 88vh;
+  }
+
+  #sabak-modal .sabak-guild-list {
+    max-height: 55vh;
+    overflow-y: auto;
+  }
 }
 
 @media (max-width: 480px) {
@@ -2767,12 +2800,12 @@ button:hover {
 }
 
 .sabak-guild-list {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
   gap: 8px;
   margin: 12px 0;
-  max-height: 300px;
-  overflow-y: auto;
+  max-height: none;
+  overflow-y: visible;
 }
 
 /* 沙巴克报名信息卡片样式 */
@@ -2817,8 +2850,8 @@ button:hover {
 
 /* 沙巴克模态框加宽和调整高度 */
 #sabak-modal .modal-card {
-  width: min(450px, 90vw);
-  max-height: 80vh;
+  width: min(650px, 90vw);
+  max-height: 85vh;
   display: flex;
   flex-direction: column;
 }
@@ -2829,16 +2862,20 @@ button:hover {
 
 #sabak-modal .modal-text {
   flex-shrink: 0;
+  max-height: none;
+  overflow: visible;
 }
 
 #sabak-modal .sabak-guild-list {
   flex: 1;
-  min-height: 0;
+  min-height: 200px;
+  max-height: 50vh;
   overflow-y: auto;
 }
 
 #sabak-modal .modal-actions {
   flex-shrink: 0;
+  margin-top: 12px;
 }
 
 /* 守城方行会样式 */
@@ -2849,6 +2886,10 @@ button:hover {
   border-radius: 4px;
   color: #b8860b;
   font-weight: 600;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 60px;
 }
 
 .defender-badge {
@@ -2870,6 +2911,10 @@ button:hover {
   border-radius: 4px;
   color: #8b0000;
   font-weight: 500;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 60px;
 }
 
 .attacker-badge {
@@ -3581,4 +3626,28 @@ body.dark .boss-respawn-time {
 body.dark .boss-respawn-time #boss-respawn-timer {
   color: #e8a058;
 }
+
+/* 沙巴克报名网格响应式布局 */
+@media (max-width: 480px) {
+  .sabak-guild-list {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  #sabak-modal .modal-card {
+    width: calc(100vw - 20px);
+  }
+}
+
+@media (min-width: 481px) and (max-width: 768px) {
+  .sabak-guild-list {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (min-width: 769px) {
+  .sabak-guild-list {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
 

@@ -198,7 +198,6 @@ export function tickStatus(target) {
   }
 
   // 清理过期的中毒冷却
-  const now = Date.now();
   if (target.status.poisonsBySource) {
     for (const [sourceName, cooldownUntil] of Object.entries(target.status.poisonsBySource)) {
       if (now >= cooldownUntil) {

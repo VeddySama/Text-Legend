@@ -292,10 +292,6 @@ let tradeData = {
   partnerName: ''
 };
 let guildMembers = [];
-const CONSIGN_PAGE_SIZE = 9;
-  l};
-let guildMembers = [];
-const CONSIGN_PAGE_SIZE = 9;
 let bagItems = [];
 let bagPage = 0;
 let bagFilter = 'all';

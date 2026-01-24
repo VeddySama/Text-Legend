@@ -75,9 +75,21 @@ export function seedRespawnCache(records) {
     const roomId = row.room_id || row.roomId;
     const slotIndex = Number(row.slot_index ?? row.slotIndex);
     if (!zoneId || !roomId || Number.isNaN(slotIndex)) return;
+    
+    let status = {};
+    if (row.status) {
+      try {
+        status = typeof row.status === 'string' ? JSON.parse(row.status) : row.status;
+      } catch (e) {
+        status = {};
+      }
+    }
+    
     RESPAWN_CACHE.set(respawnKey(zoneId, roomId, slotIndex), {
       templateId: row.template_id || row.templateId,
-      respawnAt: Number(row.respawn_at ?? row.respawnAt)
+      respawnAt: Number(row.respawn_at ?? row.respawnAt),
+      currentHp: row.current_hp ?? row.currentHp ?? null,
+      status
     });
   });
 }
@@ -141,6 +153,26 @@ export function spawnMobs(zoneId, roomId) {
         if (respawnStore && respawnStore.clear) {
           respawnStore.clear(zoneId, roomId, index);
         }
+      } else if (cached && cached.respawnAt <= now && cached.currentHp !== null && cached.currentHp !== undefined) {
+        // 缓存已过期但有血量数据：恢复怪物血量（重启服务器加载）
+        mob = {
+          id: `${templateId}-${Date.now()}-${randInt(100, 999)}`,
+          templateId,
+          slotIndex: index,
+          name: tpl.name,
+          level: tpl.level,
+          hp: Math.max(1, Math.min(cached.currentHp, scaled.hp)),
+          max_hp: scaled.hp,
+          atk: scaled.atk,
+          def: scaled.def,
+          mdef: scaled.mdef,
+          dex: tpl.dex || 6,
+          status: cached.status || {},
+          respawnAt: null,
+          justRespawned: false
+        };
+        mobList.push(mob);
+        return;
       } else if (cached && cached.respawnAt <= now) {
         // 缓存已过期，清理缓存记录
         RESPAWN_CACHE.delete(respawnKey(zoneId, roomId, index));
@@ -232,3 +264,24 @@ export function removeMob(zoneId, roomId, mobId) {
 export function resetRoom(zoneId, roomId) {
   ROOM_MOBS.delete(roomKey(zoneId, roomId));
 }
+
+export function getAllAliveMobs() {
+  const aliveMobs = [];
+  for (const [key, mobs] of ROOM_MOBS.entries()) {
+    const [zoneId, roomId] = key.split(':');
+    for (const mob of mobs) {
+      if (mob.hp > 0 && mob.hp < mob.max_hp) {
+        aliveMobs.push({
+          zoneId,
+          roomId,
+          slotIndex: mob.slotIndex,
+          templateId: mob.templateId,
+          currentHp: mob.hp,
+          status: mob.status || {}
+        });
+      }
+    }
+  }
+  return aliveMobs;
+}
+

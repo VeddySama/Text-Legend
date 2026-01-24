@@ -1,27 +1,38 @@
 import knex from './index.js';
 
 export async function listMobRespawns() {
-  return knex('mob_respawns').select('zone_id', 'room_id', 'slot_index', 'template_id', 'respawn_at');
+  return knex('mob_respawns').select('zone_id', 'room_id', 'slot_index', 'template_id', 'respawn_at', 'current_hp', 'status');
 }
 
-export async function upsertMobRespawn(zoneId, roomId, slotIndex, templateId, respawnAt) {
+export async function upsertMobRespawn(zoneId, roomId, slotIndex, templateId, respawnAt, currentHp = null, status = null) {
+  const data = {
+    zone_id: zoneId,
+    room_id: roomId,
+    slot_index: slotIndex,
+    template_id: templateId,
+    respawn_at: respawnAt
+  };
+  
+  if (currentHp !== null) {
+    data.current_hp = currentHp;
+  }
+  
+  if (status !== null) {
+    data.status = typeof status === 'string' ? status : JSON.stringify(status);
+  }
+  
   return knex('mob_respawns')
-    .insert({
-      zone_id: zoneId,
-      room_id: roomId,
-      slot_index: slotIndex,
-      template_id: templateId,
-      respawn_at: respawnAt
-    })
+    .insert(data)
     .onConflict(['zone_id', 'room_id', 'slot_index'])
-    .merge({
-      template_id: templateId,
-      respawn_at: respawnAt
-    });
+    .merge(data);
 }
 
 export async function clearMobRespawn(zoneId, roomId, slotIndex) {
   return knex('mob_respawns')
     .where({ zone_id: zoneId, room_id: roomId, slot_index: slotIndex })
     .del();
+}
+
+export async function saveMobState(zoneId, roomId, slotIndex, templateId, currentHp, status) {
+  return upsertMobRespawn(zoneId, roomId, slotIndex, templateId, 0, currentHp, status);
 }

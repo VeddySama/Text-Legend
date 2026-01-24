@@ -15,7 +15,7 @@ import { createAdminSession, listUsers, verifyAdminSession, deleteUser } from '.
 import { sendMail, listMail, markMailRead } from './db/mail.js';
 import { createVipCodes, listVipCodes, useVipCode } from './db/vip.js';
 import { getVipSelfClaimEnabled, setVipSelfClaimEnabled, canUserClaimVip, incrementUserVipClaimCount } from './db/settings.js';
-import { listMobRespawns, upsertMobRespawn, clearMobRespawn } from './db/mobs.js';
+import { listMobRespawns, upsertMobRespawn, clearMobRespawn, saveMobState } from './db/mobs.js';
 import {
   listConsignments,
   listConsignmentsBySeller,
@@ -56,7 +56,7 @@ import {
 import { MOB_TEMPLATES } from './game/mobs.js';
 import { ITEM_TEMPLATES } from './game/items.js';
 import { WORLD } from './game/world.js';
-import { getRoomMobs, getAliveMobs, spawnMobs, removeMob, seedRespawnCache, setRespawnStore } from './game/state.js';
+import { getRoomMobs, getAliveMobs, spawnMobs, removeMob, seedRespawnCache, setRespawnStore, getAllAliveMobs } from './game/state.js';
 import { calcHitChance, calcDamage, applyDamage, applyPoison, tickStatus, getDefenseMultiplier } from './game/combat.js';
 import { randInt, clamp } from './game/utils.js';
 import { expForLevel } from './game/constants.js';
@@ -4038,11 +4038,34 @@ async function start() {
   for (const row of respawnRows) {
     if (row.respawn_at && Number(row.respawn_at) > now) {
       activeRespawns.push(row);
+    } else if (row.current_hp && row.current_hp > 0) {
+      // 保留有血量数据的怪物，即使重生时间已过期
+      activeRespawns.push(row);
     } else {
       await clearMobRespawn(row.zone_id, row.room_id, row.slot_index);
     }
   }
   seedRespawnCache(activeRespawns);
+  
+  // 定期保存怪物血量状态（每30秒）
+  setInterval(async () => {
+    try {
+      const aliveMobs = getAllAliveMobs();
+      for (const mob of aliveMobs) {
+        await saveMobState(
+          mob.zoneId,
+          mob.roomId,
+          mob.slotIndex,
+          mob.templateId,
+          mob.currentHp,
+          mob.status
+        );
+      }
+    } catch (err) {
+      console.warn('Failed to save mob states:', err);
+    }
+  }, 30000);
+  
   try {
     const result = await cleanupInvalidItems();
     console.log(

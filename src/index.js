@@ -10,7 +10,7 @@ import config from './config.js';
 import knex from './db/index.js';
 import { createUser, verifyUser, createSession, getSession, getUserByName, setAdminFlag } from './db/users.js';
 import { listCharacters, loadCharacter, saveCharacter, findCharacterByName } from './db/characters.js';
-import { addGuildMember, createGuild, getGuildByName, getGuildMember, getSabakOwner, isGuildLeader, listGuildMembers, listSabakRegistrations, registerSabak, removeGuildMember, setSabakOwner, clearSabakRegistrations, transferGuildLeader } from './db/guilds.js';
+import { addGuildMember, createGuild, getGuildByName, getGuildMember, getSabakOwner, isGuildLeader, listGuildMembers, listSabakRegistrations, registerSabak, removeGuildMember, leaveGuild, setSabakOwner, clearSabakRegistrations, transferGuildLeader } from './db/guilds.js';
 import { createAdminSession, listUsers, verifyAdminSession, deleteUser } from './db/admin.js';
 import { sendMail, listMail, markMailRead } from './db/mail.js';
 import { createVipCodes, listVipCodes, useVipCode } from './db/vip.js';
@@ -2530,6 +2530,7 @@ io.on('connection', (socket) => {
         getGuildByName,
         addGuildMember,
         removeGuildMember,
+        leaveGuild,
         listGuildMembers,
         isGuildLeader,
         transferGuildLeader,

@@ -37,7 +37,7 @@ export async function getGuildMember(userId, charName) {
 }
 
 export async function listGuildMembers(guildId) {
-  return knex('guild_members').where({ guild_id: guildId }).select('char_name', 'role');
+  return knex('guild_members').where({ guild_id: guildId }).select('char_name', 'role', 'user_id');
 }
 
 export async function isGuildLeader(guildId, userId, charName) {

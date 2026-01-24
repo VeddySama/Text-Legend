@@ -1579,16 +1579,29 @@ export async function handleCommand({ player, players, input, send, partyApi, gu
 
       if (sub === 'kick' || sub === 'remove') {
         if (!player.guild) return send('你不在行会中。');
-        const target = players.find((p) => p.name === nameArg);
-        if (!target) return send('玩家不在线。');
-        if (!target.guild || target.guild.id !== player.guild.id) return send('对方不在你的行会中。');
+        if (!nameArg) return send('要踢出谁？');
+
         const isLeader = await guildApi.isGuildLeader(player.guild.id, player.userId, player.name);
         if (!isLeader) return send('只有会长可以踢人。');
-        if (target.guild.role === 'leader') return send('不能踢出会长。');
-        await guildApi.removeGuildMember(player.guild.id, target.userId, target.name);
-        target.guild = null;
-        send(`已将 ${target.name} 移出行会。`);
-        target.send('你已被移出行会。');
+
+        // 从数据库中获取行会成员列表
+        const members = await guildApi.listGuildMembers(player.guild.id);
+        const targetMember = members.find((m) => m.char_name === nameArg);
+
+        if (!targetMember) return send('该玩家不在你的行会中。');
+        if (targetMember.role === 'leader') return send('不能踢出会长。');
+
+        // 从数据库中移除行会成员
+        await guildApi.removeGuildMember(player.guild.id, targetMember.user_id, nameArg);
+
+        // 如果玩家在线，清除其行会信息并发送通知
+        const onlineTarget = players.find((p) => p.name === nameArg);
+        if (onlineTarget) {
+          onlineTarget.guild = null;
+          onlineTarget.send('你已被移出行会。');
+        }
+
+        send(`已将 ${nameArg} 移出行会。`);
         return;
       }
 

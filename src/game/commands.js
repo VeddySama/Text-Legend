@@ -1613,17 +1613,21 @@ export async function handleCommand({ player, players, input, send, partyApi, gu
         const isLeader = await guildApi.isGuildLeader(player.guild.id, player.userId, player.name);
         if (!isLeader) return send('只有会长可以转让会长职位。');
         if (target.guild.role === 'leader') return send('对方已经是会长。');
-        await guildApi.transferGuildLeader(
-          player.guild.id,
-          player.userId,
-          player.name,
-          target.userId,
-          target.name
-        );
-        player.guild.role = 'member';
-        target.guild.role = 'leader';
-        send(`你已将会长职位转让给 ${target.name}。`);
-        target.send(`${player.name} 已将会长职位转让给你。`);
+        try {
+          await guildApi.transferGuildLeader(
+            player.guild.id,
+            player.userId,
+            player.name,
+            target.userId,
+            target.name
+          );
+          player.guild.role = 'member';
+          target.guild.role = 'leader';
+          send(`你已将会长职位转让给 ${target.name}。`);
+          target.send(`${player.name} 已将会长职位转让给你。`);
+        } catch (err) {
+          send(`转让会长失败: ${err.message}`);
+        }
         return;
       }
 

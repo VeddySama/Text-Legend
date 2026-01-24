@@ -46,15 +46,23 @@ export async function isGuildLeader(guildId, userId, charName) {
 }
 
 export async function transferGuildLeader(guildId, oldLeaderUserId, oldLeaderCharName, newLeaderUserId, newLeaderCharName) {
-  await knex('guild_members')
-    .where({ guild_id: guildId, user_id: oldLeaderUserId, char_name: oldLeaderCharName })
-    .update({ role: 'member' });
-  await knex('guild_members')
-    .where({ guild_id: guildId, user_id: newLeaderUserId, char_name: newLeaderCharName })
-    .update({ role: 'leader' });
-  await knex('guilds')
-    .where({ id: guildId })
-    .update({ leader_user_id: newLeaderUserId, leader_char_name: newLeaderCharName });
+  await knex.transaction(async (trx) => {
+    const oldLeaderRows = await trx('guild_members')
+      .where({ guild_id: guildId, user_id: oldLeaderUserId, char_name: oldLeaderCharName })
+      .update({ role: 'member' });
+    if (oldLeaderRows === 0) {
+      throw new Error('旧会长记录不存在或已更新');
+    }
+    const newLeaderRows = await trx('guild_members')
+      .where({ guild_id: guildId, user_id: newLeaderUserId, char_name: newLeaderCharName })
+      .update({ role: 'leader' });
+    if (newLeaderRows === 0) {
+      throw new Error('新会长记录不存在');
+    }
+    await trx('guilds')
+      .where({ id: guildId })
+      .update({ leader_user_id: newLeaderUserId, leader_char_name: newLeaderCharName });
+  });
 }
 
 export async function getSabakOwner() {

@@ -1644,6 +1644,7 @@ export async function handleCommand({ player, players, input, send, partyApi, gu
       if (sub === 'leave') {
         if (!player.guild) return send('你不在行会中。');
         const isLeader = await guildApi.isGuildLeader(player.guild.id, player.userId, player.name);
+        console.log('[GUILD LEAVE CHECK] player:', player.name, 'userId:', player.userId, 'guildId:', player.guild.id, 'isLeader:', isLeader);
         if (isLeader) return send('会长不能直接退出行会，请先转让会长职位。');
         const guildId = await guildApi.leaveGuild(player.userId, player.name);
         player.guild = null;

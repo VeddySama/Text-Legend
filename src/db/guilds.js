@@ -42,6 +42,7 @@ export async function listGuildMembers(guildId) {
 
 export async function isGuildLeader(guildId, userId, charName) {
   const row = await knex('guild_members').where({ guild_id: guildId, user_id: userId, char_name: charName }).first();
+  console.log('[isGuildLeader] guildId:', guildId, 'userId:', userId, 'charName:', charName, 'row:', row);
   return row && row.role === 'leader';
 }
 

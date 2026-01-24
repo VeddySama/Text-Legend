@@ -339,8 +339,8 @@ export function computeDerived(player) {
 
   // 修炼果加成：直接加成（不乘以系数）
   const trainingFruitBonus = {
-    hp: (trainingFruit.hp || 0) * 10,
-    mp: (trainingFruit.mp || 0) * 10,
+    hp: (trainingFruit.hp || 0),
+    mp: (trainingFruit.mp || 0),
     atk: (trainingFruit.atk || 0),
     def: (trainingFruit.def || 0),
     mag: (trainingFruit.mag || 0),

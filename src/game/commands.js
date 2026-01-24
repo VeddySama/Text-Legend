@@ -959,6 +959,8 @@ export async function handleCommand({ player, players, input, send, partyApi, gu
         player.mp -= skill.mp;
         const summon = summonStats(player, skill, skillLevel);
         player.summon = { ...summon, exp: 0 };
+        if (!player.flags) player.flags = {};
+        player.flags.lastSummonSkill = skill.id;
         send(`你召唤了 ${summon.name} (等级 ${summon.level})。`);
         notifyMastery(player, skill);
         return;

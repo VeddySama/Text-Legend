@@ -1850,7 +1850,7 @@ function applyDamageToMob(mob, dmg, attackerName) {
           attacker.send(`${mob.name} 处于无敌状态，免疫了所有伤害！`);
         }
       }
-      return;
+      return { damageTaken: false };
     }
 
     // 10%几率触发无敌效果（持续10秒）
@@ -1864,7 +1864,7 @@ function applyDamageToMob(mob, dmg, attackerName) {
         }
       }
       // 这次攻击无效
-      return;
+      return { damageTaken: false };
     }
 
     // 10%几率触发50%减伤
@@ -1879,7 +1879,7 @@ function applyDamageToMob(mob, dmg, attackerName) {
       }
     }
   }
-  
+
   recordMobDamage(mob, attackerName, dmg);
   applyDamage(mob, dmg);
 
@@ -1901,6 +1901,8 @@ function applyDamageToMob(mob, dmg, attackerName) {
       }
     }
   }
+
+  return { damageTaken: true, actualDamage: dmg };
 }
 
 function retaliateMobAgainstPlayer(mob, player, online) {
@@ -2674,7 +2676,18 @@ function autoResummon(player) {
   if (!player || player.hp <= 0) return false;
   const skills = getLearnedSkills(player).filter((skill) => skill.type === 'summon');
   if (!skills.length) return false;
-  const summonSkill = skills.sort((a, b) => getSkillLevel(player, b.id) - getSkillLevel(player, a.id))[0];
+
+  let summonSkill = null;
+  const lastSkillId = player.flags?.lastSummonSkill;
+
+  if (lastSkillId) {
+    summonSkill = skills.find((skill) => skill.id === lastSkillId);
+  }
+
+  if (!summonSkill) {
+    summonSkill = skills.sort((a, b) => getSkillLevel(player, b.id) - getSkillLevel(player, a.id))[0];
+  }
+
   if (!summonSkill || player.mp < summonSkill.mp) return false;
   player.mp = clamp(player.mp - summonSkill.mp, 0, player.max_mp);
   const skillLevel = getSkillLevel(player, summonSkill.id);
@@ -3350,8 +3363,10 @@ async function combatTick() {
           const mdef = Math.floor((target.mdef || 0) * mdefMultiplier);
           const powerStat = skill.id === 'soul' ? (player.spirit || 0) : (player.mag || 0);
           const aoeDmg = Math.max(1, Math.floor((powerStat + randInt(0, powerStat / 2)) * skillPower - mdef * 0.6));
-          applyDamageToMob(target, aoeDmg, player.name);
-          player.send(`你对 ${target.name} 造成 ${aoeDmg} 点伤害。`);
+          const result = applyDamageToMob(target, aoeDmg, player.name);
+          if (result?.damageTaken) {
+            player.send(`你对 ${target.name} 造成 ${aoeDmg} 点伤害。`);
+          }
           if (tryApplyHealBlockEffect(player, target)) {
             player.send(`禁疗效果作用于 ${target.name}。`);
           }
@@ -3371,11 +3386,15 @@ async function combatTick() {
         }
         sendRoomState(player.position.zone, player.position.room);
       } else {
-        applyDamageToMob(mob, dmg, player.name);
-        player.send(`你对 ${mob.name} 造成 ${dmg} 点伤害。`);
+        const result = applyDamageToMob(mob, dmg, player.name);
+        if (result?.damageTaken) {
+          player.send(`你对 ${mob.name} 造成 ${dmg} 点伤害。`);
+        }
         if (hasComboWeapon(player) && mob.hp > 0 && Math.random() <= COMBO_PROC_CHANCE) {
-          applyDamageToMob(mob, dmg, player.name);
-          player.send(`连击触发，对 ${mob.name} 造成 ${dmg} 点伤害。`);
+          const comboResult = applyDamageToMob(mob, dmg, player.name);
+          if (comboResult?.damageTaken) {
+            player.send(`连击触发，对 ${mob.name} 造成 ${dmg} 点伤害。`);
+          }
         }
         if (tryApplyHealBlockEffect(player, mob)) {
           player.send(`禁疗效果作用于 ${mob.name}。`);
@@ -3384,9 +3403,11 @@ async function combatTick() {
           const extraTargets = mobs.filter((m) => m.id !== mob.id);
           if (extraTargets.length) {
             const extraTarget = extraTargets[randInt(0, extraTargets.length - 1)];
-            const extraDmg = Math.max(1, Math.floor(dmg * ASSASSINATE_SECONDARY_DAMAGE_RATE));
-            applyDamageToMob(extraTarget, extraDmg, player.name);
+          const extraDmg = Math.max(1, Math.floor(dmg * ASSASSINATE_SECONDARY_DAMAGE_RATE));
+          const extraResult = applyDamageToMob(extraTarget, extraDmg, player.name);
+          if (extraResult?.damageTaken) {
             player.send(`刺杀剑术波及 ${extraTarget.name}，造成 ${extraDmg} 点伤害。`);
+          }
             if (tryApplyHealBlockEffect(player, extraTarget)) {
               player.send(`禁疗效果作用于 ${extraTarget.name}。`);
             }
@@ -3439,8 +3460,10 @@ async function combatTick() {
           // cleave伤害基于玩家攻击力的30%，而不是主目标受伤的30%
           const cleaveBaseDmg = Math.floor(player.atk * 0.3 * skillPower);
           const cleaveDmg = Math.max(1, Math.floor(calcDamage(player, other, 0.3 * skillPower)));
-          applyDamageToMob(other, cleaveDmg, player.name);
-          player.send(`你对 ${other.name} 造成 ${cleaveDmg} 点伤害。`);
+          const cleaveResult = applyDamageToMob(other, cleaveDmg, player.name);
+          if (cleaveResult?.damageTaken) {
+            player.send(`你对 ${other.name} 造成 ${cleaveDmg} 点伤害。`);
+          }
           retaliateMobAgainstPlayer(other, player, online);
         });
       }
@@ -3472,8 +3495,10 @@ async function combatTick() {
       const hitChance = calcHitChance(summon, mob);
       if (Math.random() <= hitChance) {
         const dmg = calcDamage(summon, mob, 1);
-        applyDamageToMob(mob, dmg, player.name);
-        player.send(`${summon.name} 对 ${mob.name} 造成 ${dmg} 点伤害。`);
+        const summonResult = applyDamageToMob(mob, dmg, player.name);
+        if (summonResult?.damageTaken) {
+          player.send(`${summon.name} 对 ${mob.name} 造成 ${dmg} 点伤害。`);
+        }
       }
     }
 

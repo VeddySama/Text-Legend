@@ -188,7 +188,8 @@ body.dark .modal-card {
 body.dark #shop-modal .modal-actions,
 body.dark #consign-modal .modal-actions,
 body.dark #bag-modal .modal-actions,
-body.dark #drops-modal .modal-actions {
+body.dark #drops-modal .modal-actions,
+body.dark #guild-modal .modal-actions {
   background: #25201c;
   border-color: #4a3a30;
 }
@@ -2672,6 +2673,12 @@ button:hover {
   text-align: center;
   cursor: pointer;
   line-height: 1.2;
+}
+
+#guild-modal .modal-text {
+  text-align: center;
+  font-weight: 500;
+  font-size: 0.95rem;
 }
 
 .bag-tabs {

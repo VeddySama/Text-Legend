@@ -185,6 +185,9 @@ const guildUi = {
   modal: document.getElementById('guild-modal'),
   title: document.getElementById('guild-title'),
   list: document.getElementById('guild-list'),
+  page: document.getElementById('guild-page'),
+  prev: document.getElementById('guild-prev'),
+  next: document.getElementById('guild-next'),
   invite: document.getElementById('guild-invite'),
   leave: document.getElementById('guild-leave'),
   close: document.getElementById('guild-close')
@@ -315,10 +318,15 @@ let tradeData = {
 };
 let guildMembers = [];
 const CONSIGN_PAGE_SIZE = 9;
-  let bagItems = [];
-  let bagPage = 0;
-  let bagFilter = 'all';
-  const BAG_PAGE_SIZE = 40;
+  l};
+let guildMembers = [];
+const CONSIGN_PAGE_SIZE = 9;
+let bagItems = [];
+let bagPage = 0;
+let bagFilter = 'all';
+const BAG_PAGE_SIZE = 20;
+let guildPage = 0;
+const GUILD_PAGE_SIZE = 5;
 
 const authSection = document.getElementById('auth');
 const characterSection = document.getElementById('character');
@@ -1971,12 +1979,19 @@ function renderGuildModal() {
   if (guildUi.leave) {
     guildUi.leave.classList.remove('hidden');
   }
+
+  // 计算分页
+  const totalPages = Math.max(1, Math.ceil(guildMembers.length / GUILD_PAGE_SIZE));
+  guildPage = Math.min(Math.max(0, guildPage), totalPages - 1);
+  const start = guildPage * GUILD_PAGE_SIZE;
+  const pageMembers = guildMembers.slice(start, start + GUILD_PAGE_SIZE);
+
   if (!guildMembers.length) {
     const empty = document.createElement('div');
     empty.textContent = '暂无成员信息。';
     guildUi.list.appendChild(empty);
   } else {
-    guildMembers.forEach((member) => {
+    pageMembers.forEach((member) => {
       const row = document.createElement('div');
       row.className = 'guild-member';
       const name = document.createElement('div');
@@ -2005,6 +2020,12 @@ function renderGuildModal() {
       guildUi.list.appendChild(row);
     });
   }
+
+  // 更新分页信息
+  if (guildUi.page) guildUi.page.textContent = `第 ${guildPage + 1}/${totalPages} 页`;
+  if (guildUi.prev) guildUi.prev.disabled = guildPage === 0;
+  if (guildUi.next) guildUi.next.disabled = guildPage >= totalPages - 1;
+
   guildUi.modal.classList.remove('hidden');
 }
 
@@ -2133,6 +2154,7 @@ function renderPartyModal() {
 
 function showGuildModal() {
   hideItemTooltip();
+  guildPage = 0;
   if (socket) socket.emit('guild_members');
   renderGuildModal();
 }
@@ -3502,6 +3524,23 @@ if (observeUi.modal) {
   observeUi.modal.addEventListener('click', (e) => {
     if (e.target === observeUi.modal) {
       observeUi.modal.classList.add('hidden');
+    }
+  });
+}
+if (guildUi.prev) {
+  guildUi.prev.addEventListener('click', () => {
+    if (guildPage > 0) {
+      guildPage -= 1;
+      renderGuildModal();
+    }
+  });
+}
+if (guildUi.next) {
+  guildUi.next.addEventListener('click', () => {
+    const totalPages = Math.max(1, Math.ceil(guildMembers.length / GUILD_PAGE_SIZE));
+    if (guildPage < totalPages - 1) {
+      guildPage += 1;
+      renderGuildModal();
     }
   });
 }

@@ -2187,8 +2187,8 @@ function renderState(state) {
     }
 
     ui.gold.textContent = state.stats.gold;
-    if (ui.hpValue) ui.hpValue.textContent = `${state.stats.hp}/${state.stats.max_hp}`;
-    if (ui.mpValue) ui.mpValue.textContent = `${state.stats.mp}/${state.stats.max_mp}`;
+    if (ui.hpValue) ui.hpValue.textContent = `${Math.round(state.stats.hp)}/${Math.round(state.stats.max_hp)}`;
+    if (ui.mpValue) ui.mpValue.textContent = `${Math.round(state.stats.mp)}/${Math.round(state.stats.max_mp)}`;
     if (ui.expValue) {
       ui.expValue.textContent = state.stats.exp_next && state.stats.exp_next > 0
         ? `${state.stats.exp}/${state.stats.exp_next}`

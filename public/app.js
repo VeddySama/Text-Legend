@@ -2448,30 +2448,100 @@ function renderState(state) {
     const inSabakPalace = state.room && state.room.zoneId === 'sb_town' && state.room.roomId === 'palace';
     const palaceStatsBlock = sabakPalaceStatsUi.title.closest('.action-group');
 
-    if (!inSabakPalace || !state.sabak?.palaceKillStats || state.sabak.palaceKillStats.length === 0) {
+    if (!inSabakPalace) {
       if (palaceStatsBlock) palaceStatsBlock.classList.add('hidden');
     } else {
       if (palaceStatsBlock) palaceStatsBlock.classList.remove('hidden');
       sabakPalaceStatsUi.list.innerHTML = '';
-      state.sabak.palaceKillStats.forEach((entry, idx) => {
-        const row = document.createElement('div');
-        row.className = 'rank-item';
-        const name = document.createElement('span');
-        name.textContent = entry.guild_name;
-        const kills = document.createElement('span');
-        kills.textContent = `${entry.kills}击杀`;
-        const pos = document.createElement('span');
-        pos.className = 'rank-pos';
-        pos.textContent = `#${idx + 1}`;
-        if (entry.is_defender) {
-          name.style.color = '#ffd700';
-          name.style.fontWeight = 'bold';
+
+      // 添加攻城战状态信息
+      if (state.sabak && state.sabak.active) {
+        const statusDiv = document.createElement('div');
+        statusDiv.className = 'sabak-status';
+        statusDiv.style.padding = '8px';
+        statusDiv.style.marginBottom = '8px';
+        statusDiv.style.background = 'rgba(255, 215, 0, 0.1)';
+        statusDiv.style.borderRadius = '4px';
+        statusDiv.style.border = '1px solid #ffd700';
+
+        // 如果有倒计时，显示倒计时
+        if (state.sabak.siegeEndsAt && state.sabak.siegeEndsAt > Date.now()) {
+          const remaining = Math.max(0, state.sabak.siegeEndsAt - Date.now());
+          const minutes = Math.floor(remaining / 60000);
+          const seconds = Math.floor((remaining % 60000) / 1000);
+          statusDiv.innerHTML = `<div style="color: #ffd700; font-weight: bold; text-align: center;">
+            ⚔️ 攻城战进行中
+            <div style="font-size: 1.2em; margin-top: 4px;">${minutes}分${seconds}秒</div>
+          </div>`;
+
+          // 更新倒计时
+          const timerInterval = setInterval(() => {
+            const now = Date.now();
+            const remaining = Math.max(0, state.sabak.siegeEndsAt - now);
+            const timerEl = sabakPalaceStatsUi.list.querySelector('.sabak-status');
+            if (timerEl && remaining > 0 && state.sabak.siegeEndsAt === state.sabak.siegeEndsAt) {
+              const mins = Math.floor(remaining / 60000);
+              const secs = Math.floor((remaining % 60000) / 1000);
+              const content = timerEl.querySelector('div');
+              if (content) {
+                content.innerHTML = `<div style="color: #ffd700; font-weight: bold; text-align: center;">
+                  ⚔️ 攻城战进行中
+                  <div style="font-size: 1.2em; margin-top: 4px;">${mins}分${secs}秒</div>
+                </div>`;
+              }
+            } else {
+              clearInterval(timerInterval);
+            }
+          }, 1000);
+        } else {
+          statusDiv.innerHTML = `<div style="color: #ffd700; font-weight: bold; text-align: center;">
+            ⚔️ 攻城战进行中
+          </div>`;
         }
-        row.appendChild(pos);
-        row.appendChild(name);
-        row.appendChild(kills);
-        sabakPalaceStatsUi.list.appendChild(row);
-      });
+        sabakPalaceStatsUi.list.appendChild(statusDiv);
+      } else if (state.sabak?.ownerGuildName) {
+        const statusDiv = document.createElement('div');
+        statusDiv.className = 'sabak-status';
+        statusDiv.style.padding = '8px';
+        statusDiv.style.marginBottom = '8px';
+        statusDiv.style.background = 'rgba(100, 149, 237, 0.1)';
+        statusDiv.style.borderRadius = '4px';
+        statusDiv.style.border = '1px solid #6495ed';
+        statusDiv.innerHTML = `<div style="color: #6495ed; font-weight: bold; text-align: center;">
+          🏰 城主: ${state.sabak.ownerGuildName}
+        </div>`;
+        sabakPalaceStatsUi.list.appendChild(statusDiv);
+      }
+
+      // 显示击杀统计或无数据提示
+      if (state.sabak?.palaceKillStats && state.sabak.palaceKillStats.length > 0) {
+        state.sabak.palaceKillStats.forEach((entry, idx) => {
+          const row = document.createElement('div');
+          row.className = 'rank-item';
+          const name = document.createElement('span');
+          name.textContent = entry.guild_name;
+          const kills = document.createElement('span');
+          kills.textContent = `${entry.kills}击杀`;
+          const pos = document.createElement('span');
+          pos.className = 'rank-pos';
+          pos.textContent = `#${idx + 1}`;
+          if (entry.is_defender) {
+            name.style.color = '#ffd700';
+            name.style.fontWeight = 'bold';
+          }
+          row.appendChild(pos);
+          row.appendChild(name);
+          row.appendChild(kills);
+          sabakPalaceStatsUi.list.appendChild(row);
+        });
+      } else {
+        const empty = document.createElement('div');
+        empty.style.padding = '8px';
+        empty.style.textAlign = 'center';
+        empty.style.color = '#999';
+        empty.textContent = state.sabak?.active ? '暂无击杀数据' : '攻城战未开始';
+        sabakPalaceStatsUi.list.appendChild(empty);
+      }
     }
   }
 

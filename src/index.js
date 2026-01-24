@@ -1756,7 +1756,8 @@ async function buildState(player) {
       ownerGuildId: sabakState.ownerGuildId,
       ownerGuildName: sabakState.ownerGuildName,
       inPalace: isSabakPalace(player.position.zone, player.position.room),
-      palaceKillStats: isSabakPalace(player.position.zone, player.position.room) ? getSabakPalaceKillStats() : null
+      palaceKillStats: isSabakPalace(player.position.zone, player.position.room) ? getSabakPalaceKillStats() : null,
+      siegeEndsAt: sabakState.siegeEndsAt || null
     },
     worldBossRank: bossRank,
     worldBossNextRespawn: bossNextRespawn,

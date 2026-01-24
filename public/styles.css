@@ -352,6 +352,10 @@ body.dark .rank-item .rank-pos {
   color: #c88048;
 }
 
+body.dark .rank-item span:not(.rank-pos) {
+  color: #e8d5c0;
+}
+
 body.dark .guild-member {
   background: #3a3028;
   border-color: #4a3828;

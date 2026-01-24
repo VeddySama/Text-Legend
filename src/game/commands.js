@@ -925,13 +925,14 @@ export async function handleCommand({ player, players, input, send, partyApi, gu
             p.position.zone === player.position.zone && p.position.room === player.position.room
         );
         if (!pvpTarget) return send('未找到目标。');
-        if (
-          isSabakZone(player.position.zone) &&
-          player.guild &&
-          pvpTarget.guild &&
-          player.guild.id === pvpTarget.guild.id
-        ) {
-          return send('沙巴克内不能攻击同一行会成员。');
+        const myParty = partyApi?.getPartyByMember ? partyApi.getPartyByMember(player.name) : null;
+        const sameParty = myParty && myParty.members.includes(pvpTarget.name);
+        const sameGuild = player.guild && pvpTarget.guild && String(player.guild.id) === String(pvpTarget.guild.id);
+        if (isSabakZone(player.position.zone) && sameGuild) {
+          return send('不能攻击同一行会成员。');
+        }
+        if (sameParty) {
+          return send('不能攻击同一队伍成员。');
         }
         player.combat = { targetId: pvpTarget.name, targetType: 'player', skillId: 'slash' };
         send(`你开始攻击 ${pvpTarget.name}。`);
@@ -948,13 +949,14 @@ export async function handleCommand({ player, players, input, send, partyApi, gu
           p.position.zone === player.position.zone && p.position.room === player.position.room
       );
       if (!pvpTarget) return send('未找到目标。');
-      if (
-        isSabakZone(player.position.zone) &&
-        player.guild &&
-        pvpTarget.guild &&
-        player.guild.id === pvpTarget.guild.id
-      ) {
-        return send('沙巴克内不能攻击同一行会成员。');
+      const myParty = partyApi?.getPartyByMember ? partyApi.getPartyByMember(player.name) : null;
+      const sameParty = myParty && myParty.members.includes(pvpTarget.name);
+      const sameGuild = player.guild && pvpTarget.guild && String(player.guild.id) === String(pvpTarget.guild.id);
+      if (isSabakZone(player.position.zone) && sameGuild) {
+        return send('不能攻击同一行会成员。');
+      }
+      if (sameParty) {
+        return send('不能攻击同一队伍成员。');
       }
       player.combat = { targetId: pvpTarget.name, targetType: 'player', skillId: 'slash' };
       send(`你开始攻击 ${pvpTarget.name}。`);

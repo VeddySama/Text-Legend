@@ -2030,7 +2030,7 @@ function renderSabakModal(payload) {
       </div>
       <div class="sabak-info-section">
         <div class="sabak-info-title">🏆 胜利条件</div>
-        <div class="sabak-info-content">攻城时间内杀人最多的行会获胜<br>或占领沙城皇宫持续5分钟</div>
+        <div class="sabak-info-content">占领沙城皇宫持续5分钟<br>或在沙城皇宫内击杀敌方行会会员最多</div>
       </div>
     `;
   }

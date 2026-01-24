@@ -1323,13 +1323,22 @@ async function finishSabakSiege() {
 
 function recordSabakKill(attacker, target) {
   if (!attacker || !target) return;
-  if (!isSabakZone(attacker.position.zone)) return;
+  // 只统计沙城皇宫内的击杀
+  if (!isSabakPalace(attacker.position.zone, attacker.position.room)) return;
   if (!attacker.guild) return;
+  // 只统计攻守双方行会成员之间的击杀
+  if (!target.guild) return;
+  // 不统计同阵营击杀
   if (attacker.guild && target.guild && String(attacker.guild.id) === String(target.guild.id)) return;
+  // 必须有沙巴克占领者且攻城战已开始才统计
   if (!sabakState.ownerGuildId) return;
-  if (String(attacker.guild.id) !== String(sabakState.ownerGuildId) && !sabakState.active) {
-    startSabakSiege(attacker.guild);
-  }
+  if (!sabakState.active) return;
+  // 只有攻守双方行会才参与统计
+  const isAttackerDefender = String(attacker.guild.id) === String(sabakState.ownerGuildId);
+  const isTargetDefender = String(target.guild.id) === String(sabakState.ownerGuildId);
+  // 只有攻守双方互杀才算数
+  if (!(isAttackerDefender || isTargetDefender)) return;
+
   const entry = sabakState.killStats[attacker.guild.id] || {
     name: attacker.guild.name,
     kills: 0
@@ -3217,12 +3226,19 @@ async function combatTick() {
           continue;
         }
         if (isSabakZone(player.position.zone)) {
-          const sameGuild = player.guild && target.guild && player.guild.id === target.guild.id;
+          const sameGuild = player.guild && target.guild && String(player.guild.id) === String(target.guild.id);
           if (sameGuild) {
             player.combat = null;
-            player.send('沙巴克内不能攻击同一行会成员。');
+            player.send('不能攻击同一行会成员。');
             continue;
           }
+        }
+        const myParty = getPartyByMember(player.name);
+        const sameParty = myParty && myParty.members.includes(target.name);
+        if (sameParty) {
+          player.combat = null;
+          player.send('不能攻击同一队伍成员。');
+          continue;
         }
         if (!target.flags) target.flags = {};
         target.flags.lastCombatAt = Date.now();

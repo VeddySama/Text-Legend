@@ -1371,6 +1371,7 @@ export async function handleCommand({ player, players, input, send, partyApi, gu
         const target = players.find((p) => p.name === targetName);
         if (target) target.send('你已被队长踢出队伍。');
         return;
+      }
       if (sub === 'transfer') {
         if (!party) return send('你不在队伍中。');
         if (!party.leader || party.leader !== player.name) return send('只有队长可以转让队长职位。');

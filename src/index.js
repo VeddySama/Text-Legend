@@ -2066,10 +2066,9 @@ function retaliateMobAgainstPlayer(mob, player, online) {
     if (Math.random() <= 0.2) {
       if (!mobTarget.status) mobTarget.status = {};
       if (!mobTarget.status.debuffs) mobTarget.status.debuffs = {};
-      const breakNow = Date.now();
       mobTarget.status.debuffs.armorBreak = {
         defMultiplier: 0.5,
-        expiresAt: breakNow + 3000
+        expiresAt: now + 3000
       };
       if (mobTarget.userId) {
         mobTarget.send(`${mob.name} 破防攻击！你的防御和魔御降低50%，持续3秒。`);
@@ -2101,7 +2100,7 @@ function retaliateMobAgainstPlayer(mob, player, online) {
   // 检查弱化效果（玩家佩戴弱化戒指对怪物施加）
   if (mob.status?.debuffs?.weak) {
     const weak = mob.status.debuffs.weak;
-    if (weak.expiresAt && weak.expiresAt < Date.now()) {
+    if (weak.expiresAt && weak.expiresAt < now) {
       delete mob.status.debuffs.weak;
     } else {
       dmg = Math.floor(dmg * (1 - (weak.dmgReduction || 0)));
@@ -3444,7 +3443,7 @@ async function combatTick() {
       // 检查攻击者的弱化效果（来自破防戒指）
       if (player.status?.debuffs?.weak) {
         const weak = player.status.debuffs.weak;
-        if (weak.expiresAt && weak.expiresAt < Date.now()) {
+        if (weak.expiresAt && weak.expiresAt < now) {
           delete player.status.debuffs.weak;
         } else {
           dmg = Math.floor(dmg * (1 - (weak.dmgReduction || 0)));

@@ -830,8 +830,25 @@ button:hover {
 }
 
 #change-password-btn {
-  margin-bottom: 8px;
-  width: 100%;
+  background: #f7e2c6;
+  color: #6b4a2a;
+  border: 1px solid #d8b48a;
+  box-shadow: inset 0 0 0 1px rgba(214, 145, 64, 0.2);
+}
+
+#change-password-btn:hover {
+  filter: brightness(1.03);
+}
+
+.char-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.char-actions button {
+  min-width: 96px;
 }
 
 .status-title {

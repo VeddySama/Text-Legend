@@ -309,6 +309,51 @@ body.theme-dark .block {
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
 }
 
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(20, 14, 10, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+
+.modal.hidden {
+  display: none;
+}
+
+.modal-card {
+  width: min(420px, 92vw);
+  background: var(--panel);
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  padding: 18px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.25);
+}
+
+.modal-title {
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.modal-text {
+  color: #7b5a3a;
+  margin-bottom: 10px;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+body.theme-dark .modal-text {
+  color: #c6a57d;
+}
+
 body.theme-dark input,
 body.theme-dark select,
 body.theme-dark textarea {

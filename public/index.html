@@ -64,8 +64,10 @@
         <option value="mage">法师</option>
         <option value="taoist">道士</option>
       </select>
-      <button id="create-char-btn">创建</button>
-      <button id="change-password-btn" class="chip" data-action="change-password">修改密码</button>
+      <div class="char-actions">
+        <button id="create-char-btn" type="button">创建</button>
+        <button id="change-password-btn" type="button" data-action="change-password">修改密码</button>
+      </div>
       <div id="char-msg" class="msg"></div>
     </section>
 
@@ -480,6 +482,6 @@
   </footer>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script src="app.js"></script>
+  <script src="app.js?v=4"></script>
 </body>
 </html>

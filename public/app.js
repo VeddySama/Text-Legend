@@ -11,7 +11,6 @@ let vipSelfClaimEnabled = true;
 let bossRespawnTimer = null;
 let bossRespawnTarget = null;
 let bossRespawnTimerEl = null;
-let bossRespawnRoomKey = null;
 
 // 屏蔽F12开发者工具
 (function() {
@@ -2223,7 +2222,7 @@ function shopDisplayPrice(item) {
 
 async function promptChangePassword() {
   if (!token) {
-    showToast('请先登录后修改密码');
+    alert('请先登录后修改密码');
     return;
   }
   const oldPassword = await promptModal({
@@ -2555,7 +2554,7 @@ function renderState(state) {
     }
 
     const currentRoomKey = state.room ? `${state.room.zoneId}:${state.room.roomId}` : null;
-    const resetBossRespawn = (clearRoomKey = false) => {
+    const resetBossRespawn = () => {
       if (bossRespawnTimer) {
         clearInterval(bossRespawnTimer);
       }
@@ -2565,18 +2564,23 @@ function renderState(state) {
       if (ui.worldBossRank) {
         ui.worldBossRank.querySelectorAll('.boss-respawn-time').forEach((node) => node.remove());
       }
-      if (clearRoomKey) bossRespawnRoomKey = null;
     };
-    const roomChanged = bossRespawnRoomKey !== currentRoomKey;
+    const prevRoomKey = ui.worldBossRank.dataset.roomKey || null;
+    const roomChanged = prevRoomKey !== currentRoomKey;
     if (roomChanged) {
       resetBossRespawn();
-      bossRespawnRoomKey = currentRoomKey;
-      if (ui.worldBossRank) ui.worldBossRank.innerHTML = '';
+      if (ui.worldBossRank) {
+        ui.worldBossRank.innerHTML = '';
+        ui.worldBossRank.dataset.roomKey = currentRoomKey || '';
+      }
     }
     if (!inSpecialBossRoom) {
       if (rankBlock) rankBlock.classList.add('hidden');
-      resetBossRespawn(true);
+      resetBossRespawn();
       if (ui.worldBossRank) ui.worldBossRank.innerHTML = '';
+      if (ui.worldBossRank) {
+        ui.worldBossRank.removeAttribute('data-room-key');
+      }
     } else {
       if (rankBlock) rankBlock.classList.remove('hidden');
       const ranks = state.worldBossRank || [];
@@ -2640,14 +2644,12 @@ function renderState(state) {
         }
       } else if (!ranks.length) {
         resetBossRespawn();
-        bossRespawnRoomKey = currentRoomKey;
         const empty = document.createElement('div');
         empty.textContent = '暂无排行';
         if (ui.worldBossRank) ui.worldBossRank.innerHTML = '';
         ui.worldBossRank.appendChild(empty);
       } else {
         resetBossRespawn();
-        bossRespawnRoomKey = currentRoomKey;
         if (ui.worldBossRank) ui.worldBossRank.innerHTML = '';
         ranks.forEach((entry, idx) => {
           const row = document.createElement('div');
@@ -3303,6 +3305,13 @@ if (ui.changePasswordButtons && ui.changePasswordButtons.length) {
       promptChangePassword();
     });
   });
+} else {
+  const fallbackBtn = document.getElementById('change-password-btn');
+  if (fallbackBtn) {
+    fallbackBtn.addEventListener('click', () => {
+      promptChangePassword();
+    });
+  }
 }
 if (chat.emojiToggle) {
   chat.emojiToggle.addEventListener('click', () => {

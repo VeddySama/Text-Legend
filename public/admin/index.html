@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>GM后台 - 文字传奇</title>
-  <link rel="stylesheet" href="admin.css?v=2">
+  <link rel="stylesheet" href="admin.css?v=3">
 </head>
 <body>
   <div class="wrap">
@@ -165,6 +165,18 @@
     </section>
   </div>
 
-  <script src="admin.js?v=2"></script>
+  <div id="admin-pw-modal" class="modal hidden">
+    <div class="modal-card">
+      <div class="modal-title" id="admin-pw-title">修改密码</div>
+      <div class="modal-text" id="admin-pw-text"></div>
+      <input id="admin-pw-input" type="password" placeholder="新密码">
+      <div class="modal-actions">
+        <button id="admin-pw-cancel" class="btn-small">取消</button>
+        <button id="admin-pw-submit">更新</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="admin.js?v=3"></script>
 </body>
 </html>

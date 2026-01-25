@@ -18,6 +18,14 @@ const lootLogStatus = document.getElementById('loot-log-status');
 const lootLogMsg = document.getElementById('loot-log-msg');
 const usersSearchInput = document.getElementById('users-search');
 const usersSearchBtn = document.getElementById('users-search-btn');
+const adminPwModal = document.getElementById('admin-pw-modal');
+const adminPwTitle = document.getElementById('admin-pw-title');
+const adminPwText = document.getElementById('admin-pw-text');
+const adminPwInput = document.getElementById('admin-pw-input');
+const adminPwCancel = document.getElementById('admin-pw-cancel');
+const adminPwSubmit = document.getElementById('admin-pw-submit');
+
+let pendingPwUser = null;
 
 let adminToken = localStorage.getItem('adminToken');
 let currentUsersPage = 1;
@@ -232,21 +240,13 @@ async function updateCharacter() {
 }
 
 async function resetUserPassword(username) {
-  const password = prompt(`设置用户 "${username}" 的新密码`);
-  if (!password) return;
-  if (password.length < 4) {
-    alert('密码至少4位');
-    return;
-  }
-  try {
-    await api('/admin/users/password', 'POST', {
-      username,
-      password
-    });
-    alert('密码已更新，已清理登录状态。');
-  } catch (err) {
-    alert(`修改失败: ${err.message}`);
-  }
+  if (!adminPwModal || !adminPwInput) return;
+  pendingPwUser = username;
+  adminPwTitle.textContent = '修改密码';
+  adminPwText.textContent = `设置用户 "${username}" 的新密码`;
+  adminPwInput.value = '';
+  adminPwModal.classList.remove('hidden');
+  setTimeout(() => adminPwInput.focus(), 0);
 }
 
 async function sendMail() {
@@ -476,3 +476,31 @@ document.getElementById('loot-log-off').addEventListener('click', () => toggleLo
 document.getElementById('backup-download').addEventListener('click', downloadBackup);
 document.getElementById('import-btn').addEventListener('click', importBackup);
 if (themeToggleBtn) themeToggleBtn.addEventListener('click', toggleTheme);
+if (adminPwCancel) {
+  adminPwCancel.addEventListener('click', () => {
+    pendingPwUser = null;
+    adminPwModal.classList.add('hidden');
+  });
+}
+if (adminPwSubmit) {
+  adminPwSubmit.addEventListener('click', async () => {
+    if (!pendingPwUser) return;
+    const password = adminPwInput.value.trim();
+    if (!password) return;
+    if (password.length < 4) {
+      alert('密码至少4位');
+      return;
+    }
+    try {
+      await api('/admin/users/password', 'POST', {
+        username: pendingPwUser,
+        password
+      });
+      alert('密码已更新，已清理登录状态。');
+      pendingPwUser = null;
+      adminPwModal.classList.add('hidden');
+    } catch (err) {
+      alert(`修改失败: ${err.message}`);
+    }
+  });
+}

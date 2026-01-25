@@ -2098,6 +2098,7 @@ function gainSummonExp(player) {
 function applyDamageToMob(mob, dmg, attackerName) {
   const mobTemplate = MOB_TEMPLATES[mob.templateId];
   const isSpecialBoss = Boolean(mobTemplate?.specialBoss);
+  const isWorldBoss = Boolean(mobTemplate?.worldBoss);
 
   // 特殊BOSS防御效果：受到攻击时触发
   if (isSpecialBoss) {
@@ -2110,6 +2111,42 @@ function applyDamageToMob(mob, dmg, attackerName) {
         const attacker = playersByName(attackerName);
         if (attacker) {
           attacker.send(`${mob.name} 处于无敌状态，免疫了所有伤害！`);
+        }
+      }
+      return { damageTaken: false };
+    }
+
+    // 世界BOSS受到攻击时10%几率触发无敌效果（持续10秒）
+    if (isWorldBoss && Math.random() <= 0.1) {
+      if (!mob.status) mob.status = {};
+      mob.status.invincible = now + 10000;
+
+      // 清除所有毒效果和负面状态
+      if (mob.status.activePoisons) {
+        delete mob.status.activePoisons;
+      }
+      if (mob.status.poison) {
+        delete mob.status.poison;
+      }
+      if (mob.status.debuffs) {
+        delete mob.status.debuffs.poison;
+        delete mob.status.debuffs.poisonEffect;
+        delete mob.status.debuffs.weak;
+        delete mob.status.debuffs.armorBreak;
+      }
+
+      if (attackerName) {
+        const attacker = playersByName(attackerName);
+        if (attacker) {
+          const online = listOnlinePlayers();
+          const roomPlayers = online.filter((p) =>
+            p.position.zone === attacker.position.zone &&
+            p.position.room === attacker.position.room &&
+            p.hp > 0
+          );
+          roomPlayers.forEach((roomPlayer) => {
+            roomPlayer.send(`${mob.name} 触发了无敌效果，10秒内免疫所有伤害、毒、麻痹、降攻击、降防效果！`);
+          });
         }
       }
       return { damageTaken: false };
@@ -3446,11 +3483,11 @@ function updateSpecialBossStatsBasedOnPlayers() {
           specialBoss.mdef = baseMdef + mdefBonus;
         }
       }
-      // 2人及以上时增加攻击，防御魔御保持基础值
+      // 2人及以上时增加攻击，世界BOSS额外增加1000防御/魔御
       else {
         atkBonus = isWorldBoss ? 3000 : 800;
-        defBonus = 0;
-        mdefBonus = 0;
+        defBonus = isWorldBoss ? 1000 : 0;
+        mdefBonus = isWorldBoss ? 1000 : 0;
         if (specialBoss.status?.enhancedMode !== 'partial') {
           specialBoss.status.enhancedMode = 'partial';
           specialBoss.atk = baseAtk + atkBonus;

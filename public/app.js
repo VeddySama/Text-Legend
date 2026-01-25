@@ -119,7 +119,7 @@ const ui = {
   worldBossRankTitle: document.getElementById('worldboss-rank-title'),
   training: document.getElementById('training-list'),
   actions: document.getElementById('actions-list'),
-  changePasswordBtn: document.getElementById('change-password-btn')
+  changePasswordButtons: Array.from(document.querySelectorAll('[data-action="change-password"]'))
 };
 const dropsUi = {
   modal: document.getElementById('drops-modal'),
@@ -2222,6 +2222,10 @@ function shopDisplayPrice(item) {
 }
 
 async function promptChangePassword() {
+  if (!token) {
+    showToast('请先登录后修改密码');
+    return;
+  }
   const oldPassword = await promptModal({
     title: '修改密码',
     text: '请输入旧密码',
@@ -2551,43 +2555,46 @@ function renderState(state) {
     }
 
     const currentRoomKey = state.room ? `${state.room.zoneId}:${state.room.roomId}` : null;
-    const roomChanged = bossRespawnRoomKey !== currentRoomKey;
-    if (roomChanged) {
+    const resetBossRespawn = (clearRoomKey = false) => {
       if (bossRespawnTimer) {
         clearInterval(bossRespawnTimer);
       }
       bossRespawnTimer = null;
       bossRespawnTarget = null;
       bossRespawnTimerEl = null;
+      if (ui.worldBossRank) {
+        ui.worldBossRank.querySelectorAll('.boss-respawn-time').forEach((node) => node.remove());
+      }
+      if (clearRoomKey) bossRespawnRoomKey = null;
+    };
+    const roomChanged = bossRespawnRoomKey !== currentRoomKey;
+    if (roomChanged) {
+      resetBossRespawn();
       bossRespawnRoomKey = currentRoomKey;
       if (ui.worldBossRank) ui.worldBossRank.innerHTML = '';
     }
-    if (ui.worldBossRank) {
-      const respawnBlocks = ui.worldBossRank.querySelectorAll('.boss-respawn-time');
-      if (respawnBlocks.length > 1) {
-        respawnBlocks.forEach((node) => node.remove());
-        if (bossRespawnTimer) {
-          clearInterval(bossRespawnTimer);
-        }
-        bossRespawnTimer = null;
-        bossRespawnTarget = null;
-        bossRespawnTimerEl = null;
-      }
-    }
     if (!inSpecialBossRoom) {
       if (rankBlock) rankBlock.classList.add('hidden');
-      if (bossRespawnTimer) {
-        clearInterval(bossRespawnTimer);
-        bossRespawnTimer = null;
-        bossRespawnTarget = null;
-        bossRespawnTimerEl = null;
-      }
-      bossRespawnRoomKey = null;
+      resetBossRespawn(true);
       if (ui.worldBossRank) ui.worldBossRank.innerHTML = '';
     } else {
       if (rankBlock) rankBlock.classList.remove('hidden');
       const ranks = state.worldBossRank || [];
       const nextRespawn = state.worldBossNextRespawn;
+      if (ui.worldBossRank) {
+        const respawnNodes = ui.worldBossRank.querySelectorAll('.boss-respawn-time');
+        if (respawnNodes.length > 1) {
+          respawnNodes.forEach((node, idx) => {
+            if (idx > 0) node.remove();
+          });
+        }
+        if (!bossRespawnTimerEl) {
+          const existingTimer = ui.worldBossRank.querySelector('#boss-respawn-timer');
+          if (existingTimer) {
+            bossRespawnTimerEl = existingTimer;
+          }
+        }
+      }
 
       // 如果有下次刷新时间，显示刷新倒计时
       if (nextRespawn && nextRespawn > Date.now()) {
@@ -2607,8 +2614,6 @@ function renderState(state) {
             if (bossRespawnTimer) {
               clearInterval(bossRespawnTimer);
               bossRespawnTimer = null;
-              bossRespawnTarget = null;
-              bossRespawnTimerEl = null;
             }
           }
         };
@@ -2634,24 +2639,14 @@ function renderState(state) {
           updateTimer();
         }
       } else if (!ranks.length) {
-        if (bossRespawnTimer) {
-          clearInterval(bossRespawnTimer);
-          bossRespawnTimer = null;
-          bossRespawnTarget = null;
-          bossRespawnTimerEl = null;
-        }
+        resetBossRespawn();
         bossRespawnRoomKey = currentRoomKey;
         const empty = document.createElement('div');
         empty.textContent = '暂无排行';
         if (ui.worldBossRank) ui.worldBossRank.innerHTML = '';
         ui.worldBossRank.appendChild(empty);
       } else {
-        if (bossRespawnTimer) {
-          clearInterval(bossRespawnTimer);
-          bossRespawnTimer = null;
-          bossRespawnTarget = null;
-          bossRespawnTimerEl = null;
-        }
+        resetBossRespawn();
         bossRespawnRoomKey = currentRoomKey;
         if (ui.worldBossRank) ui.worldBossRank.innerHTML = '';
         ranks.forEach((entry, idx) => {
@@ -2868,7 +2863,6 @@ function renderState(state) {
     { id: 'repair', label: '\u4FEE\u7406' },
     { id: 'consign', label: '\u5BC4\u552E' },
     { id: 'drops', label: '\u5957\u88c5\u6389\u843d' },
-    { id: 'password', label: '\u6539\u5BC6\u7801' },
     { id: 'logout', label: '\u9000\u51fa\u6e38\u620f' }
   ];
   // 只对非VIP玩家显示VIP激活按钮，并且自助领取功能开启时显示领取按钮
@@ -2909,10 +2903,6 @@ function renderState(state) {
       });
       if (!code) return;
       socket.emit('cmd', { text: `vip activate ${code.trim()}` });
-      return;
-    }
-    if (a.id === 'password') {
-      await promptChangePassword();
       return;
     }
     if (a.id === 'logout') {
@@ -3307,9 +3297,11 @@ function showObserveModal(data) {
 document.getElementById('login-btn').addEventListener('click', login);
 document.getElementById('register-btn').addEventListener('click', register);
 document.getElementById('create-char-btn').addEventListener('click', createCharacter);
-if (ui.changePasswordBtn) {
-  ui.changePasswordBtn.addEventListener('click', () => {
-    promptChangePassword();
+if (ui.changePasswordButtons && ui.changePasswordButtons.length) {
+  ui.changePasswordButtons.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      promptChangePassword();
+    });
   });
 }
 if (chat.emojiToggle) {

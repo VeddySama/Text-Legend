@@ -2,7 +2,6 @@
 const dashboardSection = document.getElementById('dashboard');
 const loginMsg = document.getElementById('login-msg');
 const usersList = document.getElementById('users-list');
-const promoteMsg = document.getElementById('promote-msg');
 const charMsg = document.getElementById('char-msg');
 const mailMsg = document.getElementById('mail-msg');
 const vipCodesResult = document.getElementById('vip-codes-result');
@@ -17,7 +16,6 @@ const themeToggleBtn = document.getElementById('theme-toggle');
 const collapseAllBtn = document.getElementById('collapse-all');
 const lootLogStatus = document.getElementById('loot-log-status');
 const lootLogMsg = document.getElementById('loot-log-msg');
-const pwMsg = document.getElementById('pw-msg');
 const usersSearchInput = document.getElementById('users-search');
 const usersSearchBtn = document.getElementById('users-search-btn');
 
@@ -166,6 +164,12 @@ async function refreshUsers(page = 1) {
         btnPromote.addEventListener('click', () => quickToggleGM(u.username, true));
         tdAction.appendChild(btnPromote);
       }
+
+      const btnPassword = document.createElement('button');
+      btnPassword.className = 'btn-small btn-password';
+      btnPassword.textContent = '改密码';
+      btnPassword.addEventListener('click', () => resetUserPassword(u.username));
+      tdAction.appendChild(btnPassword);
       
       // 删除按钮
       const btnDelete = document.createElement('button');
@@ -212,21 +216,6 @@ async function deleteUserAccount(userId, username) {
   }
 }
 
-async function promoteUser(isAdmin) {
-  if (!promoteMsg) return;
-  promoteMsg.textContent = '';
-  try {
-    await api('/admin/users/promote', 'POST', {
-      username: document.getElementById('promote-username').value.trim(),
-      isAdmin
-    });
-    promoteMsg.textContent = isAdmin ? '已设置为 GM。' : '已取消 GM。';
-    await refreshUsers(currentUsersPage);
-  } catch (err) {
-    promoteMsg.textContent = err.message;
-  }
-}
-
 async function updateCharacter() {
   charMsg.textContent = '';
   try {
@@ -242,16 +231,21 @@ async function updateCharacter() {
   }
 }
 
-async function updatePassword() {
-  pwMsg.textContent = '';
+async function resetUserPassword(username) {
+  const password = prompt(`设置用户 "${username}" 的新密码`);
+  if (!password) return;
+  if (password.length < 4) {
+    alert('密码至少4位');
+    return;
+  }
   try {
     await api('/admin/users/password', 'POST', {
-      username: document.getElementById('pw-username').value.trim(),
-      password: document.getElementById('pw-new').value
+      username,
+      password
     });
-    pwMsg.textContent = '密码已更新，已清理登录状态。';
+    alert('密码已更新，已清理登录状态。');
   } catch (err) {
-    pwMsg.textContent = err.message;
+    alert(`修改失败: ${err.message}`);
   }
 }
 
@@ -471,12 +465,7 @@ document.getElementById('users-next-page').addEventListener('click', () => {
     refreshUsers(currentUsersPage + 1);
   }
 });
-const promoteBtn = document.getElementById('promote-btn');
-if (promoteBtn) promoteBtn.addEventListener('click', () => promoteUser(true));
-const demoteBtn = document.getElementById('demote-btn');
-if (demoteBtn) demoteBtn.addEventListener('click', () => promoteUser(false));
 document.getElementById('char-update-btn').addEventListener('click', updateCharacter);
-document.getElementById('pw-update-btn').addEventListener('click', updatePassword);
 document.getElementById('mail-send-btn').addEventListener('click', sendMail);
 document.getElementById('vip-create-btn').addEventListener('click', createVipCodes);
 document.getElementById('vip-list-btn').addEventListener('click', listVipCodes);

@@ -829,6 +829,11 @@ button:hover {
   box-shadow: inset 0 0 0 1px rgba(255, 224, 190, 0.35);
 }
 
+#change-password-btn {
+  margin-bottom: 8px;
+  width: 100%;
+}
+
 .status-title {
   font-family: var(--font-display);
   font-size: 1rem;

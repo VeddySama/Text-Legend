@@ -118,7 +118,8 @@ const ui = {
   worldBossRank: document.getElementById('worldboss-rank'),
   worldBossRankTitle: document.getElementById('worldboss-rank-title'),
   training: document.getElementById('training-list'),
-  actions: document.getElementById('actions-list')
+  actions: document.getElementById('actions-list'),
+  changePasswordBtn: document.getElementById('change-password-btn')
 };
 const dropsUi = {
   modal: document.getElementById('drops-modal'),
@@ -2220,6 +2221,49 @@ function shopDisplayPrice(item) {
   return price;
 }
 
+async function promptChangePassword() {
+  const oldPassword = await promptModal({
+    title: '修改密码',
+    text: '请输入旧密码',
+    placeholder: '旧密码',
+    type: 'password'
+  });
+  if (!oldPassword) return;
+  const newPassword = await promptModal({
+    title: '修改密码',
+    text: '请输入新密码（至少4位）',
+    placeholder: '新密码',
+    type: 'password'
+  });
+  if (!newPassword) return;
+  const confirmPassword = await promptModal({
+    title: '修改密码',
+    text: '请再次输入新密码',
+    placeholder: '确认新密码',
+    type: 'password'
+  });
+  if (!confirmPassword) return;
+  if (newPassword !== confirmPassword) {
+    showToast('两次密码不一致');
+    return;
+  }
+  try {
+    await apiPost('/api/password', {
+      token,
+      oldPassword,
+      newPassword
+    });
+    showToast('密码已更新，请重新登录');
+    const rememberedUser = localStorage.getItem('rememberedUser');
+    if (rememberedUser) {
+      localStorage.removeItem(getUserStorageKey('savedToken', rememberedUser));
+    }
+    exitGame();
+  } catch (err) {
+    showToast(err.message || '修改失败');
+  }
+}
+
 function renderState(state) {
   const prevState = lastState;
   lastState = state;
@@ -2517,6 +2561,18 @@ function renderState(state) {
       bossRespawnTimerEl = null;
       bossRespawnRoomKey = currentRoomKey;
       if (ui.worldBossRank) ui.worldBossRank.innerHTML = '';
+    }
+    if (ui.worldBossRank) {
+      const respawnBlocks = ui.worldBossRank.querySelectorAll('.boss-respawn-time');
+      if (respawnBlocks.length > 1) {
+        respawnBlocks.forEach((node) => node.remove());
+        if (bossRespawnTimer) {
+          clearInterval(bossRespawnTimer);
+        }
+        bossRespawnTimer = null;
+        bossRespawnTarget = null;
+        bossRespawnTimerEl = null;
+      }
     }
     if (!inSpecialBossRoom) {
       if (rankBlock) rankBlock.classList.add('hidden');
@@ -2856,46 +2912,7 @@ function renderState(state) {
       return;
     }
     if (a.id === 'password') {
-      const oldPassword = await promptModal({
-        title: '\u4fee\u6539\u5bc6\u7801',
-        text: '\u8bf7\u8f93\u5165\u65e7\u5bc6\u7801',
-        placeholder: '\u65e7\u5bc6\u7801',
-        type: 'password'
-      });
-      if (!oldPassword) return;
-      const newPassword = await promptModal({
-        title: '\u4fee\u6539\u5bc6\u7801',
-        text: '\u8bf7\u8f93\u5165\u65b0\u5bc6\u7801\uff08\u81f3\u5c114\u4f4d\uff09',
-        placeholder: '\u65b0\u5bc6\u7801',
-        type: 'password'
-      });
-      if (!newPassword) return;
-      const confirmPassword = await promptModal({
-        title: '\u4fee\u6539\u5bc6\u7801',
-        text: '\u8bf7\u518d\u6b21\u8f93\u5165\u65b0\u5bc6\u7801',
-        placeholder: '\u786e\u8ba4\u65b0\u5bc6\u7801',
-        type: 'password'
-      });
-      if (!confirmPassword) return;
-      if (newPassword !== confirmPassword) {
-        showToast('\u4e24\u6b21\u5bc6\u7801\u4e0d\u4e00\u81f4');
-        return;
-      }
-      try {
-        await apiPost('/api/password', {
-          token,
-          oldPassword,
-          newPassword
-        });
-        showToast('\u5bc6\u7801\u5df2\u66f4\u65b0\uff0c\u8bf7\u91cd\u65b0\u767b\u5f55');
-        const rememberedUser = localStorage.getItem('rememberedUser');
-        if (rememberedUser) {
-          localStorage.removeItem(getUserStorageKey('savedToken', rememberedUser));
-        }
-        exitGame();
-      } catch (err) {
-        showToast(err.message || '\u4fee\u6539\u5931\u8d25');
-      }
+      await promptChangePassword();
       return;
     }
     if (a.id === 'logout') {
@@ -3290,6 +3307,11 @@ function showObserveModal(data) {
 document.getElementById('login-btn').addEventListener('click', login);
 document.getElementById('register-btn').addEventListener('click', register);
 document.getElementById('create-char-btn').addEventListener('click', createCharacter);
+if (ui.changePasswordBtn) {
+  ui.changePasswordBtn.addEventListener('click', () => {
+    promptChangePassword();
+  });
+}
 if (chat.emojiToggle) {
   chat.emojiToggle.addEventListener('click', () => {
     if (!chat.emojiPanel) return;

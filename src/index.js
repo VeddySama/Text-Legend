@@ -3244,7 +3244,7 @@ function updateSpecialBossStatsBasedOnPlayers() {
 
       // 单人时增加攻击、5000防御、5000魔御
       if (playersInRoom < 2) {
-        atkBonus = isWorldBoss ? 1000 : 800;
+        atkBonus = isWorldBoss ? 2000 : 800;
         defBonus = 5000;
         mdefBonus = 5000;
         if (!specialBoss.status?.enhancedMode) {
@@ -3256,7 +3256,7 @@ function updateSpecialBossStatsBasedOnPlayers() {
       }
       // 2人及以上时增加攻击，防御魔御保持基础值
       else {
-        atkBonus = isWorldBoss ? 1000 : 800;
+        atkBonus = isWorldBoss ? 2000 : 800;
         defBonus = 0;
         mdefBonus = 0;
         if (specialBoss.status?.enhancedMode !== 'partial') {

@@ -8,6 +8,8 @@ let serverTimeBase = null;
 let serverTimeLocal = null;
 let serverTimeTimer = null;
 let vipSelfClaimEnabled = true;
+let bossRespawnTimer = null;
+let bossRespawnTarget = null;
 
 // 屏蔽F12开发者工具
 (function() {
@@ -2502,6 +2504,11 @@ function renderState(state) {
 
     if (!inSpecialBossRoom) {
       if (rankBlock) rankBlock.classList.add('hidden');
+      if (bossRespawnTimer) {
+        clearInterval(bossRespawnTimer);
+        bossRespawnTimer = null;
+        bossRespawnTarget = null;
+      }
     } else {
       if (rankBlock) rankBlock.classList.remove('hidden');
       const ranks = state.worldBossRank || [];
@@ -2509,31 +2516,55 @@ function renderState(state) {
 
       // 如果有下次刷新时间，显示刷新倒计时
       if (nextRespawn && nextRespawn > Date.now()) {
+        if (bossRespawnTarget !== nextRespawn && bossRespawnTimer) {
+          clearInterval(bossRespawnTimer);
+          bossRespawnTimer = null;
+        }
+        bossRespawnTarget = nextRespawn;
         const respawnDiv = document.createElement('div');
         respawnDiv.className = 'boss-respawn-time';
-        respawnDiv.innerHTML = `下次刷新: <span id="boss-respawn-timer">计算中...</span>`;
+        const timerSpan = document.createElement('span');
+        timerSpan.id = 'boss-respawn-timer';
+        timerSpan.textContent = '计算中...';
+        respawnDiv.appendChild(document.createTextNode('下次刷新: '));
+        respawnDiv.appendChild(timerSpan);
         ui.worldBossRank.appendChild(respawnDiv);
 
         // 倒计时更新函数
         const updateTimer = () => {
           const remaining = Math.max(0, nextRespawn - Date.now());
-          const timerEl = document.getElementById('boss-respawn-timer');
-          if (timerEl && remaining > 0) {
+          if (remaining > 0) {
             const minutes = Math.floor(remaining / 60000);
             const seconds = Math.floor((remaining % 60000) / 1000);
-            timerEl.textContent = `${minutes}分${seconds}秒`;
-          } else if (timerEl) {
-            timerEl.textContent = '即将刷新';
+            timerSpan.textContent = `${minutes}分${seconds}秒`;
+          } else {
+            timerSpan.textContent = '即将刷新';
+            if (bossRespawnTimer) {
+              clearInterval(bossRespawnTimer);
+              bossRespawnTimer = null;
+              bossRespawnTarget = null;
+            }
           }
         };
         updateTimer();
-        const timerInterval = setInterval(updateTimer, 1000);
-        setTimeout(() => clearInterval(timerInterval), remaining + 2000);
+        if (!bossRespawnTimer) {
+          bossRespawnTimer = setInterval(updateTimer, 1000);
+        }
       } else if (!ranks.length) {
+        if (bossRespawnTimer) {
+          clearInterval(bossRespawnTimer);
+          bossRespawnTimer = null;
+          bossRespawnTarget = null;
+        }
         const empty = document.createElement('div');
         empty.textContent = '暂无排行';
         ui.worldBossRank.appendChild(empty);
       } else {
+        if (bossRespawnTimer) {
+          clearInterval(bossRespawnTimer);
+          bossRespawnTimer = null;
+          bossRespawnTarget = null;
+        }
         ranks.forEach((entry, idx) => {
           const row = document.createElement('div');
           row.className = 'rank-item';

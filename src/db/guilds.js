@@ -75,7 +75,10 @@ export async function setSabakOwner(guildId, guildName) {
 }
 
 export async function registerSabak(guildId) {
-  await knex('sabak_registrations').insert({ guild_id: guildId });
+  await knex('sabak_registrations')
+    .insert({ guild_id: guildId, registered_at: knex.fn.now() })
+    .onConflict(['guild_id'])
+    .merge({ registered_at: knex.fn.now() });
 }
 
 export async function listSabakRegistrations() {
@@ -85,12 +88,13 @@ export async function listSabakRegistrations() {
 }
 
 export async function hasSabakRegistrationToday(guildId) {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const start = new Date();
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(start.getTime() + 24 * 60 * 60 * 1000);
   const row = await knex('sabak_registrations')
     .where({ guild_id: guildId })
-    .where('registered_at', '>=', knex.fn.now())
-    .whereRaw('DATE(registered_at) = DATE(?)', [today.toISOString().split('T')[0]])
+    .where('registered_at', '>=', start)
+    .where('registered_at', '<', end)
     .first();
   return !!row;
 }

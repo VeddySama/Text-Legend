@@ -431,7 +431,8 @@ let sabakState = {
   captureGuildName: null,
   captureStart: null,
   siegeEndsAt: null,
-  killStats: {}
+  killStats: {},
+  noRegAnnounceDate: null
 };
 
 function listOnlinePlayers() {
@@ -2778,9 +2779,18 @@ io.on('connection', (socket) => {
     const ownerGuildName = sabakState.ownerGuildName || '无';
     const windowInfo = sabakWindowInfo();
     const registrations = await listSabakRegistrations();
+    const today = new Date();
+    const start = new Date(today);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(start.getTime() + 24 * 60 * 60 * 1000);
+    const todaysRegistrations = (registrations || []).filter((r) => {
+      if (!r.registered_at) return false;
+      const regTime = new Date(r.registered_at).getTime();
+      return regTime >= start.getTime() && regTime < end.getTime();
+    });
 
     // 将守城方行会添加到报名列表中显示
-    let displayRegistrations = registrations || [];
+    let displayRegistrations = todaysRegistrations || [];
     if (sabakState.ownerGuildId && sabakState.ownerGuildName) {
       // 过滤掉守城方行会（如果它在报名列表中）
       displayRegistrations = displayRegistrations.filter(r => String(r.guild_id) !== String(sabakState.ownerGuildId));
@@ -3067,15 +3077,26 @@ function autoResummon(player) {
   const skills = getLearnedSkills(player).filter((skill) => skill.type === 'summon');
   if (!skills.length) return false;
 
+  const autoSkill = player.flags?.autoSkillId;
+  let allowedSummonSkills = [];
+  if (autoSkill === 'all') {
+    allowedSummonSkills = skills;
+  } else if (Array.isArray(autoSkill)) {
+    allowedSummonSkills = skills.filter((skill) => autoSkill.includes(skill.id));
+  } else if (typeof autoSkill === 'string') {
+    allowedSummonSkills = skills.filter((skill) => skill.id === autoSkill);
+  }
+  if (!allowedSummonSkills.length) return false;
+
   let summonSkill = null;
   const lastSkillId = player.flags?.lastSummonSkill;
 
   if (lastSkillId) {
-    summonSkill = skills.find((skill) => skill.id === lastSkillId);
+    summonSkill = allowedSummonSkills.find((skill) => skill.id === lastSkillId);
   }
 
   if (!summonSkill) {
-    summonSkill = skills.sort((a, b) => getSkillLevel(player, b.id) - getSkillLevel(player, a.id))[0];
+    summonSkill = allowedSummonSkills.sort((a, b) => getSkillLevel(player, b.id) - getSkillLevel(player, a.id))[0];
   }
 
   if (!summonSkill || player.mp < summonSkill.mp) return false;
@@ -4237,9 +4258,14 @@ async function sabakTick() {
     });
 
     if (todayRegistrations.length === 0) {
-      // 没有行会报名，直接判定守城方胜利
-      emitAnnouncement('今日无行会报名攻城，守城方自动获胜！', 'announce');
+      // 没有行会报名，直接判定守城方胜利（每日仅公告一次）
+      const todayKey = today.toDateString();
+      if (sabakState.noRegAnnounceDate !== todayKey) {
+        sabakState.noRegAnnounceDate = todayKey;
+        emitAnnouncement('今日无行会报名攻城，守城方自动获胜！', 'announce');
+      }
     } else {
+      sabakState.noRegAnnounceDate = null;
       // 有行会报名，正常开始攻城战
       startSabakSiege(null);
     }

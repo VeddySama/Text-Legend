@@ -2064,7 +2064,7 @@ function renderSabakModal(payload) {
     sabakUi.info.innerHTML = `
       <div class="sabak-info-section">
         <div class="sabak-info-title">攻城时间</div>
-        <div class="sabak-info-content">每日 20:00-20:30</div>
+        <div class="sabak-info-content">${windowInfo || '每日 20:00-20:30'}</div>
       </div>
       <div class="sabak-info-section">
         <div class="sabak-info-title">当前城主</div>
@@ -3306,7 +3306,7 @@ if (sabakUi.confirm) {
   sabakUi.confirm.addEventListener('click', () => {
     if (!socket) return;
     socket.emit('sabak_register_confirm');
-    if (sabakUi.modal) sabakUi.modal.classList.add('hidden');
+    socket.emit('sabak_info');
   });
 }
 if (sabakUi.close) {

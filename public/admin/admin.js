@@ -15,6 +15,8 @@ const backupMsg = document.getElementById('backup-msg');
 const importFileInput = document.getElementById('import-file');
 const themeToggleBtn = document.getElementById('theme-toggle');
 const collapseAllBtn = document.getElementById('collapse-all');
+const lootLogStatus = document.getElementById('loot-log-status');
+const lootLogMsg = document.getElementById('loot-log-msg');
 
 let adminToken = localStorage.getItem('adminToken');
 let currentUsersPage = 1;
@@ -330,6 +332,29 @@ async function toggleVipSelfClaim(enabled) {
   }
 }
 
+async function refreshLootLogStatus() {
+  if (!lootLogStatus) return;
+  try {
+    const data = await api('/admin/loot-log-status', 'GET');
+    lootLogStatus.textContent = data.enabled ? '已开启' : '已关闭';
+    lootLogStatus.style.color = data.enabled ? 'green' : 'red';
+  } catch (err) {
+    lootLogStatus.textContent = '加载失败';
+  }
+}
+
+async function toggleLootLog(enabled) {
+  if (!lootLogMsg) return;
+  lootLogMsg.textContent = '';
+  try {
+    await api('/admin/loot-log-toggle', 'POST', { enabled });
+    lootLogMsg.textContent = enabled ? '掉落日志已开启' : '掉落日志已关闭';
+    await refreshLootLogStatus();
+  } catch (err) {
+    lootLogMsg.textContent = err.message;
+  }
+}
+
 async function downloadBackup() {
   backupMsg.textContent = '';
   try {
@@ -387,6 +412,7 @@ if (adminToken) {
   showDashboard();
   refreshUsers();
   refreshVipSelfClaimStatus();
+  refreshLootLogStatus();
 }
 
 applyTheme(localStorage.getItem('adminTheme') || 'light');
@@ -411,6 +437,8 @@ document.getElementById('vip-create-btn').addEventListener('click', createVipCod
 document.getElementById('vip-list-btn').addEventListener('click', listVipCodes);
 document.getElementById('vip-self-claim-on').addEventListener('click', () => toggleVipSelfClaim(true));
 document.getElementById('vip-self-claim-off').addEventListener('click', () => toggleVipSelfClaim(false));
+document.getElementById('loot-log-on').addEventListener('click', () => toggleLootLog(true));
+document.getElementById('loot-log-off').addEventListener('click', () => toggleLootLog(false));
 document.getElementById('backup-download').addEventListener('click', downloadBackup);
 document.getElementById('import-btn').addEventListener('click', importBackup);
 if (themeToggleBtn) themeToggleBtn.addEventListener('click', toggleTheme);

@@ -2025,11 +2025,11 @@ function retaliateMobAgainstPlayer(mob, player, online) {
     dmg += calcMagicDamageFromValue(magicBase, mobTarget);
     dmg += calcMagicDamageFromValue(spiritBase, mobTarget);
   }
-  
+
   // 特殊BOSS攻击效果
   const isSpecialBoss = Boolean(mobTemplate?.specialBoss);
+  const now = Date.now();
   if (isSpecialBoss) {
-    const now = Date.now();
 
     // 10%几率触发无敌效果（持续10秒）
     if (Math.random() <= 0.1) {
@@ -3846,11 +3846,10 @@ async function combatTick() {
     }
 
 
-    const now = Date.now();
     const summonAlive = Boolean(player.summon && player.summon.hp > 0);
     if (player.flags?.summonAggro && summonAlive) {
       const lastAttackAt = player.flags.lastAttackAt || 0;
-      if (now - lastAttackAt >= 5000) {
+      if (Date.now() - lastAttackAt >= 5000) {
         player.flags.summonAggro = false;
       }
     }
@@ -3909,10 +3908,9 @@ async function combatTick() {
       if (isSpecialBoss && Math.random() <= 0.2) {
         if (!mobTarget.status) mobTarget.status = {};
         if (!mobTarget.status.debuffs) mobTarget.status.debuffs = {};
-        const now = Date.now();
         mobTarget.status.debuffs.armorBreak = {
           defMultiplier: 0.5,
-          expiresAt: now + 3000
+          expiresAt: Date.now() + 3000
         };
         if (mobTarget.userId) {
           mobTarget.send(`${mob.name} 破防攻击！你的防御和魔御降低50%，持续3秒。`);

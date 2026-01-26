@@ -472,14 +472,14 @@ export function summonStats(player, skill, summonLevelOverride = null) {
   if (skill.id === 'summon') {
     const factor = 0.1 + ((level - 1) * (0.9 / 7));
     max_hp = Math.floor((player.max_hp || 0) * factor);
-    atk = Math.floor((player.atk || 0) * factor);
+    atk = Math.floor((player.spirit || 0) * factor);
     def = Math.floor((player.def || 0) * factor);
     mdef = Math.floor((player.mdef || 0) * factor);
   } else {
     const increase = Math.min((level - 1) * 1.25, 10);
     const multiplier = 1 + increase;
     max_hp = Math.floor(base.baseHp * multiplier);
-    atk = Math.floor(base.baseAtk * multiplier);
+    atk = Math.floor((player.spirit || 0) * multiplier);
     def = Math.floor(base.baseDef * multiplier);
     mdef = 0;
   }
@@ -537,12 +537,13 @@ function partyStatus(party) {
   return `队伍成员: ${party.members.join(', ')}`;
 }
 
-export async function handleCommand({ player, players, input, send, partyApi, guildApi, tradeApi, mailApi, consignApi }) {
+export async function handleCommand({ player, players, input, source, send, partyApi, guildApi, tradeApi, mailApi, consignApi }) {
   const [cmdRaw, ...rest] = input.trim().split(' ');
   const cmd = (cmdRaw || '').toLowerCase();
   const args = rest.join(' ').trim();
 
   if (!cmd) return;
+  if (source !== 'ui' && cmd !== 'say') return;
 
   switch (cmd) {
     case 'help': {
@@ -1411,6 +1412,79 @@ export async function handleCommand({ player, players, input, send, partyApi, gu
         send(res.msg);
         return;
       }
+      return;
+    }
+    case 'forge': {
+      if (source !== 'ui') return;
+      if (!args) return;
+      const [mainRaw, secondaryRaw] = args
+        .split('|')
+        .map((part) => part.trim())
+        .filter(Boolean);
+      if (!mainRaw || !secondaryRaw) return;
+      let mainResolved = null;
+      let mainEquippedSlot = null;
+      if (mainRaw.startsWith('equip:')) {
+        const slotName = mainRaw.slice('equip:'.length).trim();
+        const equipped = player.equipment?.[slotName];
+        if (!equipped || !equipped.id) return send('身上没有该主件装备。');
+        const item = ITEM_TEMPLATES[equipped.id];
+        if (!item) return send('主件装备无效。');
+        mainResolved = { slot: equipped, item };
+        mainEquippedSlot = slotName;
+      } else {
+        mainResolved = resolveInventoryItem(player, mainRaw);
+        if (!mainResolved.slot || !mainResolved.item) return send('背包里没有主件装备。');
+      }
+      const secondaryResolved = resolveInventoryItem(player, secondaryRaw);
+      if (!secondaryResolved.slot || !secondaryResolved.item) return send('背包里没有副件装备。');
+      if (mainResolved.slot.id !== secondaryResolved.slot.id) {
+        return send('只能使用两件相同装备合成。');
+      }
+      const item = mainResolved.item;
+      if (!item.slot || !['weapon', 'armor', 'accessory'].includes(item.type)) {
+        return send('只能合成装备。');
+      }
+      const rarity = rarityByPrice(item);
+      if (!['legendary', 'supreme'].includes(rarity)) {
+        return send('仅支持传说及以上装备合成。');
+      }
+      if (mainEquippedSlot) {
+        secondaryResolved.slot.qty -= 1;
+      } else if (mainResolved.slot === secondaryResolved.slot) {
+        if ((mainResolved.slot.qty || 0) < 2) {
+          return send('需要两件相同装备才能合成。');
+        }
+        mainResolved.slot.qty -= 2;
+      } else {
+        mainResolved.slot.qty -= 1;
+        secondaryResolved.slot.qty -= 1;
+      }
+      player.inventory = player.inventory.filter((slot) => slot.qty > 0);
+
+      const effects = { ...(mainResolved.slot.effects || {}) };
+      const mainElement = Number(effects.elementAtk || 0);
+      const secondaryElement = Number((secondaryResolved.slot.effects || {}).elementAtk || 0);
+      effects.elementAtk = Math.max(1, Math.floor(mainElement + secondaryElement + 1));
+      if (mainEquippedSlot) {
+        player.equipment[mainEquippedSlot] = {
+          id: item.id,
+          effects,
+          durability: mainResolved.slot.durability ?? null,
+          max_durability: mainResolved.slot.max_durability ?? null
+        };
+      } else {
+        addItem(
+          player,
+          item.id,
+          1,
+          effects,
+          mainResolved.slot.durability ?? null,
+          mainResolved.slot.max_durability ?? null
+        );
+      }
+      computeDerived(player);
+      send(`合成成功：${item.name} 元素攻击+${effects.elementAtk}。`);
       return;
     }
     case 'repair': {

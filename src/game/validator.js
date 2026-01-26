@@ -72,7 +72,7 @@ export function validatePlayerName(name) {
 /**
  * 验证effects对象（只允许特定的效果）
  */
-const ALLOWED_EFFECTS = ['combo', 'fury', 'unbreakable', 'defense', 'dodge', 'poison', 'healblock'];
+const ALLOWED_EFFECTS = ['combo', 'fury', 'unbreakable', 'defense', 'dodge', 'poison', 'healblock', 'elementAtk'];
 
 export function validateEffects(effects) {
   if (effects === null || effects === undefined) {
@@ -83,6 +83,13 @@ export function validateEffects(effects) {
   }
   const normalized = {};
   for (const key of ALLOWED_EFFECTS) {
+    if (key === 'elementAtk') {
+      const value = Number(effects[key] || 0);
+      if (value > 0) {
+        normalized[key] = Math.max(1, Math.floor(value));
+      }
+      continue;
+    }
     if (effects[key]) {
       normalized[key] = true;
     }

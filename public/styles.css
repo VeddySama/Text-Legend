@@ -202,7 +202,18 @@ body.dark .modal-card .modal-title {
   color: #e8e0d4;
 }
 
-body.dark #prompt-input {
+body.dark #prompt-input,
+body.dark #prompt-input-secondary {
+  background: #2a2420;
+  border-color: #4a3a30;
+  color: var(--ink);
+}
+
+body.dark .prompt-label {
+  color: #b8a898;
+}
+
+body.dark .forge-item {
   background: #2a2420;
   border-color: #4a3a30;
   color: var(--ink);
@@ -1359,6 +1370,17 @@ button:hover {
   font-size: 0.9rem;
   color: #5b3a1c;
   white-space: pre-wrap;
+}
+
+.prompt-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.prompt-label {
+  font-size: 0.85rem;
+  color: #6b4b2a;
 }
 
 .modal-actions {
@@ -2711,6 +2733,37 @@ button:hover {
 
 .repair-item:hover {
   filter: brightness(1.03);
+}
+
+.forge-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.forge-item {
+  border-radius: 12px;
+  border: 1px solid rgba(118, 70, 22, 0.25);
+  background: #f7e2c6;
+  padding: 8px 10px;
+  text-align: center;
+  cursor: pointer;
+  font-size: 0.85rem;
+  line-height: 1.3;
+}
+
+.forge-item:hover {
+  filter: brightness(1.03);
+}
+
+.forge-item.selected {
+  box-shadow: 0 0 0 2px rgba(199, 122, 58, 0.6);
+}
+
+.forge-selection {
+  display: grid;
+  gap: 4px;
 }
 
 .bag-list {

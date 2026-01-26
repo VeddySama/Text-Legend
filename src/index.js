@@ -500,6 +500,7 @@ const RARITY_BOSS = {
   common: 0.35
 };
 const RARITY_LABELS = {
+  supreme: '至尊',
   legendary: '传说',
   epic: '史诗',
   rare: '稀有',
@@ -635,12 +636,14 @@ function formatItemLabel(itemId, effects = null) {
   if (effects.dodge) tags.push('闪避');
   if (effects.poison) tags.push('毒');
   if (effects.healblock) tags.push('禁疗');
+  if (Number(effects.elementAtk || 0) > 0) tags.push(`元素+${Math.floor(Number(effects.elementAtk))}`);
   return tags.length ? `${item.name}·${tags.join('·')}` : item.name;
 }
 
 function formatLegendaryAnnouncement(text, rarity) {
-  if (rarity !== 'legendary') return text;
-  return `传说掉落：${text}`;
+  if (rarity === 'supreme') return `至尊掉落：${text}`;
+  if (rarity === 'legendary') return `传说掉落：${text}`;
+  return text;
 }
 
 function rollEquipmentEffects(itemId) {
@@ -934,6 +937,9 @@ function normalizeEffects(effects) {
   if (effects.dodge) normalized.dodge = true;
   if (effects.poison) normalized.poison = true;
   if (effects.healblock) normalized.healblock = true;
+  if (Number(effects.elementAtk || 0) > 0) {
+    normalized.elementAtk = Math.max(1, Math.floor(Number(effects.elementAtk)));
+  }
   return Object.keys(normalized).length ? normalized : null;
 }
 
@@ -2530,6 +2536,26 @@ function calcMagicDamageFromValue(value, target) {
   return Math.max(1, dmg);
 }
 
+function calcTaoistDamageFromValue(value, target) {
+  const base = Math.max(0, value || 0);
+  let defBonus = 0;
+  const defBuff = target.status?.buffs?.defBuff;
+  if (defBuff) {
+    if (defBuff.expiresAt && defBuff.expiresAt < Date.now()) {
+      delete target.status.buffs.defBuff;
+    } else {
+      defBonus = defBuff.defBonus || 0;
+    }
+  }
+  const defMultiplier = getDefenseMultiplier(target);
+  const baseDef = (target.def || 0) + defBonus;
+  const def = Math.floor(baseDef * defMultiplier);
+  const mdefMultiplier = getMagicDefenseMultiplier(target);
+  const mdef = Math.floor((target.mdef || 0) * mdefMultiplier);
+  const dmg = Math.floor((base + randInt(0, base / 2)) - def * 0.3 - mdef * 0.3);
+  return Math.max(1, dmg);
+}
+
 function calcPoisonTickDamage(target) {
   const maxHp = Math.max(1, target.max_hp || 1);
   const total = Math.max(1, Math.floor(maxHp * 0.4));  // 提升到40%
@@ -2779,6 +2805,7 @@ io.on('connection', (socket) => {
       player,
       players: listOnlinePlayers(),
       input: payload.text || '',
+      source: payload.source || '',
       send: (msg) => sendTo(player, msg),
       partyApi: {
         parties,
@@ -3437,6 +3464,7 @@ function processMobDeath(player, mob, online) {
 
     const dropTargets = [];
     let legendaryDropGiven = false;
+    let supremeDropGiven = false;
     if (isSpecialBoss) {
       const topEntries = entries.slice(0, 10);
       const totalDamage = entries.reduce((sum, [, dmg]) => sum + dmg, 0) || 1;
@@ -3475,7 +3503,7 @@ function processMobDeath(player, mob, online) {
           const forcedItem = ITEM_TEMPLATES[forcedId];
           if (forcedItem) {
             const forcedRarity = rarityByPrice(forcedItem);
-            if (['epic', 'legendary'].includes(forcedRarity)) {
+            if (['epic', 'legendary', 'supreme'].includes(forcedRarity)) {
               emitAnnouncement(`${topPlayer.name} 获得${bossLabel}首位奖励 ${formatItemLabel(forcedId, forcedEffects)}！`, forcedRarity);
             }
             if (isEquipmentItem(forcedItem) && hasSpecialEffects(forcedEffects)) {
@@ -3496,7 +3524,7 @@ function processMobDeath(player, mob, online) {
           if (!item) return;
           logLoot(`[loot][party] ${target.name} <- ${id} (${template.id})`);
           const rarity = rarityByPrice(item);
-          if (['epic', 'legendary'].includes(rarity)) {
+          if (['epic', 'legendary', 'supreme'].includes(rarity)) {
             const text = `${target.name} 击败 ${template.name} 获得${RARITY_LABELS[rarity] || '稀有'}装备 ${formatItemLabel(id, effects)}！`;
             emitAnnouncement(formatLegendaryAnnouncement(text, rarity), rarity);
           }
@@ -3518,12 +3546,16 @@ function processMobDeath(player, mob, online) {
           const item = ITEM_TEMPLATES[entry.id];
           if (item) {
             const rarity = rarityByPrice(item);
-            if (rarity === 'legendary' && rank > 3) {
+            if ((rarity === 'legendary' || rarity === 'supreme') && rank > 3) {
               logLoot(`[loot][special][skip] ${owner.name} ${entry.id} (rank:${rank})`);
               return;
             }
             if (rarity === 'legendary' && legendaryDropGiven) {
               logLoot(`[loot][special][skip] ${owner.name} ${entry.id} (legendary given)`);
+              return;
+            }
+            if (rarity === 'supreme' && supremeDropGiven) {
+              logLoot(`[loot][special][skip] ${owner.name} ${entry.id} (supreme given)`);
               return;
             }
           }
@@ -3536,11 +3568,13 @@ function processMobDeath(player, mob, online) {
             const rarity = rarityByPrice(item);
             if (rarity === 'legendary') {
               legendaryDropGiven = true;
+            } else if (rarity === 'supreme') {
+              supremeDropGiven = true;
             }
           }
           if (!item) return;
           const rarity = rarityByPrice(item);
-          if (['epic', 'legendary'].includes(rarity)) {
+          if (['epic', 'legendary', 'supreme'].includes(rarity)) {
             const text = `${owner.name} 击败 ${template.name} 获得${RARITY_LABELS[rarity] || '稀有'}装备 ${formatItemLabel(entry.id, entry.effects)}！`;
             emitAnnouncement(formatLegendaryAnnouncement(text, rarity), rarity);
           }
@@ -3564,7 +3598,7 @@ function processMobDeath(player, mob, online) {
           const item = ITEM_TEMPLATES[entry.id];
           if (!item) return;
           const rarity = rarityByPrice(item);
-          if (['epic', 'legendary'].includes(rarity)) {
+          if (['epic', 'legendary', 'supreme'].includes(rarity)) {
             const text = `${owner.name} 击败 ${template.name} 获得${RARITY_LABELS[rarity] || '稀有'}装备 ${formatItemLabel(entry.id, entry.effects)}！`;
             emitAnnouncement(formatLegendaryAnnouncement(text, rarity), rarity);
           }
@@ -3816,6 +3850,10 @@ async function combatTick() {
         dmg = Math.floor(calcDamage(player, target, 1) * crit);
       }
 
+      const elementAtk = Math.max(0, Math.floor(player.elementAtk || 0));
+      if (elementAtk > 0) {
+        dmg += elementAtk * 10;
+      }
       // 检查攻击者的弱化效果（来自破防戒指）
       if (player.status?.debuffs?.weak) {
         const weak = player.status.debuffs.weak;
@@ -4058,7 +4096,11 @@ async function combatTick() {
           const mdefMultiplier = getMagicDefenseMultiplier(target);
           const mdef = Math.floor((target.mdef || 0) * mdefMultiplier);
           const powerStat = skill.id === 'soul' ? (player.spirit || 0) : (player.mag || 0);
-          const aoeDmg = Math.max(1, Math.floor((powerStat + randInt(0, powerStat / 2)) * skillPower - mdef * 0.6));
+          let aoeDmg = Math.max(1, Math.floor((powerStat + randInt(0, powerStat / 2)) * skillPower - mdef * 0.6));
+          const elementAtk = Math.max(0, Math.floor(player.elementAtk || 0));
+          if (elementAtk > 0) {
+            aoeDmg += elementAtk * 10;
+          }
           const result = applyDamageToMob(target, aoeDmg, player.name);
           if (result?.damageTaken) {
             player.send(`你对 ${target.name} 造成 ${aoeDmg} 点伤害。`);
@@ -4083,6 +4125,10 @@ async function combatTick() {
         }
         sendRoomState(player.position.zone, player.position.room);
       } else {
+        const elementAtk = Math.max(0, Math.floor(player.elementAtk || 0));
+        if (elementAtk > 0) {
+          dmg += elementAtk * 10;
+        }
         const result = applyDamageToMob(mob, dmg, player.name);
         if (result?.damageTaken) {
           player.send(`你对 ${mob.name} 造成 ${dmg} 点伤害。`);
@@ -4152,7 +4198,11 @@ async function combatTick() {
         mobs.filter((m) => m.id !== mob.id).forEach((other) => {
           // cleave伤害基于玩家攻击力的30%，而不是主目标受伤的30%
           const cleaveBaseDmg = Math.floor(player.atk * 0.3 * skillPower);
-          const cleaveDmg = Math.max(1, Math.floor(calcDamage(player, other, 0.3 * skillPower)));
+          let cleaveDmg = Math.max(1, Math.floor(calcDamage(player, other, 0.3 * skillPower)));
+          const elementAtk = Math.max(0, Math.floor(player.elementAtk || 0));
+          if (elementAtk > 0) {
+            cleaveDmg += elementAtk * 10;
+          }
           const cleaveResult = applyDamageToMob(other, cleaveDmg, player.name);
           if (cleaveResult?.damageTaken) {
             player.send(`你对 ${other.name} 造成 ${cleaveDmg} 点伤害。`);
@@ -4195,7 +4245,10 @@ async function combatTick() {
       const summon = player.summon;
       const hitChance = calcHitChance(summon, mob);
       if (Math.random() <= hitChance) {
-        const dmg = calcDamage(summon, mob, 1);
+        const useTaoist = summon.id === 'skeleton' || summon.id === 'summon';
+        const dmg = useTaoist
+          ? calcTaoistDamageFromValue(Number(summon.spirit ?? summon.atk ?? 0), mob)
+          : calcDamage(summon, mob, 1);
         const summonResult = applyDamageToMob(mob, dmg, player.name);
         if (summonResult?.damageTaken) {
           player.send(`${summon.name} 对 ${mob.name} 造成 ${dmg} 点伤害。`);

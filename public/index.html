@@ -200,7 +200,14 @@
     <div class="modal-card">
       <div class="modal-title" id="prompt-title">&#x8F93;&#x5165;</div>
       <div class="modal-text" id="prompt-text"></div>
-      <input id="prompt-input" type="text" placeholder="">
+      <div class="prompt-field">
+        <label id="prompt-label" class="prompt-label hidden" for="prompt-input"></label>
+        <input id="prompt-input" type="text" placeholder="">
+      </div>
+      <div class="prompt-field hidden" id="prompt-secondary-row">
+        <label id="prompt-label-secondary" class="prompt-label" for="prompt-input-secondary"></label>
+        <input id="prompt-input-secondary" type="text" placeholder="">
+      </div>
       <div class="modal-actions">
         <button id="prompt-extra" class="hidden">退出组队</button>
         <button id="prompt-cancel">&#x53D6;&#x6D88;</button>
@@ -235,6 +242,24 @@
       <div class="modal-actions">
         <button id="repair-all">&#x5168;&#x90E8;&#x4FEE;&#x7406;</button>
         <button id="repair-close">&#x5173;&#x95ED;</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="forge-modal" class="modal hidden">
+    <div class="modal-card">
+      <div class="modal-title">&#x88C5;&#x5907;&#x5408;&#x6210;</div>
+      <div class="modal-list-wrapper">
+        <div class="modal-text">&#x9009;&#x62E9;&#x4E3B;&#x4EF6;&#xFF08;&#x5DF2;&#x7A7F;&#x6234;&#x4F20;&#x8BF4;&#x53CA;&#x4EE5;&#x4E0A;&#xFF09;</div>
+        <div id="forge-main-list" class="forge-list"></div>
+        <div class="forge-selection">
+          <div id="forge-main-selected" class="modal-text">&#x4E3B;&#x4EF6;: &#x672A;&#x9009;&#x62E9;</div>
+          <div id="forge-secondary-selected" class="modal-text">&#x526F;&#x4EF6;: &#x7B49;&#x5F85;&#x5339;&#x914D;</div>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button id="forge-confirm" disabled>&#x5408;&#x6210;</button>
+        <button id="forge-close">&#x5173;&#x95ED;</button>
       </div>
     </div>
   </div>

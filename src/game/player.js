@@ -23,6 +23,9 @@ function normalizeEffects(effects) {
   if (effects.dodge) normalized.dodge = true;
   if (effects.poison) normalized.poison = true;
   if (effects.healblock) normalized.healblock = true;
+  if (Number(effects.elementAtk || 0) > 0) {
+    normalized.elementAtk = Math.max(1, Math.floor(Number(effects.elementAtk)));
+  }
   return Object.keys(normalized).length ? normalized : null;
 }
 
@@ -36,6 +39,7 @@ function effectsKey(effects) {
   if (effects.dodge) parts.push('dodge');
   if (effects.poison) parts.push('poison');
   if (effects.healblock) parts.push('healblock');
+  if (Number(effects.elementAtk || 0) > 0) parts.push(`elementAtk:${Math.floor(Number(effects.elementAtk))}`);
   return parts.join('+');
 }
 
@@ -294,6 +298,7 @@ export function computeDerived(player) {
   const stats = { ...base };
   let mdefBonus = 0;
   let evadeChance = 0;
+  let elementAtk = 0;
   for (const entry of bonus) {
     const item = entry.item;
     const setBonus = activeSetIds.has(item.id) ? (activeSetBonusRates.get(item.id) || SET_BONUS_RATE) : 1;
@@ -314,6 +319,9 @@ export function computeDerived(player) {
     }
     if (entry.effects?.dodge) {
       evadeChance = 0.2;
+    }
+    if (entry.effects?.elementAtk) {
+      elementAtk += Math.max(0, Math.floor(entry.effects.elementAtk));
     }
     stats.str += atk ? Math.floor(atk / 2) : 0;
     stats.dex += dex || 0;
@@ -377,6 +385,7 @@ export function computeDerived(player) {
   player.mag = stats.int * 1.4 + stats.spirit * 0.6 + trainingBonus.mag + trainingFruitBonus.mag + bonusMag;
   player.spirit = stats.spirit + bonusSpirit;
   player.mdef = stats.spirit * 1.1 + level * 0.8 + trainingBonus.mdef + trainingFruitBonus.mdef + mdefBonus + bonusMdef;
+  player.elementAtk = elementAtk;
   player.evadeChance = evadeChance + (player.dex || 0) * 0.001; // 1点敏捷增加0.001闪避
 
   player.hp = clamp(player.hp, 1, player.max_hp);

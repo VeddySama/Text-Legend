@@ -195,7 +195,11 @@ const promptUi = {
   modal: document.getElementById('prompt-modal'),
   title: document.getElementById('prompt-title'),
   text: document.getElementById('prompt-text'),
+  label: document.getElementById('prompt-label'),
   input: document.getElementById('prompt-input'),
+  secondaryRow: document.getElementById('prompt-secondary-row'),
+  labelSecondary: document.getElementById('prompt-label-secondary'),
+  inputSecondary: document.getElementById('prompt-input-secondary'),
   ok: document.getElementById('prompt-ok'),
   cancel: document.getElementById('prompt-cancel'),
   extra: document.getElementById('prompt-extra')
@@ -212,6 +216,14 @@ const repairUi = {
   list: document.getElementById('repair-list'),
   all: document.getElementById('repair-all'),
   close: document.getElementById('repair-close')
+};
+const forgeUi = {
+  modal: document.getElementById('forge-modal'),
+  list: document.getElementById('forge-main-list'),
+  main: document.getElementById('forge-main-selected'),
+  secondary: document.getElementById('forge-secondary-selected'),
+  confirm: document.getElementById('forge-confirm'),
+  close: document.getElementById('forge-close')
 };
 const consignUi = {
   modal: document.getElementById('consign-modal'),
@@ -834,6 +846,17 @@ function promptModal({ title, text, placeholder, value, extra, allowEmpty, type 
       promptUi.input.removeEventListener('keydown', onKey);
       promptUi.modal.classList.add('hidden');
       promptUi.input.type = prevType || 'text';
+      if (promptUi.label) {
+        promptUi.label.classList.add('hidden');
+        promptUi.label.textContent = '';
+      }
+      if (promptUi.secondaryRow) {
+        promptUi.secondaryRow.classList.add('hidden');
+      }
+      if (promptUi.inputSecondary) {
+        promptUi.inputSecondary.value = '';
+        promptUi.inputSecondary.placeholder = '';
+      }
       if (promptUi.extra) {
         promptUi.extra.removeEventListener('click', onExtra);
         promptUi.extra.classList.add('hidden');
@@ -842,6 +865,18 @@ function promptModal({ title, text, placeholder, value, extra, allowEmpty, type 
 
     promptUi.title.textContent = title || '输入';
     promptUi.text.textContent = text || '';
+    if (promptUi.label) {
+      promptUi.label.classList.add('hidden');
+      promptUi.label.textContent = '';
+    }
+    if (promptUi.secondaryRow) {
+      promptUi.secondaryRow.classList.add('hidden');
+    }
+    if (promptUi.inputSecondary) {
+      promptUi.inputSecondary.value = '';
+      promptUi.inputSecondary.placeholder = '';
+    }
+    promptUi.input.classList.remove('hidden');
     promptUi.input.placeholder = placeholder || '';
     promptUi.input.value = value || '';
     promptUi.input.type = type || 'text';
@@ -858,6 +893,93 @@ function promptModal({ title, text, placeholder, value, extra, allowEmpty, type 
     promptUi.ok.addEventListener('click', onOk);
     promptUi.cancel.addEventListener('click', onCancel);
     promptUi.input.addEventListener('keydown', onKey);
+    promptUi.modal.classList.remove('hidden');
+    setTimeout(() => promptUi.input.focus(), 0);
+  });
+}
+
+function promptDualModal({
+  title,
+  text,
+  labelMain,
+  labelSecondary,
+  placeholderMain,
+  placeholderSecondary,
+  valueMain,
+  valueSecondary,
+  allowEmpty
+}) {
+  if (!promptUi.modal || !promptUi.input || !promptUi.inputSecondary) return Promise.resolve(null);
+  return new Promise((resolve) => {
+    const prevType = promptUi.input.type;
+    const onCancel = () => {
+      cleanup();
+      resolve(null);
+    };
+    const onOk = () => {
+      const main = promptUi.input.value.trim();
+      const secondary = promptUi.inputSecondary.value.trim();
+      cleanup();
+      if (main && secondary) return resolve({ main, secondary });
+      resolve(allowEmpty ? { main, secondary } : null);
+    };
+    const onKey = (e) => {
+      if (e.key === 'Enter') onOk();
+      if (e.key === 'Escape') onCancel();
+    };
+    const cleanup = () => {
+      promptUi.ok.removeEventListener('click', onOk);
+      promptUi.cancel.removeEventListener('click', onCancel);
+      promptUi.input.removeEventListener('keydown', onKey);
+      promptUi.inputSecondary.removeEventListener('keydown', onKey);
+      promptUi.modal.classList.add('hidden');
+      promptUi.input.type = prevType || 'text';
+      if (promptUi.label) {
+        promptUi.label.classList.add('hidden');
+        promptUi.label.textContent = '';
+      }
+      if (promptUi.secondaryRow) {
+        promptUi.secondaryRow.classList.add('hidden');
+      }
+      if (promptUi.labelSecondary) {
+        promptUi.labelSecondary.textContent = '';
+      }
+      if (promptUi.inputSecondary) {
+        promptUi.inputSecondary.value = '';
+        promptUi.inputSecondary.placeholder = '';
+      }
+      if (promptUi.extra) {
+        promptUi.extra.classList.add('hidden');
+        promptUi.extra.textContent = '';
+      }
+    };
+
+    promptUi.title.textContent = title || '输入';
+    promptUi.text.textContent = text || '';
+    if (promptUi.label) {
+      promptUi.label.textContent = labelMain || '主件';
+      promptUi.label.classList.remove('hidden');
+    }
+    if (promptUi.secondaryRow) {
+      promptUi.secondaryRow.classList.remove('hidden');
+    }
+    if (promptUi.labelSecondary) {
+      promptUi.labelSecondary.textContent = labelSecondary || '副件';
+    }
+    if (promptUi.extra) {
+      promptUi.extra.classList.add('hidden');
+      promptUi.extra.textContent = '';
+    }
+    promptUi.input.classList.remove('hidden');
+    promptUi.input.placeholder = placeholderMain || '';
+    promptUi.input.value = valueMain || '';
+    promptUi.input.type = 'text';
+    promptUi.inputSecondary.placeholder = placeholderSecondary || '';
+    promptUi.inputSecondary.value = valueSecondary || '';
+    promptUi.ok.addEventListener('click', onOk);
+    promptUi.cancel.addEventListener('click', onCancel);
+    promptUi.input.addEventListener('keydown', onKey);
+    promptUi.inputSecondary.addEventListener('keydown', onKey);
     promptUi.modal.classList.remove('hidden');
     setTimeout(() => promptUi.input.focus(), 0);
   });
@@ -884,6 +1006,17 @@ function confirmModal({ title, text }) {
       promptUi.modal.removeEventListener('keydown', onKey);
       promptUi.modal.classList.add('hidden');
       promptUi.input.classList.remove('hidden');
+      if (promptUi.label) {
+        promptUi.label.classList.add('hidden');
+        promptUi.label.textContent = '';
+      }
+      if (promptUi.secondaryRow) {
+        promptUi.secondaryRow.classList.add('hidden');
+      }
+      if (promptUi.inputSecondary) {
+        promptUi.inputSecondary.value = '';
+        promptUi.inputSecondary.placeholder = '';
+      }
       if (promptUi.extra) {
         promptUi.extra.classList.add('hidden');
         promptUi.extra.textContent = '';
@@ -893,6 +1026,13 @@ function confirmModal({ title, text }) {
     promptUi.title.textContent = title || '确认';
     promptUi.text.textContent = text || '';
     promptUi.input.classList.add('hidden');
+    if (promptUi.label) {
+      promptUi.label.classList.add('hidden');
+      promptUi.label.textContent = '';
+    }
+    if (promptUi.secondaryRow) {
+      promptUi.secondaryRow.classList.add('hidden');
+    }
     if (promptUi.extra) {
       promptUi.extra.classList.add('hidden');
       promptUi.extra.textContent = '';
@@ -1214,6 +1354,77 @@ function showRepairModal() {
   hideItemTooltip();
   renderRepairList(lastState ? lastState.equipment : []);
   repairUi.modal.classList.remove('hidden');
+}
+
+let forgeSelection = null;
+
+function findForgeMatch(equippedEntry, items) {
+  if (!equippedEntry || !equippedEntry.item) return null;
+  const itemId = equippedEntry.item.id;
+  const matches = (items || []).filter((item) =>
+    item.id === itemId &&
+    ['legendary', 'supreme'].includes(item.rarity) &&
+    (item.qty || 0) > 0
+  );
+  if (!matches.length) return null;
+  const secondary = matches
+    .slice()
+    .sort((a, b) => (b.effects?.elementAtk || 0) - (a.effects?.elementAtk || 0))[0];
+  return {
+    main: equippedEntry.item,
+    secondary,
+    mainSlot: equippedEntry.slot,
+    secondaryKey: secondary.key
+  };
+}
+
+function renderForgeModal() {
+  if (!forgeUi.list || !forgeUi.main || !forgeUi.secondary || !forgeUi.confirm) return;
+  const equipped = (lastState?.equipment || [])
+    .filter((entry) => entry.item && ['legendary', 'supreme'].includes(entry.item.rarity));
+  forgeUi.list.innerHTML = '';
+  forgeSelection = null;
+  forgeUi.main.textContent = '主件: 未选择';
+  forgeUi.secondary.textContent = '副件: 等待匹配';
+  forgeUi.confirm.disabled = true;
+  if (!equipped.length) {
+    const empty = document.createElement('div');
+    empty.textContent = '暂无已穿戴的传说及以上装备';
+    forgeUi.list.appendChild(empty);
+    return;
+  }
+  equipped.forEach((entry) => {
+    const item = entry.item;
+    const btn = document.createElement('div');
+    btn.className = 'forge-item';
+    btn.textContent = formatItemName(item);
+    btn.addEventListener('click', () => {
+      Array.from(forgeUi.list.querySelectorAll('.forge-item')).forEach((node) =>
+        node.classList.remove('selected')
+      );
+      btn.classList.add('selected');
+      const match = findForgeMatch(entry, lastState?.items || []);
+      if (!match) {
+        forgeSelection = null;
+        forgeUi.main.textContent = `主件: ${formatItemName(item)}`;
+        forgeUi.secondary.textContent = '副件: 背包没有同名传说及以上装备';
+        forgeUi.confirm.disabled = true;
+        return;
+      }
+      forgeSelection = match;
+      forgeUi.main.textContent = `主件: ${formatItemName(match.main)}`;
+      forgeUi.secondary.textContent = `副件: ${formatItemName(match.secondary)}`;
+      forgeUi.confirm.disabled = false;
+    });
+    forgeUi.list.appendChild(btn);
+  });
+}
+
+function showForgeModal() {
+  if (!forgeUi.modal) return;
+  hideItemTooltip();
+  renderForgeModal();
+  forgeUi.modal.classList.remove('hidden');
 }
 
 function showAfkModal(skills, activeIds) {
@@ -1981,6 +2192,9 @@ function formatItemTooltip(item) {
   if (item.effects && item.effects.healblock) {
     lines.push('\u7279\u6548: \u7981\u7597(20%\u6982\u7387\u51cf\u5c11\u76ee\u6807\u56de\u884090%\uff0c\u6301\u7eed5\u79d2)');
   }
+  if (item.effects && item.effects.elementAtk) {
+    lines.push(`\u7279\u6548: \u5143\u7d20\u653b\u51fb+${Math.floor(item.effects.elementAtk)}(\u65e0\u89c6\u9632\u5fa1/\u9b54\u5fa1)`);
+  }
   const typeLabel = ITEM_TYPE_LABELS[item.type] || ITEM_TYPE_LABELS.unknown;
   lines.push(`\u7c7b\u578b: ${typeLabel}`);
   if (item.slot) {
@@ -2216,6 +2430,7 @@ function formatItemName(item) {
   if (item.effects && item.effects.dodge) tags.push('\u95ea\u907f');
   if (item.effects && item.effects.poison) tags.push('\u6bd2');
   if (item.effects && item.effects.healblock) tags.push('\u7981\u7597');
+  if (item.effects && item.effects.elementAtk) tags.push(`\u5143\u7d20+${Math.floor(item.effects.elementAtk)}`);
   return tags.length ? `${item.name}\u00b7${tags.join('\u00b7')}` : item.name;
 }
 
@@ -2875,6 +3090,7 @@ function renderState(state) {
     { id: 'mail list', label: '\u90ae\u4ef6' },
     { id: 'shop', label: '\u5546\u5e97' },
     { id: 'repair', label: '\u4FEE\u7406' },
+    { id: 'forge', label: '\u88C5\u5907\u5408\u6210' },
     { id: 'consign', label: '\u5BC4\u552E' },
     { id: 'drops', label: '\u5957\u88c5\u6389\u843d' },
     { id: 'logout', label: '\u9000\u51fa\u6e38\u620f' }
@@ -2947,6 +3163,10 @@ function renderState(state) {
     }
     if (a.id === 'repair') {
       showRepairModal();
+      return;
+    }
+    if (a.id === 'forge') {
+      showForgeModal();
       return;
     }
     if (a.id === 'drops') {
@@ -3137,6 +3357,13 @@ function enterGame(name) {
   setBar(ui.mp, 0, 1);
   setBar(ui.exp, 0, 1);
   socket = io();
+  const rawEmit = socket.emit.bind(socket);
+  socket.emit = (event, payload) => {
+    if (event === 'cmd' && payload && typeof payload === 'object' && !payload.source) {
+      payload = { ...payload, source: 'ui' };
+    }
+    return rawEmit(event, payload);
+  };
   socket.on('connect', () => {
     socket.emit('auth', { token, name });
     socket.emit('cmd', { text: 'stats' });
@@ -3351,6 +3578,7 @@ document.addEventListener('click', (evt) => {
   const modals = [
     shopUi?.modal,
     repairUi?.modal,
+    forgeUi?.modal,
     consignUi?.modal,
     bagUi?.modal,
     statsUi?.modal,
@@ -3534,6 +3762,22 @@ if (repairUi.close) {
   repairUi.close.addEventListener('click', () => {
     repairUi.modal.classList.add('hidden');
     hideItemTooltip();
+  });
+}
+if (forgeUi.close) {
+  forgeUi.close.addEventListener('click', () => {
+    forgeUi.modal.classList.add('hidden');
+    hideItemTooltip();
+  });
+}
+if (forgeUi.confirm) {
+  forgeUi.confirm.addEventListener('click', () => {
+    if (!socket || !forgeSelection) return;
+    socket.emit('cmd', {
+      text: `forge equip:${forgeSelection.mainSlot} | ${forgeSelection.secondaryKey}`,
+      source: 'ui'
+    });
+    forgeUi.modal.classList.add('hidden');
   });
 }
 if (repairUi.all) {

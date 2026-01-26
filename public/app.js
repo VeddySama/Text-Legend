@@ -510,9 +510,14 @@ function appendLine(payload) {
   // 兼容字符串和对象两种参数
   const text = typeof payload === 'string' ? payload : payload.text;
   if (!text) return;
+  const normalizedPayload = typeof payload === 'string' ? { text: payload } : payload;
 
   // 过滤聊天信息，不显示在实时日志中
   if (isChatLine(text)) {
+    return;
+  }
+  // 公告只在聊天区显示
+  if (isAnnouncement(normalizedPayload)) {
     return;
   }
 
@@ -528,8 +533,6 @@ function appendLine(payload) {
     return;
   }
 
-  // 确保传给 buildLine 的是对象格式
-  const normalizedPayload = typeof payload === 'string' ? { text: payload } : payload;
   const p = buildLine(normalizedPayload);
   log.appendChild(p);
   log.scrollTop = log.scrollHeight;

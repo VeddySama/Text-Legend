@@ -61,7 +61,7 @@
   lianyu: { id: 'lianyu', name: '炼狱', type: 'weapon', slot: 'weapon', atk: 15, price: 16000 },
   juejudao: { id: 'juejudao', name: '裁决之杖', type: 'weapon', slot: 'weapon', atk: 21, price: 52000 },
   nujian: { id: 'nujian', name: '怒斩', type: 'weapon', slot: 'weapon', atk: 19, dex: 4, price: 72000 },
-  wulong: { id: 'wulong', name: '屠龙', type: 'weapon', slot: 'weapon', atk: 31, price: 200000 },
+  wulong: { id: 'wulong', name: '屠龙', type: 'weapon', slot: 'weapon', atk: 31, price: 200000, rarity: 'epic' },
   kaitian: { id: 'kaitian', name: '开天', type: 'weapon', slot: 'weapon', atk: 47, price: 300000, rarity: 'legendary', bossOnly: true },
   sword_rochie: { id: 'sword_rochie', name: '洛奇王者之刃', type: 'weapon', slot: 'weapon', atk: 94, price: 600000, rarity: 'supreme', bossOnly: true },
   staff_rochie: { id: 'staff_rochie', name: '洛奇王者权杖', type: 'weapon', slot: 'weapon', mag: 66, price: 600000, rarity: 'supreme', bossOnly: true },

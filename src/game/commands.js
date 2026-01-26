@@ -12,7 +12,7 @@ import {
   ensurePlayerSkills
 } from './skills.js';
 import { addItem, removeItem, equipItem, unequipItem, bagLimit, gainExp, computeDerived, getDurabilityMax, getRepairCost, getItemKey, sameEffects } from './player.js';
-import { CLASSES, expForLevel, getStartPosition } from './constants.js';
+import { CLASSES, expForLevel, getStartPosition, ROOM_VARIANT_COUNT } from './constants.js';
 import { getRoom, getAliveMobs, spawnMobs } from './state.js';
 import { clamp } from './utils.js';
 import { applyDamage } from './combat.js';
@@ -45,7 +45,7 @@ function selectLeastPopulatedRoom(zoneId, roomId, onlinePlayers, currentPlayer =
   }
 
   // 查找所有带数字后缀的房间变体（1, 2, 3）
-  for (let i = 1; i <= 3; i++) {
+  for (let i = 1; i <= ROOM_VARIANT_COUNT; i++) {
     const candidateRoomId = `${baseRoomId}${i}`;
     if (WORLD[zoneId]?.rooms?.[candidateRoomId]) {
       const playerCount = onlinePlayers.filter(
@@ -596,7 +596,7 @@ export async function handleCommand({ player, players, input, source, send, part
           // 如果有，则根据队伍优先和负载均衡选择合适的房间
           const baseRoomId = roomId.replace(/\d+$/, '');
           const hasRoomVariants = (() => {
-            for (let i = 1; i <= 3; i++) {
+            for (let i = 1; i <= ROOM_VARIANT_COUNT; i++) {
               if (WORLD[zoneId]?.rooms?.[`${baseRoomId}${i}`]) {
                 return true;
               }

@@ -19,6 +19,8 @@ export const CLASSES = {
   }
 };
 
+export const ROOM_VARIANT_COUNT = 5;
+
 const EXP_TABLE = [
   0,
   100, 200, 400, 700, 1100, 1600, 2200, 2900, 3700, 4600,
@@ -46,7 +48,9 @@ export function maxBagSlots(level) {
 }
 
 export function getStartPosition() {
-  const plainsVariants = ['plains', 'plains1', 'plains2', 'plains3'];
+  const plainsVariants = Array.from({ length: ROOM_VARIANT_COUNT + 1 }, (_, i) =>
+    i === 0 ? 'plains' : `plains${i}`
+  );
   const randomPlains = plainsVariants[Math.floor(Math.random() * plainsVariants.length)];
   return {
     zone: 'bq_plains',

@@ -1,4 +1,8 @@
-﻿export const WORLD = {
+import { ROOM_VARIANT_COUNT } from './constants.js';
+
+import { ROOM_VARIANT_COUNT } from './constants.js';
+
+export const WORLD = {
   bq_town: {
     id: 'bq_town',
     name: '比奇城',
@@ -1064,6 +1068,88 @@
     }
   }
 };
+
+function expandRoomVariants(world) {
+  const extraCount = Math.max(0, ROOM_VARIANT_COUNT - 3);
+  if (!extraCount) return;
+  const extraSuffixes = Array.from({ length: extraCount }, (_, idx) => idx + 4);
+  const baseByZone = new Map();
+  Object.entries(world).forEach(([zoneId, zone]) => {
+    if (!zone?.rooms) return;
+    const baseMap = new Map();
+    Object.keys(zone.rooms).forEach((roomId) => {
+      const match = roomId.match(/^(.*?)([1-3])$/);
+      if (!match) return;
+      const baseId = match[1];
+      if (!baseMap.has(baseId)) {
+        baseMap.set(baseId, roomId);
+      }
+    });
+    if (baseMap.size) {
+      baseByZone.set(zoneId, baseMap);
+    }
+  });
+
+  const replaceSuffix = (value, target) => {
+    if (typeof value !== 'string') return value;
+    return value.replace(/([1-3])$/, String(target));
+  };
+
+  baseByZone.forEach((baseMap, zoneId) => {
+    const zone = world[zoneId];
+    baseMap.forEach((templateId, baseId) => {
+      const template = zone.rooms[templateId];
+      if (!template) return;
+      extraSuffixes.forEach((suffix) => {
+        const newRoomId = `${baseId}${suffix}`;
+        if (zone.rooms[newRoomId]) return;
+        const cloned = JSON.parse(JSON.stringify(template));
+        cloned.id = replaceSuffix(cloned.id, suffix);
+        cloned.name = replaceSuffix(cloned.name, suffix);
+        if (cloned.exits && typeof cloned.exits === 'object') {
+          Object.keys(cloned.exits).forEach((dir) => {
+            const dest = cloned.exits[dir];
+            if (typeof dest !== 'string') return;
+            if (dest.includes(':')) {
+              const [destZone, destRoom] = dest.split(':');
+              cloned.exits[dir] = `${destZone}:${replaceSuffix(destRoom, suffix)}`;
+            } else {
+              cloned.exits[dir] = replaceSuffix(dest, suffix);
+            }
+          });
+        }
+        zone.rooms[newRoomId] = cloned;
+      });
+    });
+  });
+
+  Object.values(world).forEach((zone) => {
+    if (!zone?.rooms) return;
+    Object.values(zone.rooms).forEach((room) => {
+      if (!room?.exits) return;
+      const nextExits = { ...room.exits };
+      Object.entries(room.exits).forEach(([dir, dest]) => {
+        const match = dir.match(/^(.*?)([1-3])$/);
+        if (!match) return;
+        const baseDir = match[1];
+        extraSuffixes.forEach((suffix) => {
+          const newDir = `${baseDir}${suffix}`;
+          if (nextExits[newDir]) return;
+          if (typeof dest !== 'string') return;
+          if (dest.includes(':')) {
+            const [destZone, destRoom] = dest.split(':');
+            nextExits[newDir] = `${destZone}:${replaceSuffix(destRoom, suffix)}`;
+          } else {
+            nextExits[newDir] = replaceSuffix(dest, suffix);
+          }
+        });
+      });
+      room.exits = nextExits;
+    });
+  });
+}
+
+expandRoomVariants(WORLD);
 
 export const NPCS = {
   guard: {

@@ -14,7 +14,7 @@ export const SKILLS = {
     explode: { id: 'explode', name: '\u7206\u88c2\u706b\u7130', mp: 14, power: 1.25, type: 'spell' },
     lightning: { id: 'lightning', name: '\u96f7\u7535\u672f', mp: 16, power: 1.45, type: 'spell' },
     flash: { id: 'flash', name: '\u75be\u5149\u7535\u5f71', mp: 18, power: 1.3, type: 'spell' },
-    thunder: { id: 'thunder', name: '\u5730\u72f1\u96f7\u5149', mp: 20, power: 1.15, type: 'aoe' },
+    thunder: { id: 'thunder', name: '\u5730\u72f1\u96f7\u5149', mp: 20, power: 1.0, type: 'aoe' },
     shield: { id: 'shield', name: '\u9b54\u6cd5\u76fe', mp: 22, power: 1.0, type: 'buff_shield' },
     iceblast: { id: 'iceblast', name: '\u51b0\u54c6\u54ee', mp: 24, power: 1.6, type: 'spell' }
   },

@@ -1664,6 +1664,14 @@ function showBagModal() {
         <span class="summon-stat-label">攻击</span>
         <span class="summon-stat-value">${summon.atk || 0}</span>
       </div>
+      <div class="summon-stat">
+        <span class="summon-stat-label">防御</span>
+        <span class="summon-stat-value">${summon.def || 0}</span>
+      </div>
+      <div class="summon-stat">
+        <span class="summon-stat-label">魔御</span>
+        <span class="summon-stat-value">${summon.mdef || 0}</span>
+      </div>
     `;
     container.appendChild(statsDiv);
 
@@ -3286,7 +3294,7 @@ function showObserveModal(data) {
     data.summons.forEach(summon => {
       html += '<div class="observe-summon-item">';
       html += `<span class="observe-summon-name">${summon.name} (Lv ${summon.level})</span>`;
-      html += `<span class="observe-summon-stats">HP: ${summon.hp}/${summon.maxHp}</span>`;
+      html += `<span class="observe-summon-stats">HP: ${summon.hp}/${summon.maxHp} | 攻击: ${summon.atk || 0} | 防御: ${summon.def || 0} | 魔御: ${summon.mdef || 0}</span>`;
       html += '</div>';
     });
     html += '</div>';

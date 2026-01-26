@@ -465,11 +465,24 @@ export function summonStats(player, skill, summonLevelOverride = null) {
   const desiredLevel = summonLevelOverride ?? skillLevel ?? 1;
   const summonLevel = Math.max(1, Math.min(8, Math.floor(desiredLevel)));
   const level = summonLevel;
-  const increase = Math.min((level - 1) * 1.25, 10);
-  const multiplier = 1 + increase;
-  const max_hp = Math.floor(base.baseHp * multiplier);
-  const atk = Math.floor(base.baseAtk * multiplier);
-  const def = Math.floor(base.baseDef * multiplier);
+  let max_hp;
+  let atk;
+  let def;
+  let mdef;
+  if (skill.id === 'summon') {
+    const factor = 0.1 + ((level - 1) * (0.9 / 7));
+    max_hp = Math.floor((player.max_hp || 0) * factor);
+    atk = Math.floor((player.atk || 0) * factor);
+    def = Math.floor((player.def || 0) * factor);
+    mdef = Math.floor((player.mdef || 0) * factor);
+  } else {
+    const increase = Math.min((level - 1) * 1.25, 10);
+    const multiplier = 1 + increase;
+    max_hp = Math.floor(base.baseHp * multiplier);
+    atk = Math.floor(base.baseAtk * multiplier);
+    def = Math.floor(base.baseDef * multiplier);
+    mdef = 0;
+  }
   const dex = 8 + skillLevel;
   return {
     id: skill.id,
@@ -481,6 +494,7 @@ export function summonStats(player, skill, summonLevelOverride = null) {
     max_hp,
     atk,
     def,
+    mdef,
     dex
   };
 }

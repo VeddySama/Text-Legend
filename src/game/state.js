@@ -5,6 +5,7 @@ import { randInt } from './utils.js';
 const ROOM_MOBS = new Map();
 const RESPAWN_CACHE = new Map();
 let respawnStore = null;
+let worldBossKillCount = 0;
 const BOSS_SCALE = { hp: 1.25, atk: 1.42, def: 1.77 };
 const MOB_HP_SCALE = 2;
 const MOB_STAT_SCALE = 1.69;
@@ -40,12 +41,22 @@ function scaledStats(tpl) {
   if (tpl.worldBoss) {
     def = Math.floor(def * 0.7);
   }
-  return {
+  let stats = {
     hp: Math.floor(tpl.hp * MOB_HP_SCALE * BOSS_SCALE.hp * MOB_STAT_SCALE),
     atk: Math.floor(tpl.atk * BOSS_SCALE.atk * MOB_STAT_SCALE),
     def,
     mdef: Math.floor(def * 0.5)
   };
+  if (tpl.worldBoss) {
+    const growth = 1 + Math.floor(worldBossKillCount / 10) * 0.01;
+    stats = {
+      hp: Math.floor(stats.hp * growth),
+      atk: Math.floor(stats.atk * growth),
+      def: Math.floor(stats.def * growth),
+      mdef: Math.floor(stats.mdef * growth)
+    };
+  }
+  return stats;
 }
 
 function roomKey(zoneId, roomId) {
@@ -141,7 +152,7 @@ export function spawnMobs(zoneId, roomId) {
             def: scaled.def,
             mdef: scaled.mdef,
             dex: tpl.dex || 6,
-            status: {},
+            status: { baseStats: { atk: scaled.atk, def: scaled.def, mdef: scaled.mdef, max_hp: scaled.hp } },
             respawnAt: cached.respawnAt,
             justRespawned: false
           };
@@ -171,6 +182,9 @@ export function spawnMobs(zoneId, roomId) {
           respawnAt: null,
           justRespawned: false
         };
+        if (!mob.status.baseStats) {
+          mob.status.baseStats = { atk: scaled.atk, def: scaled.def, mdef: scaled.mdef, max_hp: scaled.hp };
+        }
         mobList.push(mob);
         return;
       } else if (cached && cached.respawnAt <= now) {
@@ -192,7 +206,7 @@ export function spawnMobs(zoneId, roomId) {
         def: scaled.def,
         mdef: scaled.mdef,
         dex: tpl.dex || 6,
-        status: {},
+        status: { baseStats: { atk: scaled.atk, def: scaled.def, mdef: scaled.mdef, max_hp: scaled.hp } },
         respawnAt: null,
         justRespawned: false
       };
@@ -210,7 +224,7 @@ export function spawnMobs(zoneId, roomId) {
       mob.def = scaled.def;
       mob.mdef = scaled.mdef;
       mob.dex = tpl.dex || 6;
-      mob.status = {};
+      mob.status = { baseStats: { atk: scaled.atk, def: scaled.def, mdef: scaled.mdef, max_hp: scaled.hp } };
       mob.respawnAt = null;
       mob.justRespawned = Boolean(tpl.worldBoss || tpl.sabakBoss || tpl.respawnMs);
       RESPAWN_CACHE.delete(respawnKey(zoneId, roomId, index));
@@ -220,6 +234,17 @@ export function spawnMobs(zoneId, roomId) {
     }
   });
   return mobList;
+}
+
+export function incrementWorldBossKills(amount = 1) {
+  const delta = Number(amount) || 0;
+  worldBossKillCount = Math.max(0, worldBossKillCount + delta);
+  return worldBossKillCount;
+}
+
+export function setWorldBossKillCount(count) {
+  worldBossKillCount = Math.max(0, Math.floor(Number(count) || 0));
+  return worldBossKillCount;
 }
 
 export function removeMob(zoneId, roomId, mobId) {

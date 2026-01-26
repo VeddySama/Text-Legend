@@ -41,6 +41,17 @@ export async function getLootLogEnabled() {
   return enabled === 'true' || enabled === '1';
 }
 
+export async function getWorldBossKillCount() {
+  const count = await getSetting('world_boss_kill_count', '0');
+  const parsed = parseInt(count, 10);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+export async function setWorldBossKillCount(count) {
+  const normalized = Math.max(0, Math.floor(Number(count) || 0));
+  await setSetting('world_boss_kill_count', String(normalized));
+}
+
 /**
  * 设置掉落日志开关
  */

@@ -14,7 +14,7 @@ import { addGuildMember, createGuild, getGuildByName, getGuildMember, getSabakOw
 import { createAdminSession, listUsers, verifyAdminSession, deleteUser } from './db/admin.js';
 import { sendMail, listMail, markMailRead } from './db/mail.js';
 import { createVipCodes, listVipCodes, useVipCode } from './db/vip.js';
-import { getVipSelfClaimEnabled, setVipSelfClaimEnabled, getLootLogEnabled, setLootLogEnabled, canUserClaimVip, incrementUserVipClaimCount } from './db/settings.js';
+import { getVipSelfClaimEnabled, setVipSelfClaimEnabled, getLootLogEnabled, setLootLogEnabled, canUserClaimVip, incrementUserVipClaimCount, getWorldBossKillCount, setWorldBossKillCount } from './db/settings.js';
 import { listMobRespawns, upsertMobRespawn, clearMobRespawn, saveMobState } from './db/mobs.js';
 import {
   listConsignments,
@@ -56,7 +56,7 @@ import {
 import { MOB_TEMPLATES } from './game/mobs.js';
 import { ITEM_TEMPLATES } from './game/items.js';
 import { WORLD } from './game/world.js';
-import { getRoomMobs, getAliveMobs, spawnMobs, removeMob, seedRespawnCache, setRespawnStore, getAllAliveMobs } from './game/state.js';
+import { getRoomMobs, getAliveMobs, spawnMobs, removeMob, seedRespawnCache, setRespawnStore, getAllAliveMobs, incrementWorldBossKills, setWorldBossKillCount as setWorldBossKillCountState } from './game/state.js';
 import { calcHitChance, calcDamage, applyDamage, applyPoison, tickStatus, getDefenseMultiplier } from './game/combat.js';
 import { randInt, clamp } from './game/utils.js';
 import { expForLevel } from './game/constants.js';
@@ -1933,7 +1933,8 @@ async function buildState(player) {
           hp: player.summon.hp,
           max_hp: player.summon.max_hp,
           atk: player.summon.atk,
-          def: player.summon.def
+          def: player.summon.def,
+          mdef: player.summon.mdef || 0
         }
       : null,
     equipment,
@@ -3360,6 +3361,12 @@ function processMobDeath(player, mob, online) {
   const isSabakBoss = Boolean(template.sabakBoss);
   const isMolongBoss = template.id === 'molong_boss';
   const isSpecialBoss = isWorldBoss || isSabakBoss || isMolongBoss;
+  if (isWorldBoss) {
+    const nextKills = incrementWorldBossKills(1);
+    void setWorldBossKillCount(nextKills).catch((err) => {
+      console.warn('Failed to persist world boss kill count:', err);
+    });
+  }
   const { rankMap, entries } = isSpecialBoss ? buildDamageRankMap(mob, damageSnapshot) : { rankMap: {}, entries: [] };
   let lootOwner = player;
   if (!party || partyMembersForReward.length === 0) {
@@ -3589,9 +3596,10 @@ function updateSpecialBossStatsBasedOnPlayers() {
       ).length;
 
       const tpl = MOB_TEMPLATES[specialBoss.templateId];
-      const baseAtk = tpl.atk;
-      const baseDef = tpl.def;
-      const baseMdef = tpl.mdef;
+      const baseStats = specialBoss.status?.baseStats;
+      const baseAtk = baseStats?.atk ?? tpl.atk;
+      const baseDef = baseStats?.def ?? tpl.def;
+      const baseMdef = baseStats?.mdef ?? tpl.mdef;
 
       let atkBonus = 0;
       let defBonus = 0;
@@ -4598,6 +4606,8 @@ async function start() {
   }
   await loadSabakState();
   lootLogEnabled = await getLootLogEnabled();
+  const worldBossKillCount = await getWorldBossKillCount();
+  setWorldBossKillCountState(worldBossKillCount);
   checkMobRespawn();
   setInterval(() => checkMobRespawn(), 5000);
   setInterval(() => sabakTick().catch(() => {}), 5000);

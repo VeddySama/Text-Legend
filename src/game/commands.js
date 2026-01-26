@@ -1101,11 +1101,11 @@ export async function handleCommand({ player, players, input, source, send, part
       if (skill.type === 'buff_shield') {
         if (player.mp < skill.mp) return send('魔法不足。');
         player.mp -= skill.mp;
-        const duration = 120 + skillLevel * 60;
+        const duration = 60;
         applyBuff(player, {
           key: 'magicShield',
           expiresAt: Date.now() + duration * 1000,
-          ratio: 0.6 + (skillLevel - 1) * 0.1
+          ratio: 0.2
         });
         send(`你施放了 ${skill.name}，护盾持续 ${duration} 秒。`);
         notifyMastery(player, skill);

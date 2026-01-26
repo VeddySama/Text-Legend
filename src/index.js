@@ -1582,7 +1582,7 @@ function applyDamageToPlayer(target, dmg) {
     if (buff.expiresAt && buff.expiresAt < Date.now()) {
       delete target.status.buffs.magicShield;
     } else if (target.mp > 0) {
-      const ratio = Math.max(0, Math.min(0.9, buff.ratio || 0.6));
+      const ratio = 0.2;
       const convert = Math.min(Math.floor(dmg * ratio), target.mp);
       target.mp = Math.max(0, target.mp - convert);
       dmg -= convert;

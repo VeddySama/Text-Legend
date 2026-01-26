@@ -75,6 +75,45 @@ app.use(express.static(path.join(__dirname, '..', 'public')));
 const CAPTCHA_TTL_MS = 5 * 60 * 1000;
 const captchaStore = new Map();
 
+function getSummons(player) {
+  if (!player) return [];
+  if (Array.isArray(player.summons)) return player.summons.filter(Boolean);
+  if (player.summon) return [player.summon];
+  return [];
+}
+
+function setSummons(player, summons) {
+  if (!player) return;
+  const next = Array.isArray(summons) ? summons.filter(Boolean) : [];
+  player.summons = next;
+  player.summon = next[0] || null;
+}
+
+function getAliveSummons(player) {
+  return getSummons(player).filter((summon) => summon.hp > 0);
+}
+
+function getPrimarySummon(player) {
+  return getAliveSummons(player)[0] || null;
+}
+
+function addOrReplaceSummon(player, summon) {
+  if (!player || !summon) return;
+  const summons = getSummons(player).filter((entry) => entry.id !== summon.id);
+  summons.unshift(summon);
+  setSummons(player, summons);
+}
+
+function removeSummonById(player, summonId) {
+  if (!player || !summonId) return;
+  const summons = getSummons(player).filter((entry) => entry.id !== summonId);
+  setSummons(player, summons);
+}
+
+function hasAliveSummon(player, summonId) {
+  return getAliveSummons(player).some((entry) => entry.id === summonId);
+}
+
 function cleanupCaptchas() {
   const now = Date.now();
   for (const [token, entry] of captchaStore.entries()) {
@@ -1746,6 +1785,20 @@ async function buildState(player) {
     max_hp: m.max_hp,
     mdef: m.mdef || 0
   }));
+  const summonList = getAliveSummons(player);
+  const summonPayloads = summonList.map((summon) => ({
+    id: summon.id,
+    name: summon.name,
+    level: summon.level,
+    levelMax: SUMMON_MAX_LEVEL,
+    exp: summon.exp || 0,
+    exp_next: SUMMON_EXP_PER_LEVEL,
+    hp: summon.hp,
+    max_hp: summon.max_hp,
+    atk: summon.atk,
+    def: summon.def,
+    mdef: summon.mdef || 0
+  }));
 
   // 检查房间是否有BOSS，获取下次刷新时间
   const roomMobs = getRoomMobs(player.position.zone, player.position.room);
@@ -1939,18 +1992,8 @@ async function buildState(player) {
       sabak_bonus: sabakBonus,
       set_bonus: Boolean(player.flags?.setBonusActive)
     },
-    summon: player.summon
-      ? {
-          name: player.summon.name,
-          level: player.summon.level,
-          levelMax: SUMMON_MAX_LEVEL,
-          hp: player.summon.hp,
-          max_hp: player.summon.max_hp,
-          atk: player.summon.atk,
-          def: player.summon.def,
-          mdef: player.summon.mdef || 0
-        }
-      : null,
+    summon: summonPayloads[0] || null,
+    summons: summonPayloads,
     equipment,
     guild: player.guild?.name || null,
     guild_role: player.guild?.role || null,
@@ -2086,27 +2129,39 @@ function recordMobDamage(mob, attackerName, dmg) {
 }
 
 function gainSummonExp(player) {
-  if (!player.summon) return;
-  const skill = getSkill(player.classId, player.summon.id);
-  if (!skill) return;
-  const skillLevel = getSkillLevel(player, skill.id);
-  let summonLevel = player.summon.summonLevel || player.summon.level || skillLevel || 1;
-  let exp = player.summon.exp || 0;
-  exp += 1;
-  let leveled = false;
-  while (summonLevel < SUMMON_MAX_LEVEL && exp >= SUMMON_EXP_PER_LEVEL) {
-    exp -= SUMMON_EXP_PER_LEVEL;
-    summonLevel += 1;
-    leveled = true;
-  }
-  if (leveled) {
-    const ratio = player.summon.max_hp ? player.summon.hp / player.summon.max_hp : 1;
-    const nextSummon = summonStats(player, skill, summonLevel);
-    player.summon = { ...nextSummon, exp };
-    player.summon.hp = clamp(Math.floor(player.summon.max_hp * ratio), 1, player.summon.max_hp);
-    player.send(`${player.summon.name} 升到 ${summonLevel} 级。`);
-  } else {
-    player.summon.exp = exp;
+  const summons = getSummons(player);
+  if (!summons.length) return;
+  let changed = false;
+  const next = summons.map((summon) => {
+    if (!summon || summon.hp <= 0) return summon;
+    const skill = getSkill(player.classId, summon.id);
+    if (!skill) return summon;
+    const skillLevel = getSkillLevel(player, skill.id);
+    let summonLevel = summon.summonLevel || summon.level || skillLevel || 1;
+    let exp = summon.exp || 0;
+    exp += 1;
+    let leveled = false;
+    while (summonLevel < SUMMON_MAX_LEVEL && exp >= SUMMON_EXP_PER_LEVEL) {
+      exp -= SUMMON_EXP_PER_LEVEL;
+      summonLevel += 1;
+      leveled = true;
+    }
+    if (leveled) {
+      const ratio = summon.max_hp ? summon.hp / summon.max_hp : 1;
+      const nextSummon = summonStats(player, skill, summonLevel);
+      const updated = { ...nextSummon, exp };
+      updated.hp = clamp(Math.floor(updated.max_hp * ratio), 1, updated.max_hp);
+      player.send(`${updated.name} 升到 ${summonLevel} 级。`);
+      changed = true;
+      return updated;
+    }
+    if (exp !== summon.exp) {
+      changed = true;
+    }
+    return { ...summon, exp };
+  });
+  if (changed) {
+    setSummons(player, next);
   }
 }
 
@@ -2196,10 +2251,11 @@ function applyDamageToMob(mob, dmg, attackerName) {
 function retaliateMobAgainstPlayer(mob, player, online) {
   if (!mob || mob.hp <= 0) return;
   if (mob.status && mob.status.stunTurns > 0) return;
-  const summonAlive = Boolean(player.summon && player.summon.hp > 0);
+  const primarySummon = getPrimarySummon(player);
+  const summonAlive = Boolean(primarySummon);
   const mobTemplate = MOB_TEMPLATES[mob.templateId];
   const isBossAggro = Boolean(mobTemplate?.worldBoss || mobTemplate?.sabakBoss);
-  let mobTarget = player.flags?.summonAggro || !summonAlive ? player : player.summon;
+  let mobTarget = player.flags?.summonAggro || !summonAlive ? player : primarySummon;
   if (isBossAggro) {
     const targetName = mob.status?.aggroTarget;
     const aggroPlayer = targetName
@@ -2213,7 +2269,7 @@ function retaliateMobAgainstPlayer(mob, player, online) {
     if (aggroPlayer) {
       mobTarget = aggroPlayer;
     } else {
-      mobTarget = summonAlive ? player.summon : player;
+      mobTarget = summonAlive ? primarySummon : player;
     }
   }
   const mobHitChance = calcHitChance(mob, mobTarget);
@@ -2345,26 +2401,30 @@ function retaliateMobAgainstPlayer(mob, player, online) {
         }
         
         // 溅射到召唤物
-        if (splashTarget.summon && splashTarget.summon.hp > 0) {
-          applyDamage(splashTarget.summon, splashDmg);
-          splashTarget.send(`${mob.name} 的攻击溅射到 ${splashTarget.summon.name}，造成 ${splashDmg} 点伤害。`);
-          if (splashTarget.summon.hp <= 0) {
-            splashTarget.send(`${splashTarget.summon.name} 被击败。`);
-            splashTarget.summon = null;
-            autoResummon(splashTarget);
+        const splashSummons = getAliveSummons(splashTarget);
+        splashSummons.forEach((summon) => {
+          applyDamage(summon, splashDmg);
+          splashTarget.send(`${mob.name} 的攻击溅射到 ${summon.name}，造成 ${splashDmg} 点伤害。`);
+          if (summon.hp <= 0) {
+            splashTarget.send(`${summon.name} 被击败。`);
+            removeSummonById(splashTarget, summon.id);
+            autoResummon(splashTarget, summon.id);
           }
-        }
+        });
       });
       
       // 溅射到主目标的召唤物（如果主目标是玩家且有召唤物）
-      if (mobTarget.summon && mobTarget.summon.hp > 0 && mobTarget !== mobTarget.summon) {
-        applyDamage(mobTarget.summon, splashDmg);
-        mobTarget.send(`${mob.name} 的攻击溅射到 ${mobTarget.summon.name}，造成 ${splashDmg} 点伤害。`);
-        if (mobTarget.summon.hp <= 0) {
-          mobTarget.send(`${mobTarget.summon.name} 被击败。`);
-          mobTarget.summon = null;
-          autoResummon(mobTarget);
-        }
+      if (mobTarget && mobTarget.userId) {
+        const targetSummons = getAliveSummons(mobTarget);
+        targetSummons.forEach((summon) => {
+          applyDamage(summon, splashDmg);
+          mobTarget.send(`${mob.name} 的攻击溅射到 ${summon.name}，造成 ${splashDmg} 点伤害。`);
+          if (summon.hp <= 0) {
+            mobTarget.send(`${summon.name} 被击败。`);
+            removeSummonById(mobTarget, summon.id);
+            autoResummon(mobTarget, summon.id);
+          }
+        });
       }
     }
     
@@ -2402,20 +2462,23 @@ function retaliateMobAgainstPlayer(mob, player, online) {
       }
       
       // 溅射到其他玩家的召唤物
-      if (splashTarget.summon && splashTarget.summon.hp > 0) {
-        applyDamage(splashTarget.summon, splashDmg);
-        splashTarget.send(`${mob.name} 的攻击溅射到 ${splashTarget.summon.name}，造成 ${splashDmg} 点伤害。`);
-        if (splashTarget.summon.hp <= 0) {
-          splashTarget.send(`${splashTarget.summon.name} 被击败。`);
-          splashTarget.summon = null;
-          autoResummon(splashTarget);
+      const splashSummons = getAliveSummons(splashTarget);
+      splashSummons.forEach((summon) => {
+        applyDamage(summon, splashDmg);
+        splashTarget.send(`${mob.name} 的攻击溅射到 ${summon.name}，造成 ${splashDmg} 点伤害。`);
+        if (summon.hp <= 0) {
+          splashTarget.send(`${summon.name} 被击败。`);
+          removeSummonById(splashTarget, summon.id);
+          autoResummon(splashTarget, summon.id);
         }
-      }
+      });
     });
   }
   
   if (mobTarget.hp <= 0) {
     player.send(`${mobTarget.name} 被击败。`);
+    removeSummonById(player, mobTarget.id);
+    autoResummon(player, mobTarget.id);
   }
 }
 
@@ -2744,19 +2807,25 @@ io.on('connection', (socket) => {
     if (!loaded.flags) loaded.flags = {};
 
     // 自动恢复召唤物
-    if (loaded.flags.savedSummon) {
-      const saved = loaded.flags.savedSummon;
-      const skill = getSkill(loaded.classId, saved.id);
-      if (skill && loaded.mp >= skill.mp) {
-        const skillLevel = getSkillLevel(loaded, skill.id);
-        const summon = summonStats(loaded, skill, skillLevel);
-        loaded.summon = { ...summon, exp: saved.exp || 0 };
-        loaded.summon.hp = Math.min(saved.hp || loaded.summon.max_hp, loaded.summon.max_hp);
-        loaded.mp = clamp(loaded.mp - skill.mp, 0, loaded.max_mp);
-        loaded.send(`${loaded.summon.name} 已重新召唤 (等级 ${loaded.summon.level})。`);
-      }
+    const savedSummons = Array.isArray(loaded.flags.savedSummons)
+      ? loaded.flags.savedSummons
+      : (loaded.flags.savedSummon ? [loaded.flags.savedSummon] : []);
+    if (savedSummons.length) {
+      savedSummons.forEach((saved) => {
+        const skill = getSkill(loaded.classId, saved.id);
+        if (skill && loaded.mp >= skill.mp) {
+          const skillLevel = getSkillLevel(loaded, skill.id);
+          const summon = summonStats(loaded, skill, skillLevel);
+          const restored = { ...summon, exp: saved.exp || 0 };
+          restored.hp = Math.min(saved.hp || restored.max_hp, restored.max_hp);
+          loaded.mp = clamp(loaded.mp - skill.mp, 0, loaded.max_mp);
+          addOrReplaceSummon(loaded, restored);
+          loaded.send(`${restored.name} 已重新召唤 (等级 ${restored.level})。`);
+        }
+      });
       // 清除保存的召唤物数据
       delete loaded.flags.savedSummon;
+      delete loaded.flags.savedSummons;
     }
 
     if (loaded.flags?.partyId && Array.isArray(loaded.flags.partyMembers) && loaded.flags.partyMembers.length) {
@@ -2986,12 +3055,12 @@ io.on('connection', (socket) => {
 
   socket.on('disconnect', async (reason) => {
     const player = players.get(socket.id);
-    if (player) {
-      console.log(`[disconnect] ${player.name} (${player.userId || 'unknown'}) reason=${reason || 'unknown'}`);
-      if (!player.flags) player.flags = {};
-      player.flags.offlineAt = Date.now();
-      player.summon = null;
-      const trade = getTradeByPlayer(player.name);
+      if (player) {
+        console.log(`[disconnect] ${player.name} (${player.userId || 'unknown'}) reason=${reason || 'unknown'}`);
+        if (!player.flags) player.flags = {};
+        player.flags.offlineAt = Date.now();
+      setSummons(player, []);
+        const trade = getTradeByPlayer(player.name);
       if (trade) {
         clearTrade(trade, `交易已取消（${player.name} 离线）。`);
       }
@@ -3084,9 +3153,12 @@ function tryAutoHeal(player) {
     candidates.push({ target: player, name: player.name });
   }
 
-  if (player.summon && player.summon.hp > 0 && player.summon.hp / player.summon.max_hp < healThreshold) {
-    candidates.push({ target: player.summon, name: player.summon.name, isSummon: true });
-  }
+  const playerSummons = getAliveSummons(player);
+  playerSummons.forEach((summon) => {
+    if (summon.hp / summon.max_hp < healThreshold) {
+      candidates.push({ target: summon, name: summon.name, isSummon: true });
+    }
+  });
 
   const party = getPartyByMember(player.name);
   if (party && party.members.length > 0) {
@@ -3108,12 +3180,17 @@ function tryAutoHeal(player) {
   if (party && party.members.length > 0) {
     party.members.forEach((memberName) => {
       const member = playersByName(memberName);
-      if (member && member.summon && member.summon.hp > 0) {
-        summonTargets.push({ target: member.summon, name: member.summon.name, isSummon: true });
+      if (member) {
+        const memberSummons = getAliveSummons(member);
+        memberSummons.forEach((summon) => {
+          summonTargets.push({ target: summon, name: summon.name, isSummon: true });
+        });
       }
     });
-  } else if (player.summon && player.summon.hp > 0) {
-    summonTargets.push({ target: player.summon, name: player.summon.name, isSummon: true });
+  } else if (playerSummons.length) {
+    playerSummons.forEach((summon) => {
+      summonTargets.push({ target: summon, name: summon.name, isSummon: true });
+    });
   }
   const allCandidates = candidates.concat(summonTargets);
 
@@ -3208,7 +3285,8 @@ function tryAutoBuff(player) {
       : [player];
     const targets = members.slice();
     members.forEach((p) => {
-      if (p.summon && p.summon.hp > 0) targets.push(p.summon);
+      const summons = getAliveSummons(p);
+      summons.forEach((summon) => targets.push(summon));
     });
 
     const buffKey = buffSkill.type === 'buff_mdef' ? 'mdefBuff' : 'defBuff';
@@ -3254,7 +3332,7 @@ function pickCombatSkillId(player, combatSkillId) {
         if (cooldownRemaining > 0) return false;
       }
       // 召唤技能：如果召唤物还存活，跳过该技能
-      if (skill.type === 'summon' && player.summon && player.summon.hp > 0) {
+      if (skill.type === 'summon' && hasAliveSummon(player, skill.id)) {
         return false;
       }
       return true;
@@ -3309,7 +3387,7 @@ function pickCombatSkillId(player, combatSkillId) {
   return combatSkillId;
 }
 
-function autoResummon(player) {
+function autoResummon(player, desiredSkillId = null) {
   if (!player || player.hp <= 0) return false;
   const skills = getLearnedSkills(player).filter((skill) => skill.type === 'summon');
   if (!skills.length) return false;
@@ -3325,22 +3403,30 @@ function autoResummon(player) {
   }
   if (!allowedSummonSkills.length) return false;
 
-  let summonSkill = null;
-  const lastSkillId = player.flags?.lastSummonSkill;
+  const existingIds = new Set(getAliveSummons(player).map((summon) => summon.id));
+  if (desiredSkillId && existingIds.has(desiredSkillId)) return false;
 
-  if (lastSkillId) {
+  let summonSkill = null;
+  if (desiredSkillId) {
+    summonSkill = allowedSummonSkills.find((skill) => skill.id === desiredSkillId);
+  }
+
+  const lastSkillId = player.flags?.lastSummonSkill;
+  if (!summonSkill && lastSkillId && !existingIds.has(lastSkillId)) {
     summonSkill = allowedSummonSkills.find((skill) => skill.id === lastSkillId);
   }
 
   if (!summonSkill) {
-    summonSkill = allowedSummonSkills.sort((a, b) => getSkillLevel(player, b.id) - getSkillLevel(player, a.id))[0];
+    const candidates = allowedSummonSkills.filter((skill) => !existingIds.has(skill.id));
+    if (!candidates.length) return false;
+    summonSkill = candidates.sort((a, b) => getSkillLevel(player, b.id) - getSkillLevel(player, a.id))[0];
   }
 
   if (!summonSkill || player.mp < summonSkill.mp) return false;
   player.mp = clamp(player.mp - summonSkill.mp, 0, player.max_mp);
   const skillLevel = getSkillLevel(player, summonSkill.id);
   const summon = summonStats(player, summonSkill, skillLevel);
-  player.summon = { ...summon, exp: 0 };
+  addOrReplaceSummon(player, { ...summon, exp: 0 });
   player.send(`召唤物被击败，自动召唤 ${summon.name} (等级 ${summon.level})。`);
   return true;
 }
@@ -3710,11 +3796,15 @@ async function combatTick() {
           }
         }
       }
-      if (player.summon && player.summon.hp <= 0) {
-        player.summon = null;
+      const summons = getSummons(player);
+      const deadSummons = summons.filter((summon) => summon && summon.hp <= 0);
+      if (deadSummons.length) {
+        deadSummons.forEach((summon) => {
+          removeSummonById(player, summon.id);
+          autoResummon(player, summon.id);
+        });
         if (!player.flags) player.flags = {};
         player.flags.summonAggro = true;
-        autoResummon(player);
       }
 
     if (!player.combat) {
@@ -4250,19 +4340,21 @@ async function combatTick() {
       }
     }
 
-    if (player.summon && mob.hp > 0) {
-      const summon = player.summon;
-      const hitChance = calcHitChance(summon, mob);
-      if (Math.random() <= hitChance) {
-        const useTaoist = summon.id === 'skeleton' || summon.id === 'summon';
-        const dmg = useTaoist
-          ? calcTaoistDamageFromValue(Number(summon.spirit ?? summon.atk ?? 0), mob)
-          : calcDamage(summon, mob, 1);
-        const summonResult = applyDamageToMob(mob, dmg, player.name);
-        if (summonResult?.damageTaken) {
-          player.send(`${summon.name} 对 ${mob.name} 造成 ${dmg} 点伤害。`);
+    const summons = getAliveSummons(player);
+    if (summons.length && mob.hp > 0) {
+      summons.forEach((summon) => {
+        const hitChance = calcHitChance(summon, mob);
+        if (Math.random() <= hitChance) {
+          const useTaoist = summon.id === 'skeleton' || summon.id === 'summon';
+          const dmg = useTaoist
+            ? calcTaoistDamageFromValue(Number(summon.spirit ?? summon.atk ?? 0), mob)
+            : calcDamage(summon, mob, 1);
+          const summonResult = applyDamageToMob(mob, dmg, player.name);
+          if (summonResult?.damageTaken) {
+            player.send(`${summon.name} 对 ${mob.name} 造成 ${dmg} 点伤害。`);
+          }
         }
-      }
+      });
     }
 
     if (mob.hp <= 0) {
@@ -4278,7 +4370,8 @@ async function combatTick() {
     }
 
 
-    const summonAlive = Boolean(player.summon && player.summon.hp > 0);
+    const primarySummon = summons[0] || null;
+    const summonAlive = Boolean(primarySummon);
     if (player.flags?.summonAggro && summonAlive) {
       const lastAttackAt = player.flags.lastAttackAt || 0;
       if (Date.now() - lastAttackAt >= 5000) {
@@ -4287,7 +4380,7 @@ async function combatTick() {
     }
     const mobTemplate = MOB_TEMPLATES[mob.templateId];
     const isBossAggro = Boolean(mobTemplate?.worldBoss || mobTemplate?.sabakBoss);
-    let mobTarget = player.flags?.summonAggro || !summonAlive ? player : player.summon;
+    let mobTarget = player.flags?.summonAggro || !summonAlive ? player : primarySummon;
     if (isBossAggro) {
       const targetName = mob.status?.aggroTarget;
       const aggroPlayer = targetName
@@ -4301,7 +4394,7 @@ async function combatTick() {
       if (aggroPlayer) {
         mobTarget = aggroPlayer;
       } else {
-        mobTarget = summonAlive ? player.summon : player;
+        mobTarget = summonAlive ? primarySummon : player;
       }
     }
     const mobHitChance = calcHitChance(mob, mobTarget);
@@ -4410,26 +4503,30 @@ async function combatTick() {
             }
             
             // 溅射到召唤物
-            if (splashTarget.summon && splashTarget.summon.hp > 0) {
-              applyDamage(splashTarget.summon, splashDmg);
-              splashTarget.send(`${mob.name} 的攻击溅射到 ${splashTarget.summon.name}，造成 ${splashDmg} 点伤害。`);
-              if (splashTarget.summon.hp <= 0) {
-                splashTarget.send(`${splashTarget.summon.name} 被击败。`);
-                splashTarget.summon = null;
-                autoResummon(splashTarget);
+            const splashSummons = getAliveSummons(splashTarget);
+            splashSummons.forEach((summon) => {
+              applyDamage(summon, splashDmg);
+              splashTarget.send(`${mob.name} 的攻击溅射到 ${summon.name}，造成 ${splashDmg} 点伤害。`);
+              if (summon.hp <= 0) {
+                splashTarget.send(`${summon.name} 被击败。`);
+                removeSummonById(splashTarget, summon.id);
+                autoResummon(splashTarget, summon.id);
               }
-            }
+            });
           });
           
           // 溅射到主目标的召唤物（如果主目标是玩家且有召唤物）
-          if (mobTarget.summon && mobTarget.summon.hp > 0 && mobTarget !== mobTarget.summon) {
-            applyDamage(mobTarget.summon, splashDmg);
-            mobTarget.send(`${mob.name} 的攻击溅射到 ${mobTarget.summon.name}，造成 ${splashDmg} 点伤害。`);
-            if (mobTarget.summon.hp <= 0) {
-              mobTarget.send(`${mobTarget.summon.name} 被击败。`);
-              mobTarget.summon = null;
-              autoResummon(mobTarget);
-            }
+          if (mobTarget && mobTarget.userId) {
+            const targetSummons = getAliveSummons(mobTarget);
+            targetSummons.forEach((summon) => {
+              applyDamage(summon, splashDmg);
+              mobTarget.send(`${mob.name} 的攻击溅射到 ${summon.name}，造成 ${splashDmg} 点伤害。`);
+              if (summon.hp <= 0) {
+                mobTarget.send(`${summon.name} 被击败。`);
+                removeSummonById(mobTarget, summon.id);
+                autoResummon(mobTarget, summon.id);
+              }
+            });
           }
         }
       } else {
@@ -4465,24 +4562,25 @@ async function combatTick() {
             }
             
             // 溅射到其他玩家的召唤物
-            if (splashTarget.summon && splashTarget.summon.hp > 0) {
-              applyDamage(splashTarget.summon, splashDmg);
-              splashTarget.send(`${mob.name} 的攻击溅射到 ${splashTarget.summon.name}，造成 ${splashDmg} 点伤害。`);
-              if (splashTarget.summon.hp <= 0) {
-                splashTarget.send(`${splashTarget.summon.name} 被击败。`);
-                splashTarget.summon = null;
-                autoResummon(splashTarget);
+            const splashSummons = getAliveSummons(splashTarget);
+            splashSummons.forEach((summon) => {
+              applyDamage(summon, splashDmg);
+              splashTarget.send(`${mob.name} 的攻击溅射到 ${summon.name}，造成 ${splashDmg} 点伤害。`);
+              if (summon.hp <= 0) {
+                splashTarget.send(`${summon.name} 被击败。`);
+                removeSummonById(splashTarget, summon.id);
+                autoResummon(splashTarget, summon.id);
               }
-            }
+            });
           });
         }
         
         if (mobTarget.hp <= 0) {
           player.send(`${mobTarget.name} 被击败。`);
-          player.summon = null;
           if (!player.flags) player.flags = {};
           player.flags.summonAggro = true;
-          autoResummon(player);
+          removeSummonById(player, mobTarget.id);
+          autoResummon(player, mobTarget.id);
           const followChance = calcHitChance(mob, player);
           if (Math.random() <= followChance) {
             const followDmg = calcDamage(mob, player, 1);

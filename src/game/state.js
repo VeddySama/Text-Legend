@@ -22,7 +22,7 @@ function isBossTemplate(tpl) {
     tpl.id.includes('boss') ||
     tpl.id.includes('leader') ||
     tpl.id.includes('demon') ||
-    ['bug_queen', 'huangquan', 'evil_snake', 'pig_white'].includes(tpl.id)
+    ['bug_queen', 'huangquan'].includes(tpl.id)
   );
 }
 

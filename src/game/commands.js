@@ -17,6 +17,35 @@ import { getRoom, getAliveMobs, spawnMobs } from './state.js';
 import { clamp } from './utils.js';
 import { applyDamage } from './combat.js';
 
+function getSummons(player) {
+  if (!player) return [];
+  if (Array.isArray(player.summons)) return player.summons.filter(Boolean);
+  if (player.summon) return [player.summon];
+  return [];
+}
+
+function setSummons(player, summons) {
+  if (!player) return;
+  const next = Array.isArray(summons) ? summons.filter(Boolean) : [];
+  player.summons = next;
+  player.summon = next[0] || null;
+}
+
+function getAliveSummons(player) {
+  return getSummons(player).filter((summon) => summon.hp > 0);
+}
+
+function addOrReplaceSummon(player, summon) {
+  if (!player || !summon) return;
+  const summons = getSummons(player).filter((entry) => entry.id !== summon.id);
+  summons.unshift(summon);
+  setSummons(player, summons);
+}
+
+function hasAliveSummon(player, summonId) {
+  return getAliveSummons(player).some((entry) => entry.id === summonId);
+}
+
 // 负载均衡：选择玩家最少的房间
 // 当目标房间有多个变体时（如 plains, plains1, plains2, plains3），自动分配到人最少的那个
 function selectLeastPopulatedRoom(zoneId, roomId, onlinePlayers, currentPlayer = null, partyApi = null) {
@@ -773,14 +802,15 @@ export async function handleCommand({ player, players, input, source, send, part
       }
       
       // 召唤物信息
-      if (target.summon) {
+      const targetSummons = getAliveSummons(target);
+      targetSummons.forEach((summon) => {
         observeData.summons.push({
-          name: target.summon.name,
-          level: target.summon.level,
-          hp: target.summon.hp,
-          maxHp: target.summon.max_hp
+          name: summon.name,
+          level: summon.level,
+          hp: summon.hp,
+          maxHp: summon.max_hp
         });
-      }
+      });
       
       // 通过socket发送observe事件给玩家
       if (player.socket) {
@@ -1020,7 +1050,8 @@ export async function handleCommand({ player, players, input, source, send, part
       if (skill.type === 'heal') {
         if (player.mp < skill.mp) return send('魔法不足。');
         let target = player;
-        const summon = player.summon ? { ...player.summon, isSummon: true } : null;
+        let targetIsSummon = false;
+        const summonCandidates = getAliveSummons(player).map((summon) => ({ target: summon, isSummon: true }));
         if (targetName) {
           const nameLower = targetName.toLowerCase();
           const candidate = players.find(
@@ -1036,26 +1067,30 @@ export async function handleCommand({ player, players, input, source, send, part
         } else if (partyApi?.getPartyByMember) {
           const party = partyApi.getPartyByMember(player.name);
           if (party && party.members.length) {
-            const candidates = players.filter(
-              (p) =>
-                party.members.includes(p.name) &&
-                p.position.zone === player.position.zone &&
-                p.position.room === player.position.room
-            );
-            if (summon) candidates.push(summon);
+            const candidates = players
+              .filter(
+                (p) =>
+                  party.members.includes(p.name) &&
+                  p.position.zone === player.position.zone &&
+                  p.position.room === player.position.room
+              )
+              .map((entry) => ({ target: entry, isSummon: false }));
+            candidates.push(...summonCandidates);
             if (candidates.length) {
-              candidates.sort((a, b) => (a.hp / a.max_hp) - (b.hp / b.max_hp));
-              target = candidates[0];
+              candidates.sort((a, b) => (a.target.hp / a.target.max_hp) - (b.target.hp / b.target.max_hp));
+              target = candidates[0].target;
+              targetIsSummon = candidates[0].isSummon;
             }
-          } else if (summon) {
-            target = summon;
+          } else if (summonCandidates.length) {
+            target = summonCandidates[0].target;
+            targetIsSummon = true;
           }
         }
         player.mp -= skill.mp;
         const baseHeal = Math.floor((player.spirit || 0) * 0.8 * power + player.level * 4);
-        if (target.isSummon) {
-          player.summon.hp = clamp(player.summon.hp + baseHeal, 1, player.summon.max_hp);
-          send(`你为 ${player.summon.name} 施放了 ${skill.name}，恢复 ${baseHeal} 点生命。`);
+        if (targetIsSummon) {
+          target.hp = clamp(target.hp + baseHeal, 1, target.max_hp);
+          send(`你为 ${target.name} 施放了 ${skill.name}，恢复 ${baseHeal} 点生命。`);
         } else {
           const heal = Math.max(1, Math.floor(baseHeal * getHealMultiplier(target)));
           target.hp = clamp(target.hp + heal, 1, target.max_hp);
@@ -1083,9 +1118,10 @@ export async function handleCommand({ player, players, input, source, send, part
         if (!members.length) return send('未找到队伍成员。');
         const summonTargets = [];
         members.forEach((member) => {
-          if (member.summon && member.summon.hp > 0) {
-            summonTargets.push({ summon: member.summon, owner: member });
-          }
+          const memberSummons = getAliveSummons(member);
+          memberSummons.forEach((summon) => {
+            summonTargets.push({ summon, owner: member });
+          });
         });
         player.mp -= skill.mp;
         const baseHeal = Math.floor((player.spirit || 0) * 0.8 * power + player.level * 4);
@@ -1106,9 +1142,10 @@ export async function handleCommand({ player, players, input, source, send, part
       }
       if (skill.type === 'summon') {
         if (player.mp < skill.mp) return send('魔法不足。');
+        if (hasAliveSummon(player, skill.id)) return send('该召唤物已存在。');
         player.mp -= skill.mp;
         const summon = summonStats(player, skill, skillLevel);
-        player.summon = { ...summon, exp: 0 };
+        addOrReplaceSummon(player, { ...summon, exp: 0 });
         if (!player.flags) player.flags = {};
         player.flags.lastSummonSkill = skill.id;
         send(`你召唤了 ${summon.name} (等级 ${summon.level})。`);
@@ -1144,7 +1181,8 @@ export async function handleCommand({ player, players, input, source, send, part
           : [player];
         const targets = members.slice();
         members.forEach((p) => {
-          if (p.summon && p.summon.hp > 0) targets.push(p.summon);
+          const summons = getAliveSummons(p);
+          summons.forEach((summon) => targets.push(summon));
         });
         targets.forEach((p) => {
           applyBuff(p, { key: 'defBuff', expiresAt: Date.now() + duration * 1000, defMultiplier });
@@ -1172,7 +1210,8 @@ export async function handleCommand({ player, players, input, source, send, part
           : [player];
         const targets = members.slice();
         members.forEach((p) => {
-          if (p.summon && p.summon.hp > 0) targets.push(p.summon);
+          const summons = getAliveSummons(p);
+          summons.forEach((summon) => targets.push(summon));
         });
         targets.forEach((p) => {
           applyBuff(p, { key: 'mdefBuff', expiresAt: Date.now() + duration * 1000, mdefMultiplier });

@@ -50,16 +50,21 @@ export async function saveCharacter(userId, player) {
   normalizeInventory(player);
   // 保存召唤物信息到flags中（只有在召唤物存在且活着时保存）
   if (!player.flags) player.flags = {};
-  if (player.summon && player.summon.hp > 0) {
-    player.flags.savedSummon = {
-      id: player.summon.id,
-      exp: player.summon.exp || 0,
-      level: player.summon.level,
-      hp: player.summon.hp,
-      max_hp: player.summon.max_hp
-    };
-  } else if (player.summon && player.summon.hp <= 0) {
-    // 召唤物死亡时清除保存的数据
+  const summons = Array.isArray(player.summons)
+    ? player.summons
+    : (player.summon ? [player.summon] : []);
+  const aliveSummons = summons.filter((summon) => summon && summon.hp > 0);
+  if (aliveSummons.length) {
+    player.flags.savedSummons = aliveSummons.map((summon) => ({
+      id: summon.id,
+      exp: summon.exp || 0,
+      level: summon.level,
+      hp: summon.hp,
+      max_hp: summon.max_hp
+    }));
+    delete player.flags.savedSummon;
+  } else {
+    delete player.flags.savedSummons;
     delete player.flags.savedSummon;
   }
   const data = {

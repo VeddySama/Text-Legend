@@ -3,6 +3,7 @@ let socket = null;
 let activeChar = null;
 const classNames = { warrior: '战士', mage: '法师', taoist: '道士' };
 let selectedMob = null;
+let selectedSummonId = null;
 let lastState = null;
 let serverTimeBase = null;
 let serverTimeLocal = null;
@@ -2800,15 +2801,24 @@ function renderState(state) {
       if (summonBlock) summonBlock.classList.add('hidden');
     } else {
       if (summonBlock) summonBlock.classList.remove('hidden');
-      if (state.summon) {
-        const levelMax = state.summon.levelMax || 8;
-        const summonEntry = [{
-          id: 'summon',
-          label: `${state.summon.name} Lv${state.summon.level}/${levelMax}`,
-          raw: state.summon
-        }];
-        renderChips(ui.summon, summonEntry, () => {});
-        renderSummonDetails(state.summon, levelMax);
+      const summons = Array.isArray(state.summons) && state.summons.length
+        ? state.summons
+        : (state.summon ? [state.summon] : []);
+      if (summons.length) {
+        const summonEntries = summons.map((summon, index) => ({
+          id: summon.id || `summon-${index}`,
+          label: `${summon.name} Lv${summon.level}/${summon.levelMax || 8}`,
+          raw: summon
+        }));
+        const activeId = selectedSummonId && summonEntries.some((entry) => entry.id === selectedSummonId)
+          ? selectedSummonId
+          : summonEntries[0].id;
+        const active = summonEntries.find((entry) => entry.id === activeId) || summonEntries[0];
+        renderChips(ui.summon, summonEntries, (entry) => {
+          selectedSummonId = entry.id;
+          renderSummonDetails(entry.raw, entry.raw.levelMax || 8);
+        }, activeId);
+        renderSummonDetails(active.raw, active.raw.levelMax || 8);
       } else {
         ui.summon.textContent = '\u65e0';
         if (ui.summonDetails) {

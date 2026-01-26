@@ -3124,9 +3124,10 @@ function tryAutoHeal(player) {
       const baseHeal = Math.floor((player.spirit || 0) * 0.8 * scaledSkillPower(healSkill, getSkillLevel(player, healSkill.id)) + player.level * 4);
       const groupHeal = Math.max(1, Math.floor(baseHeal * 0.3));
       candidates.forEach((entry) => {
+        if (entry.isSummon) return;
         const heal = Math.max(1, Math.floor(groupHeal * getHealMultiplier(entry.target)));
         entry.target.hp = clamp(entry.target.hp + heal, 1, entry.target.max_hp);
-        if (entry.target !== player) {
+        if (entry.target !== player && typeof entry.target.send === 'function') {
           entry.target.send(`${player.name} 自动为你施放 ${groupHealSkill.name}，恢复 ${heal} 点生命。`);
         }
       });

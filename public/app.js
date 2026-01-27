@@ -750,6 +750,8 @@ function updateTradeDisplay() {
     tradeData.myItems.forEach((item) => {
       const itemDiv = document.createElement('div');
       itemDiv.className = 'trade-item';
+      const itemTemplate = findItemByDisplayName(item.name);
+      applyRarityClass(itemDiv, itemTemplate);
       itemDiv.textContent = `${item.name} x${item.qty}`;
       tradeUi.myItems.appendChild(itemDiv);
     });
@@ -766,6 +768,8 @@ function updateTradeDisplay() {
     tradeData.partnerItems.forEach((item) => {
       const itemDiv = document.createElement('div');
       itemDiv.className = 'trade-item';
+      const itemTemplate = findItemByDisplayName(item.name);
+      applyRarityClass(itemDiv, itemTemplate);
       itemDiv.textContent = `${item.name} x${item.qty}`;
       tradeUi.partnerItems.appendChild(itemDiv);
     });
@@ -1165,6 +1169,7 @@ function renderConsignMarket(items) {
     slice.forEach((entry) => {
     const btn = document.createElement('div');
     btn.className = 'consign-item';
+    applyRarityClass(btn, entry.item);
       btn.innerHTML = `${formatItemName(entry.item)} x${entry.qty} (${entry.price}\u91D1)<small>${entry.seller}</small>`;
     const tooltip = formatItemTooltip(entry.item);
     if (tooltip) {
@@ -1218,6 +1223,7 @@ function renderConsignMine(items) {
   slice.forEach((entry) => {
     const btn = document.createElement('div');
     btn.className = 'consign-item';
+    applyRarityClass(btn, entry.item);
       btn.innerHTML = `${formatItemName(entry.item)} x${entry.qty} (${entry.price}\u91D1)<small>\u7F16\u53F7 ${entry.id}</small>`;
     const tooltip = formatItemTooltip(entry.item);
     if (tooltip) {
@@ -1257,6 +1263,7 @@ function renderConsignInventory(items) {
   slice.forEach((item) => {
     const btn = document.createElement('div');
     btn.className = 'consign-item';
+    applyRarityClass(btn, item);
       btn.textContent = `${formatItemName(item)} x${item.qty}`;
     const tooltip = formatItemTooltip(item);
     if (tooltip) {
@@ -1316,6 +1323,7 @@ function renderConsignHistory(items) {
   slice.forEach((entry) => {
     const div = document.createElement('div');
     div.className = 'consign-history-item';
+    applyRarityClass(div, entry.item);
     const date = new Date(entry.soldAt);
     const dateStr = `${date.getMonth() + 1}/${date.getDate()} ${date.getHours()}:${String(date.getMinutes()).padStart(2, '0')}`;
     div.innerHTML = `
@@ -1329,6 +1337,8 @@ function renderConsignHistory(items) {
         <span>${dateStr}</span>
       </div>
     `;
+    const itemSpan = div.querySelector('.consign-history-item-item');
+    applyRarityClass(itemSpan, entry.item);
     const tooltip = formatItemTooltip(entry.item);
     if (tooltip) {
       div.addEventListener('mouseenter', (evt) => showItemTooltip(tooltip, evt));
@@ -1400,7 +1410,8 @@ function renderRepairList(equipment) {
     const cost = calcRepairCost(entry.item, missing);
     const btn = document.createElement('div');
     btn.className = 'repair-item';
-      btn.innerHTML = `${formatItemName(entry.item)}<br>${entry.durability}/${entry.max_durability} (${cost}\u91D1)`;
+    applyRarityClass(btn, entry.item);
+    btn.innerHTML = `${formatItemName(entry.item)}<br>${entry.durability}/${entry.max_durability} (${cost}\u91D1)`;
     const tooltip = formatItemTooltip(entry.item);
     if (tooltip) {
       btn.addEventListener('mouseenter', (evt) => showItemTooltip(tooltip, evt));
@@ -1450,6 +1461,7 @@ function renderForgeSecondaryList(itemId) {
   candidates.forEach((item) => {
     const btn = document.createElement('div');
     btn.className = 'forge-item';
+    applyRarityClass(btn, item);
     btn.innerHTML = `${formatItemName(item)} x${item.qty || 1}<span class="forge-item-meta">${formatForgeMeta(item)}</span>`;
     btn.addEventListener('click', () => {
       Array.from(forgeUi.secondaryList.querySelectorAll('.forge-item')).forEach((node) =>
@@ -1504,6 +1516,7 @@ function renderForgeModal() {
     const item = entry.item;
     const btn = document.createElement('div');
     btn.className = 'forge-item';
+    applyRarityClass(btn, item);
     btn.textContent = formatItemName(item);
     btn.addEventListener('click', () => {
       Array.from(forgeUi.list.querySelectorAll('.forge-item')).forEach((node) =>
@@ -1599,7 +1612,8 @@ function renderShopSellList(items) {
     if (item.type === 'currency') return;
     const btn = document.createElement('div');
     btn.className = 'shop-sell-item';
-      btn.textContent = `${formatItemName(item)} x${item.qty}`;
+    applyRarityClass(btn, item);
+    btn.textContent = `${formatItemName(item)} x${item.qty}`;
       btn.addEventListener('click', async () => {
         const qtyText = await promptModal({
           title: '\u51fa\u552e\u7269\u54c1',
@@ -1639,19 +1653,30 @@ function renderMailDetail(mail) {
     if (mailUi.claim) mailUi.claim.classList.add('hidden');
     return;
   }
-  mailUi.detailTitle.textContent = mail.title || '\u65E0\u6807\u9898';
+  renderTextWithItemHighlights(mailUi.detailTitle, mail.title || '\u65E0\u6807\u9898', mail.items || []);
   const dateText = formatMailDate(mail.created_at);
   mailUi.detailMeta.textContent = `${mail.from_name || '\u7CFB\u7EDF'}${dateText ? ` | ${dateText}` : ''}`;
-  mailUi.detailBody.textContent = mail.body || '';
-  const lines = [];
+  renderTextWithItemHighlights(mailUi.detailBody, mail.body || '', mail.items || []);
+  mailUi.detailItems.innerHTML = '';
   if (mail.gold && mail.gold > 0) {
-    lines.push(`\u91D1\u5E01: ${mail.gold}`);
+    const goldLine = document.createElement('div');
+    goldLine.textContent = `\u91D1\u5E01: ${mail.gold}`;
+    mailUi.detailItems.appendChild(goldLine);
   }
   if (mail.items && mail.items.length) {
-    const itemLines = mail.items.map((item) => `${formatItemName(item)} x${item.qty || 1}`);
-    lines.push(`\u9644\u4EF6: ${itemLines.join(', ')}`);
+    const itemsLine = document.createElement('div');
+    itemsLine.append('\u9644\u4EF6: ');
+    mail.items.forEach((item, idx) => {
+      const span = document.createElement('span');
+      span.textContent = `${formatItemName(item)} x${item.qty || 1}`;
+      applyRarityClass(span, item);
+      itemsLine.appendChild(span);
+      if (idx < mail.items.length - 1) {
+        itemsLine.append(', ');
+      }
+    });
+    mailUi.detailItems.appendChild(itemsLine);
   }
-  mailUi.detailItems.textContent = lines.join('\n');
   if (mailUi.claim) {
     if ((mail.items && mail.items.length) || (mail.gold && mail.gold > 0)) {
       if (mail.claimed_at) {
@@ -1747,6 +1772,7 @@ function renderMailAttachmentList() {
   mailAttachments.forEach((entry, index) => {
     const btn = document.createElement('div');
     btn.className = 'mail-attach-item';
+    applyRarityClass(btn, entry.item);
     btn.textContent = `${formatItemName(entry.item)} x${entry.qty}`;
     btn.title = '\u70B9\u51FB\u5220\u9664';
     btn.addEventListener('click', () => {
@@ -1991,6 +2017,7 @@ function showBagModal() {
     pageItems.forEach((item) => {
       const btn = document.createElement('div');
       btn.className = 'bag-item';
+      applyRarityClass(btn, item);
       btn.textContent = `${formatItemName(item)} x${item.qty}`;
     if (item.tooltip) {
       btn.addEventListener('mouseenter', (evt) => showItemTooltip(item.tooltip, evt));
@@ -2041,6 +2068,7 @@ function showBagModal() {
         equipment.forEach((entry) => {
           const btn = document.createElement('div');
           btn.className = 'bag-item';
+          applyRarityClass(btn, entry.item);
           const slotLabel = slotLabels[entry.slot] || entry.slot;
           btn.textContent = `${slotLabel}: ${formatItemName(entry.item)}`;
           // 合并耐久度信息到item对象用于tooltip显示
@@ -2075,6 +2103,7 @@ function showBagModal() {
         equipables.forEach((item) => {
           const btn = document.createElement('div');
           btn.className = 'bag-item';
+          applyRarityClass(btn, item);
           btn.textContent = `${formatItemName(item)} x${item.qty}`;
           const tooltip = formatItemTooltip(item);
           if (tooltip) {
@@ -2369,6 +2398,7 @@ const ITEM_TYPE_LABELS = {
   unknown: '\u672a\u77e5'
 };
 const RARITY_LABELS = {
+  supreme: '\u81f3\u5c0a',
   legendary: '\u4f20\u8bf4',
   epic: '\u53f2\u8bd7',
   rare: '\u7a00\u6709',
@@ -2706,6 +2736,79 @@ function formatItemName(item) {
   return tags.length ? `${item.name}\u00b7${tags.join('\u00b7')}` : item.name;
 }
 
+function applyRarityClass(el, item) {
+  if (!el || !item || !item.rarity) return;
+  el.classList.add(`rarity-${item.rarity}`);
+}
+
+function findItemByDisplayName(name, extraItems = null) {
+  if (!name) return null;
+  if (Array.isArray(extraItems)) {
+    const hit = extraItems.find((item) =>
+      formatItemName(item) === name || item.name === name
+    );
+    if (hit) return hit;
+  }
+  if (!lastState || !Array.isArray(lastState.items)) return null;
+  return lastState.items.find((item) =>
+    formatItemName(item) === name || item.name === name
+  ) || null;
+}
+
+function renderTextWithItemHighlights(container, text, extraItems = null) {
+  if (!container) return;
+  container.innerHTML = '';
+  if (!text) return;
+  const names = new Set();
+  const addName = (name) => {
+    if (name && typeof name === 'string') names.add(name);
+  };
+  if (Array.isArray(extraItems)) {
+    extraItems.forEach((item) => {
+      if (!item) return;
+      addName(item.name);
+      addName(formatItemName(item));
+    });
+  }
+  if (lastState && Array.isArray(lastState.items)) {
+    lastState.items.forEach((item) => {
+      if (!item) return;
+      addName(item.name);
+      addName(formatItemName(item));
+    });
+  }
+  if (!names.size) {
+    container.textContent = text;
+    return;
+  }
+  const escaped = Array.from(names)
+    .filter(Boolean)
+    .sort((a, b) => b.length - a.length)
+    .map((name) => name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  if (!escaped.length) {
+    container.textContent = text;
+    return;
+  }
+  const regex = new RegExp(escaped.join('|'), 'g');
+  const frag = document.createDocumentFragment();
+  let lastIndex = 0;
+  let match;
+  while ((match = regex.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      frag.appendChild(document.createTextNode(text.slice(lastIndex, match.index)));
+    }
+    const span = document.createElement('span');
+    span.textContent = match[0];
+    applyRarityClass(span, findItemByDisplayName(match[0], extraItems));
+    frag.appendChild(span);
+    lastIndex = match.index + match[0].length;
+  }
+  if (lastIndex < text.length) {
+    frag.appendChild(document.createTextNode(text.slice(lastIndex)));
+  }
+  container.appendChild(frag);
+}
+
 function isPotionName(name) {
   if (!name) return false;
   return /药|雪霜|太阳水/.test(name);
@@ -2862,6 +2965,7 @@ function renderState(state) {
           const itemTemplate = lastState?.items?.find(i => i.id === item.id);
           const itemDiv = document.createElement('div');
           itemDiv.className = 'trade-item';
+          applyRarityClass(itemDiv, itemTemplate);
           const name = itemTemplate ? formatItemName({ ...itemTemplate, effects: item.effects }) : item.id;
           itemDiv.textContent = `${name} x${item.qty}`;
           tradeUi.myItems.appendChild(itemDiv);
@@ -2880,6 +2984,7 @@ function renderState(state) {
           const itemTemplate = lastState?.items?.find(i => i.id === item.id);
           const itemDiv = document.createElement('div');
           itemDiv.className = 'trade-item';
+          applyRarityClass(itemDiv, itemTemplate);
           const name = itemTemplate ? formatItemName({ ...itemTemplate, effects: item.effects }) : item.id;
           itemDiv.textContent = `${name} x${item.qty}`;
           tradeUi.partnerItems.appendChild(itemDiv);

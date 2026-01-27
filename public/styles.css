@@ -3453,7 +3453,58 @@ body.dark .sabak-empty {
 .chip.rarity-rare { border-color: rgba(72, 140, 210, 0.55); color: #2f6aa6; }
 .chip.rarity-epic { border-color: rgba(196, 94, 178, 0.55); color: #8a2c7a; }
 .chip.rarity-legendary { border-color: rgba(212, 152, 68, 0.6); color: #8f5a12; }
+.chip.rarity-supreme { border-color: rgba(214, 92, 92, 0.6); color: #b63c3c; }
 .chip.item-set { box-shadow: 0 0 0 1px rgba(214, 145, 64, 0.4); }
+
+.rarity-common { color: #6b4a2a; }
+.rarity-uncommon { color: #2f6b3b; }
+.rarity-rare { color: #2f6aa6; }
+.rarity-epic { color: #8a2c7a; }
+.rarity-legendary { color: #8f5a12; }
+.rarity-supreme { color: #b63c3c; }
+
+.bag-item.rarity-uncommon,
+.bag-item.rarity-rare,
+.bag-item.rarity-epic,
+.bag-item.rarity-legendary,
+.bag-item.rarity-supreme,
+.shop-sell-item.rarity-uncommon,
+.shop-sell-item.rarity-rare,
+.shop-sell-item.rarity-epic,
+.shop-sell-item.rarity-legendary,
+.shop-sell-item.rarity-supreme,
+.consign-item.rarity-uncommon,
+.consign-item.rarity-rare,
+.consign-item.rarity-epic,
+.consign-item.rarity-legendary,
+.consign-item.rarity-supreme,
+.consign-history-item.rarity-uncommon,
+.consign-history-item.rarity-rare,
+.consign-history-item.rarity-epic,
+.consign-history-item.rarity-legendary,
+.consign-history-item.rarity-supreme,
+.repair-item.rarity-uncommon,
+.repair-item.rarity-rare,
+.repair-item.rarity-epic,
+.repair-item.rarity-legendary,
+.repair-item.rarity-supreme,
+.forge-item.rarity-uncommon,
+.forge-item.rarity-rare,
+.forge-item.rarity-epic,
+.forge-item.rarity-legendary,
+.forge-item.rarity-supreme,
+.trade-item.rarity-uncommon,
+.trade-item.rarity-rare,
+.trade-item.rarity-epic,
+.trade-item.rarity-legendary,
+.trade-item.rarity-supreme,
+.mail-attach-item.rarity-uncommon,
+.mail-attach-item.rarity-rare,
+.mail-attach-item.rarity-epic,
+.mail-attach-item.rarity-legendary,
+.mail-attach-item.rarity-supreme {
+  border-color: currentColor;
+}
 
 .side {
   background: #fffdf7;
@@ -3490,6 +3541,16 @@ body.dark .sabak-empty {
   align-items: center;
   justify-content: center;
   line-height: 1.2;
+  min-width: 0;
+}
+
+#players-list .chip {
+  white-space: normal;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
 }
 
 .chip.active {

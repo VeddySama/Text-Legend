@@ -1452,6 +1452,7 @@ export async function handleCommand({ player, players, input, source, send, part
       
       player.gold -= goldResult.value;
       addItem(player, item.id, qtyResult.value);
+      player.forceStateRefresh = true;
       send(`购买了 ${item.name} x${qtyResult.value}，花费 ${goldResult.value} 金币。`);
       return;
     }
@@ -1485,6 +1486,7 @@ export async function handleCommand({ player, players, input, source, send, part
       });
       if (soldCount <= 0) return send('没有可一键售卖的装备。');
       player.gold += totalGold;
+      player.forceStateRefresh = true;
       send(`一键售卖完成：售出 ${soldCount} 件装备，获得 ${totalGold} 金币。`);
       return;
     }
@@ -1517,6 +1519,7 @@ export async function handleCommand({ player, players, input, source, send, part
       const price = Math.max(1, Math.floor((item.price || 10) * 0.5));
       const total = price * qtyResult.value;
       player.gold += total;
+      player.forceStateRefresh = true;
       send(`卖出 ${item.name} x${qtyResult.value}，获得 ${total} 金币。`);
       return;
     }
@@ -1550,6 +1553,7 @@ export async function handleCommand({ player, players, input, source, send, part
           const resolved = resolveInventoryItem(player, name);
           if (!resolved.slot || !resolved.item) return send('背包里没有该物品。');
           const res = await consignApi.sell(player, resolved.slot.id, qty, price, resolved.slot.effects || null);
+          if (res && res.ok) player.forceStateRefresh = true;
           send(res.msg);
           return;
         }
@@ -1559,6 +1563,7 @@ export async function handleCommand({ player, players, input, source, send, part
         const qty = parts.length > 1 ? Number(parts[1]) : 1;
         if (Number.isNaN(id) || Number.isNaN(qty)) return;
         const res = await consignApi.buy(player, id, qty);
+        if (res && res.ok) player.forceStateRefresh = true;
         send(res.msg);
         return;
       }
@@ -1567,6 +1572,7 @@ export async function handleCommand({ player, players, input, source, send, part
         const id = Number(parts[0]);
         if (Number.isNaN(id)) return;
         const res = await consignApi.cancel(player, id);
+        if (res && res.ok) player.forceStateRefresh = true;
         send(res.msg);
         return;
       }
@@ -1642,6 +1648,7 @@ export async function handleCommand({ player, players, input, source, send, part
         );
       }
       computeDerived(player);
+      player.forceStateRefresh = true;
       send(`合成成功：${item.name} 元素攻击+${effects.elementAtk}。`);
       return;
     }
@@ -1697,6 +1704,7 @@ export async function handleCommand({ player, players, input, source, send, part
         equipped.durability = t.maxDur;
       });
       computeDerived(player);
+      player.forceStateRefresh = true;
       send(`修理完成，花费 ${total} 金币。`);
       return;
     }
@@ -1725,6 +1733,7 @@ export async function handleCommand({ player, players, input, source, send, part
       const newLevel = player.flags.training[key];
       const totalBonus = newLevel * TRAINING_OPTIONS[key].perLevel;
       computeDerived(player);
+      player.forceStateRefresh = true;
       send(`修炼成功: ${TRAINING_OPTIONS[key].label} 升至 Lv${newLevel} (属性+${totalBonus.toFixed(2)})。`);
       send(`消耗 ${cost} 金币。`);
       return;

@@ -1904,6 +1904,7 @@ let lootLogEnabled = false;
 const stateThrottleLastSent = new Map();
 const stateThrottleLastExits = new Map();
 const stateThrottleLastRoom = new Map();
+const stateThrottleLastInBoss = new Map();
 
 function getStateThrottleKey(player, socket = null) {
   if (player) {
@@ -2292,11 +2293,15 @@ async function sendState(player) {
   const inBossRoom = player.position
     ? isBossRoom(player.position.zone, player.position.room)
     : false;
-  let forceSend = false;
+  let forceSend = Boolean(player.forceStateRefresh);
   let exitsHash = null;
   let roomKey = null;
   const key = getStateThrottleKey(player);
+  const lastInBoss = key ? stateThrottleLastInBoss.get(key) : false;
   if (enabled && !override && !inBossRoom) {
+    if (lastInBoss) {
+      forceSend = true;
+    }
     if (player.position) {
       roomKey = `${player.position.zone}:${player.position.room}`;
       const exits = buildRoomExits(player.position.zone, player.position.room);
@@ -2320,9 +2325,13 @@ async function sendState(player) {
   }
   const state = await buildState(player);
   player.socket.emit('state', state);
+  player.forceStateRefresh = false;
   if (exitsHash && key) {
     stateThrottleLastExits.set(key, exitsHash);
     if (roomKey) stateThrottleLastRoom.set(key, roomKey);
+  }
+  if (key) {
+    stateThrottleLastInBoss.set(key, inBossRoom);
   }
 }
 
@@ -3105,6 +3114,7 @@ io.on('connection', (socket) => {
       stateThrottleLastSent.delete(throttleKey);
       stateThrottleLastExits.delete(throttleKey);
       stateThrottleLastRoom.delete(throttleKey);
+      stateThrottleLastInBoss.delete(throttleKey);
     }
 
     // 自动恢复召唤物
@@ -3503,6 +3513,7 @@ io.on('connection', (socket) => {
         stateThrottleLastSent.delete(throttleKey);
         stateThrottleLastExits.delete(throttleKey);
         stateThrottleLastRoom.delete(throttleKey);
+        stateThrottleLastInBoss.delete(throttleKey);
       }
       players.delete(socket.id);
     }

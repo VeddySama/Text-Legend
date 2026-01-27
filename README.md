@@ -50,71 +50,31 @@ docker compose -f docker-compose.mysql.yml up --build
 - `ADMIN_BOOTSTRAP_SECRET`：初始化 GM 密钥
 - `ADMIN_BOOTSTRAP_USER`：需要提升为 GM 的账号
 
-## 玩法与功能
+## 玩法与功能（UI 操作）
 
-- 功能界面：聊天面板、交易面板、商店弹窗（购买/出售）、修炼面板、在线人数、沙巴克加成提示
-- 行会：创建行会需要 `woma_horn`（沃玛号角），沙巴克报名需要会长操作
+当前版本主要通过 UI 操作，不提供指令列表。
 
-## 指令说明
+### 行动面板
 
-在聊天输入框直接输入指令即可（大小写不敏感）。
+- **方向**：点击方向入口移动
+- **目标**：点击怪物或玩家目标
+- **技能**：点击技能立即释放
+- **召唤物**：点击切换召唤物并查看详情
+- **自动技能（挂机）**：点击“挂机”按钮选择要自动释放的技能
 
-### 基础与移动
+### 交互与社交
 
-| 指令 | 说明 | 示例 |
-| --- | --- | --- |
-| `help` | 帮助 | `help` |
-| `look` | 查看当前房间 | `look` |
-| `go <方向>` / `move <方向>` | 移动 | `go north` |
-| `go <房间名>` | 按房间名移动 | `go 土城` |
-| `goto_room <区:房间>` | 传送至 BOSS 房间 | `goto_room bq_boss:boss` |
-| `goto <玩家>` | 跟随玩家位置 | `goto 张三` |
-| `say <内容>` | 房间聊天 | `say 大家好` |
-| `who` | 查看在线玩家 | `who` |
+- **队伍/行会**：聊天面板内的“队伍 / 行会 / 邀请 / 创建 / 报名”按钮
+- **交易**：聊天面板“交易”按钮，弹出交易面板进行物品/金币交换
+- **查看玩家**：点击玩家列表项可观察、邀请组队或发起交易
 
-### 战斗与技能
+### 功能面板
 
-| 指令 | 说明 | 示例 |
-| --- | --- | --- |
-| `attack <怪物/玩家>` / `kill <怪物>` | 普通攻击 | `attack 半兽人` |
-| `pk <玩家>` | PK 玩家 | `pk 张三` |
-| `cast <技能> <目标>` | 施放技能 | `cast 治愈术` / `cast 火球 祖玛卫士` |
-| `autoskill <技能>` | 自动技能 | `autoskill halfmoon` |
-| `autoskill all/off` | 自动技能开关 | `autoskill all` / `autoskill off` |
-| `autopotion <hp%> <mp%>` | 自动喝药 | `autopotion 40 30` |
-
-### 物品与养成
-
-| 指令 | 说明 | 示例 |
-| --- | --- | --- |
-| `bag` | 查看背包 | `bag` |
-| `use <物品>` | 使用物品 | `use 回城卷` |
-| `equip <物品>` | 装备 | `equip 炼狱` |
-| `unequip <部位>` | 卸下装备 | `unequip weapon` |
-| `buy <物品> [数量]` | 购买 | `buy 小红药 10` |
-| `sell <物品> [数量]` | 出售 | `sell 小红药 10` |
-| `sell_bulk <类型>` | 批量出售 | `sell_bulk consumable` |
-| `shop` | 查看商店 | `shop` |
-| `repair` | 修理装备 | `repair` |
-| `forge <材料>` | 锻造 | `forge ring` |
-| `consign <物品> <价格> [数量]` | 寄售 | `consign 裁决之杖 500000` |
-| `train <属性>` | 修炼属性 | `train atk` |
-| `rest` | 休息恢复 | `rest` |
-
-### 社交与系统
-
-| 指令 | 说明 | 示例 |
-| --- | --- | --- |
-| `stats` | 查看角色属性 | `stats` |
-| `observe <玩家>` / `inspect <玩家>` | 观察玩家 | `observe 张三` |
-| `party <子命令>` | 队伍 | `party invite 张三` |
-| `guild <子命令>` | 行会 | `guild create 行会名` |
-| `gsay <内容>` | 行会聊天 | `gsay 集合` |
-| `mail <子命令>` | 邮件 | `mail` |
-| `trade <玩家>` | 交易 | `trade 张三` |
-| `vip <子命令>` | VIP | `vip activate CODE` |
-| `vipclaim` | 领取 VIP 奖励 | `vipclaim` |
-| `sabak <子命令>` | 沙巴克相关 | `sabak info` |
+- **背包**：打开背包、按类别筛选、使用/装备/出售物品
+- **商店**：购买与出售（支持一键出售）
+- **行会/队伍**：查看成员、邀请、退出
+- **沙巴克**：报名、查看沙巴克信息
+- **VIP**：激活与领取（按钮在右侧操作区）
 
 ## GM 后台
 

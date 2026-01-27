@@ -762,27 +762,18 @@ async function mergeRealms() {
       body: JSON.stringify({ sourceId, targetId })
     });
 
-    const data = await res.json();
+    let data;
+    try {
+      data = await res.json();
+    } catch (jsonErr) {
+      throw new Error('服务器返回的数据格式错误，请检查后端日志');
+    }
 
     if (!res.ok) {
       throw new Error(data.error || '请求失败');
     }
 
-    // 下载备份文件
-    if (data.backupData) {
-      const backupStamp = new Date().toISOString().replace(/[:.]/g, '-');
-      const blob = new Blob([JSON.stringify(data.backupData, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `merge-backup-${backupStamp}.json`;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      URL.revokeObjectURL(url);
-    }
-
-    mergeMsg.textContent = `✅ ${data.message} 备份已自动下载。`;
+    mergeMsg.textContent = `✅ ${data.message}`;
     await refreshRealms();
   } catch (err) {
     mergeMsg.textContent = `❌ 合区失败: ${err.message}`;

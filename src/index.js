@@ -784,7 +784,6 @@ app.post('/admin/realms/merge', async (req, res) => {
   }
 
   const backupStamp = new Date().toISOString().replace(/[:.]/g, '-');
-  const backupJson = JSON.stringify(backupPayload, null, 2);
 
   // 统计合并的数据
   const stats = {
@@ -882,15 +881,13 @@ app.post('/admin/realms/merge', async (req, res) => {
   // 清除所有session，强制玩家重新登录
   await clearAllSessions();
 
-  // 返回结果，包含备份数据用于下载
-  res.setHeader('Content-Type', 'application/json; charset=utf-8');
-  res.setHeader('Content-Disposition', `attachment; filename="merge-backup-${backupStamp}.json"`);
+  // 返回结果，不包含备份数据（数据量太大，前端通过单独接口下载）
   res.json({
     ok: true,
     sourceId,
     targetId,
     message: `合区完成。角色: ${stats.characters}, 行会: ${stats.guilds}, 邮件: ${stats.mails}, 寄售: ${stats.consignments}, 寄售历史: ${stats.consignmentHistory}, 沙巴克报名: ${stats.sabakRegistrations}。所有服务器ID已重新编号，保持连续性。所有玩家已强制下线，请重新登录。`,
-    backupData: backupPayload
+    backupAvailable: true
   });
 });
 

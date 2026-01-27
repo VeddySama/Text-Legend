@@ -4524,6 +4524,7 @@ async function combatTick() {
       }
 
       if (skill && skill.type === 'aoe') {
+        const hasFalloff = skill.id === 'earth_spike' || skill.id === 'thunderstorm';
         mobs.forEach((target) => {
           // AOE伤害应该对每个目标独立计算，而不是使用主目标的伤害
           let aoeDmg = 0;
@@ -4534,6 +4535,9 @@ async function combatTick() {
             const mdef = Math.floor((target.mdef || 0) * mdefMultiplier);
             const powerStat = getPowerStatValue(player, skill);
             aoeDmg = Math.max(1, Math.floor((powerStat + randInt(0, powerStat / 2)) * skillPower - mdef * 0.6));
+          }
+          if (hasFalloff && target.id !== mob.id) {
+            aoeDmg = Math.max(1, Math.floor(aoeDmg * 0.5));
           }
           const elementAtk = Math.max(0, Math.floor(player.elementAtk || 0));
           if (elementAtk > 0) {
@@ -4690,6 +4694,22 @@ async function combatTick() {
     const aliveSummons = getAliveSummons(player);
     if (aliveSummons.length && mob.hp > 0) {
       aliveSummons.forEach((summon) => {
+        if (summon.id === 'white_tiger') {
+          mobs.forEach((target) => {
+            const hitChance = calcHitChance(summon, target);
+            if (Math.random() <= hitChance) {
+              let dmg = calcTaoistDamageFromValue(getSpiritValue(summon), target);
+              if (target.id !== mob.id) {
+                dmg = Math.max(1, Math.floor(dmg * 0.5));
+              }
+              const summonResult = applyDamageToMob(target, dmg, player.name);
+              if (summonResult?.damageTaken) {
+                player.send(`${summon.name} 对 ${target.name} 造成 ${dmg} 点伤害。`);
+              }
+            }
+          });
+          return;
+        }
         const hitChance = calcHitChance(summon, mob);
         if (Math.random() <= hitChance) {
           const useTaoist = summon.id === 'skeleton' || summon.id === 'summon';

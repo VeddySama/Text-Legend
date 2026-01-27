@@ -535,8 +535,9 @@ export function summonStats(player, skill, summonLevelOverride = null) {
   let def;
   let mdef;
     const summonFactor = 0.1 + ((level - 1) * (0.9 / 7));
-    if (skill.id === 'summon' || skill.id === 'white_tiger') {
-      const factor = skill.id === 'white_tiger' ? summonFactor * 2 : summonFactor;
+    if (skill.id === 'skeleton' || skill.id === 'summon' || skill.id === 'white_tiger') {
+      const maxRatio = skill.id === 'white_tiger' ? 2.0 : (skill.id === 'summon' ? 1.0 : 0.6);
+      const factor = summonFactor * maxRatio;
       max_hp = Math.floor((player.max_hp || 0) * factor);
       atk = Math.floor((player.spirit || 0) * factor);
       def = Math.floor((player.def || 0) * factor);

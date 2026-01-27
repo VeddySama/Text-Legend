@@ -77,9 +77,20 @@ const captchaStore = new Map();
 
 function getSummons(player) {
   if (!player) return [];
-  if (Array.isArray(player.summons)) return player.summons.filter(Boolean);
-  if (player.summon) return [player.summon];
-  return [];
+  const list = [];
+  if (Array.isArray(player.summons)) {
+    list.push(...player.summons.filter(Boolean));
+  }
+  if (player.summon) {
+    list.push(player.summon);
+  }
+  if (!list.length) return [];
+  const seen = new Set();
+  return list.filter((summon) => {
+    if (!summon || seen.has(summon.id)) return false;
+    seen.add(summon.id);
+    return true;
+  });
 }
 
 function setSummons(player, summons) {
@@ -1680,6 +1691,13 @@ function getSpiritValue(target) {
     return base;
   }
   return Math.floor(base * (buff.multiplier || 1));
+}
+
+function getPowerStatValue(player, skill) {
+  if (!player || !skill) return 0;
+  if (skill.powerStat === 'atk') return Number(player.atk || 0);
+  if (skill.powerStat === 'spirit' || skill.id === 'soul') return getSpiritValue(player);
+  return Number(player.mag || 0);
 }
 
 function applyDamageToSummon(target, dmg) {
@@ -3513,7 +3531,7 @@ function tryAutoBuff(player) {
   if (!player.flags?.autoSkillId) return false;
   const autoSkill = player.flags.autoSkillId;
   const learnedBuffs = getLearnedSkills(player).filter((skill) =>
-    skill.type === 'buff_def' || skill.type === 'buff_mdef' || skill.type === 'buff_shield'
+    skill.type === 'buff_def' || skill.type === 'buff_mdef' || skill.type === 'buff_shield' || skill.type === 'stealth_group'
   );
   if (!learnedBuffs.length) return false;
 
@@ -3526,6 +3544,13 @@ function tryAutoBuff(player) {
   const now = Date.now();
   for (const buffSkill of enabledSkills) {
     if (player.mp < buffSkill.mp) continue;
+    if (buffSkill.cooldown) {
+      if (!player.status) player.status = {};
+      if (!player.status.skillCooldowns) player.status.skillCooldowns = {};
+      const lastUse = player.status.skillCooldowns[buffSkill.id] || 0;
+      const cooldownRemaining = lastUse + buffSkill.cooldown - now;
+      if (cooldownRemaining > 0) continue;
+    }
     if (buffSkill.type === 'buff_shield') {
       const shield = player.status?.buffs?.magicShield;
       if (shield && (!shield.expiresAt || shield.expiresAt >= now + 5000)) continue;
@@ -3552,6 +3577,33 @@ function tryAutoBuff(player) {
       const summons = getAliveSummons(p);
       summons.forEach((summon) => targets.push(summon));
     });
+
+    if (buffSkill.type === 'stealth_group') {
+      const duration = 5;
+      const alreadyActive = targets.every((p) => {
+        const invincibleUntil = p.status?.invincible || 0;
+        return invincibleUntil >= now + 1000;
+      });
+      if (alreadyActive) continue;
+
+      player.mp = clamp(player.mp - buffSkill.mp, 0, player.max_mp);
+      targets.forEach((p) => {
+        if (!p.status) p.status = {};
+        if (!p.status.buffs) p.status.buffs = {};
+        p.status.invincible = now + duration * 1000;
+        applyBuff(p, { key: 'spiritBoost', expiresAt: now + duration * 1000, multiplier: 2 });
+        if (p.send && p.name && p.name !== player.name) {
+          p.send(`${player.name} 自动为你施放 ${buffSkill.name}。`);
+        }
+      });
+      if (!player.status) player.status = {};
+      if (!player.status.skillCooldowns) player.status.skillCooldowns = {};
+      if (buffSkill.cooldown) {
+        player.status.skillCooldowns[buffSkill.id] = Date.now();
+      }
+      player.send(`自动施放 ${buffSkill.name}，自己和召唤物 ${duration} 秒内免疫所有伤害，道术提升100%。`);
+      return true;
+    }
 
     const buffKey = buffSkill.type === 'buff_mdef' ? 'mdefBuff' : 'defBuff';
     const multiplierKey = buffSkill.type === 'buff_mdef' ? 'mdefMultiplier' : 'defMultiplier';
@@ -4171,18 +4223,22 @@ async function combatTick() {
           const skillLevel = getSkillLevel(player, skill.id);
           skillPower = scaledSkillPower(skill, skillLevel);
         if (skill.type === 'spell' || skill.type === 'aoe') {
-          const mdefMultiplier = getMagicDefenseMultiplier(target);
-          const mdef = Math.floor((target.mdef || 0) * mdefMultiplier);
-          const powerStat = skill.id === 'soul' ? getSpiritValue(player) : (player.mag || 0);
-          // 道士的soul技能受防御和魔御各50%影响
-          if (skill.id === 'soul') {
-            const defMultiplier = getDefenseMultiplier(target);
-            const def = Math.floor((target.def || 0) * defMultiplier);
-            dmg = Math.floor((powerStat + randInt(0, powerStat / 2)) * skillPower - mdef * 0.3 - def * 0.3);
+          if (skill.powerStat === 'atk') {
+            dmg = calcDamage(player, target, skillPower);
           } else {
-            dmg = Math.floor((powerStat + randInt(0, powerStat / 2)) * skillPower - mdef * 0.6);
+            const mdefMultiplier = getMagicDefenseMultiplier(target);
+            const mdef = Math.floor((target.mdef || 0) * mdefMultiplier);
+            const powerStat = getPowerStatValue(player, skill);
+            // 道士的soul技能受防御和魔御各50%影响
+            if (skill.id === 'soul') {
+              const defMultiplier = getDefenseMultiplier(target);
+              const def = Math.floor((target.def || 0) * defMultiplier);
+              dmg = Math.floor((powerStat + randInt(0, powerStat / 2)) * skillPower - mdef * 0.3 - def * 0.3);
+            } else {
+              dmg = Math.floor((powerStat + randInt(0, powerStat / 2)) * skillPower - mdef * 0.6);
+            }
+            if (dmg < 1) dmg = 1;
           }
-          if (dmg < 1) dmg = 1;
         } else if (skill.type === 'dot') {
           const mdefMultiplier = getMagicDefenseMultiplier(target);
           const defMultiplier = getDefenseMultiplier(target);
@@ -4435,11 +4491,15 @@ async function combatTick() {
         const skillLevel = getSkillLevel(player, skill.id);
         skillPower = scaledSkillPower(skill, skillLevel);
         if (skill.type === 'spell' || skill.type === 'aoe') {
-          const mdefMultiplier = getMagicDefenseMultiplier(mob);
-          const mdef = Math.floor((mob.mdef || 0) * mdefMultiplier);
-          const powerStat = skill.id === 'soul' ? getSpiritValue(player) : (player.mag || 0);
-          dmg = Math.floor((powerStat + randInt(0, powerStat / 2)) * skillPower - mdef * 0.6);
-          if (dmg < 1) dmg = 1;
+          if (skill.powerStat === 'atk') {
+            dmg = calcDamage(player, mob, skillPower);
+          } else {
+            const mdefMultiplier = getMagicDefenseMultiplier(mob);
+            const mdef = Math.floor((mob.mdef || 0) * mdefMultiplier);
+            const powerStat = getPowerStatValue(player, skill);
+            dmg = Math.floor((powerStat + randInt(0, powerStat / 2)) * skillPower - mdef * 0.6);
+            if (dmg < 1) dmg = 1;
+          }
         } else if (skill.type === 'dot') {
           dmg = Math.max(1, Math.floor(player.mag * 0.5 * skillPower));
         } else {
@@ -4466,10 +4526,15 @@ async function combatTick() {
       if (skill && skill.type === 'aoe') {
         mobs.forEach((target) => {
           // AOE伤害应该对每个目标独立计算，而不是使用主目标的伤害
-          const mdefMultiplier = getMagicDefenseMultiplier(target);
-          const mdef = Math.floor((target.mdef || 0) * mdefMultiplier);
-          const powerStat = skill.id === 'soul' ? getSpiritValue(player) : (player.mag || 0);
-          let aoeDmg = Math.max(1, Math.floor((powerStat + randInt(0, powerStat / 2)) * skillPower - mdef * 0.6));
+          let aoeDmg = 0;
+          if (skill.powerStat === 'atk') {
+            aoeDmg = calcDamage(player, target, skillPower);
+          } else {
+            const mdefMultiplier = getMagicDefenseMultiplier(target);
+            const mdef = Math.floor((target.mdef || 0) * mdefMultiplier);
+            const powerStat = getPowerStatValue(player, skill);
+            aoeDmg = Math.max(1, Math.floor((powerStat + randInt(0, powerStat / 2)) * skillPower - mdef * 0.6));
+          }
           const elementAtk = Math.max(0, Math.floor(player.elementAtk || 0));
           if (elementAtk > 0) {
             aoeDmg += elementAtk * 10;

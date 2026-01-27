@@ -2268,13 +2268,15 @@ const SET_DROPS = {
       { id: 'book_war_halfmoon', name: '技能书: 半月弯刀', drops: [{ mob: '沃玛教主', chance: '4%' }, { mob: '祖玛教主', chance: '4%' }] },
       { id: 'book_war_fire', name: '技能书: 烈火剑法', drops: [{ mob: '祖玛教主', chance: '4%' }, { mob: '赤月恶魔', chance: '4%' }] },
       { id: 'book_war_savage', name: '技能书: 野蛮冲撞', drops: [{ mob: '赤月恶魔', chance: '3%' }, { mob: '黄泉教主', chance: '3%' }] },
+      { id: 'book_war_earth_spike', name: '技能书: 彻地钉', drops: [{ mob: '世界BOSS', chance: '3%' }] },
       { id: 'book_mage_fireball', name: '技能书: 小火球', drops: [{ mob: '稻草人', chance: '2%' }, { mob: '鸡', chance: '2%' }] },
       { id: 'book_mage_resist', name: '技能书: 抗拒火环', drops: [{ mob: '邪恶钳虫', chance: '2%' }, { mob: '多钩猫', chance: '1%' }] },
       { id: 'book_mage_inferno', name: '技能书: 地狱火', drops: [{ mob: '触龙神', chance: '3%' }, { mob: '白野猪', chance: '2%' }] },
       { id: 'book_mage_explode', name: '技能书: 爆裂火球', drops: [{ mob: '沃玛教主', chance: '4%' }, { mob: '祖玛教主', chance: '4%' }] },
       { id: 'book_mage_lightning', name: '技能书: 雷电术', drops: [{ mob: '祖玛教主', chance: '4%' }, { mob: '牛魔王', chance: '3%' }] },
       { id: 'book_mage_flash', name: '技能书: 疾光电影', drops: [{ mob: '赤月恶魔', chance: '3%' }, { mob: '黄泉教主', chance: '3%' }] },
-      { id: 'book_mage_thunder', name: '技能书: 雷霆万钧', drops: [{ mob: '牛魔王', chance: '3%' }, { mob: '魔龙教主', chance: '3%' }] },
+      { id: 'book_mage_thunder', name: '技能书: 地狱雷光', drops: [{ mob: '牛魔王', chance: '3%' }, { mob: '魔龙教主', chance: '3%' }] },
+      { id: 'book_mage_thunderstorm', name: '技能书: 雷霆万钧', drops: [{ mob: '世界BOSS', chance: '3%' }] },
       { id: 'book_mage_shield', name: '技能书: 魔法盾', drops: [{ mob: '魔龙教主', chance: '4%' }, { mob: '沙巴克BOSS', chance: '4%' }] },
       { id: 'book_mage_ice', name: '技能书: 冰咆哮', drops: [{ mob: '沙巴克BOSS', chance: '5%' }] },
       { id: 'book_tao_heal', name: '技能书: 治愈术', drops: [{ mob: '鸡', chance: '2%' }, { mob: '鹿', chance: '2%' }] },
@@ -2286,7 +2288,8 @@ const SET_DROPS = {
       { id: 'book_tao_armor', name: '技能书: 防御术', drops: [{ mob: '祖玛教主', chance: '4%' }, { mob: '赤月恶魔', chance: '4%' }] },
       { id: 'book_tao_shield', name: '技能书: 神圣战甲术', drops: [{ mob: '黄泉教主', chance: '3%' }, { mob: '魔龙教主', chance: '3%' }] },
       { id: 'book_tao_skeleton', name: '技能书: 召唤骷髅', drops: [{ mob: '牛魔王', chance: '3%' }, { mob: '魔龙教主', chance: '3%' }] },
-      { id: 'book_tao_summon', name: '技能书: 召唤神兽', drops: [{ mob: '魔龙教主', chance: '4%' }, { mob: '沙巴克BOSS', chance: '4%' }] }
+      { id: 'book_tao_summon', name: '技能书: 召唤神兽', drops: [{ mob: '魔龙教主', chance: '4%' }, { mob: '沙巴克BOSS', chance: '4%' }] },
+      { id: 'book_tao_white_tiger', name: '技能书: 召唤白虎', drops: [{ mob: '世界BOSS', chance: '3%' }] }
     ]
   },
   special: {

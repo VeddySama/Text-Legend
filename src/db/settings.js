@@ -85,6 +85,15 @@ export async function setStateThrottleIntervalSec(seconds) {
   await setSetting('state_throttle_interval_sec', String(normalized));
 }
 
+export async function getStateThrottleOverrideServerAllowed() {
+  const enabled = await getSetting('state_throttle_override_server_allowed', 'true');
+  return enabled === 'true' || enabled === '1';
+}
+
+export async function setStateThrottleOverrideServerAllowed(enabled) {
+  await setSetting('state_throttle_override_server_allowed', enabled ? 'true' : 'false');
+}
+
 /**
  * 获取玩家已领取的VIP激活码数量
  */

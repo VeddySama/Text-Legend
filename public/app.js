@@ -18,6 +18,7 @@ let stateThrottleTimer = null;
 let lastStateRenderAt = 0;
 let stateThrottleIntervalMs = 10000;
 let stateThrottleOverride = localStorage.getItem('stateThrottleOverride') === 'true';
+let stateThrottleOverrideServerAllowed = true;
 let bossRespawnTimer = null;
 let bossRespawnTarget = null;
 let bossRespawnTimerEl = null;
@@ -2907,6 +2908,9 @@ function handleIncomingState(payload) {
     stateThrottleEnabled = payload.state_throttle_enabled === true;
     syncStateThrottleToggle();
   }
+  if (payload.state_throttle_override_server_allowed !== undefined) {
+    stateThrottleOverrideServerAllowed = payload.state_throttle_override_server_allowed === true;
+  }
   if (payload.state_throttle_interval_sec !== undefined) {
     const intervalSec = Math.max(1, Number(payload.state_throttle_interval_sec) || 10);
     stateThrottleIntervalMs = intervalSec * 1000;
@@ -3874,7 +3878,9 @@ function enterGame(name) {
   socket.on('connect', () => {
     socket.emit('auth', { token, name });
     socket.emit('cmd', { text: 'stats' });
-    socket.emit('state_throttle_override', { enabled: stateThrottleOverride });
+    if (stateThrottleOverrideServerAllowed) {
+      socket.emit('state_throttle_override', { enabled: stateThrottleOverride });
+    }
   });
   socket.on('auth_error', (payload) => {
     appendLine(`认证失败: ${payload.error}`);
@@ -4779,7 +4785,9 @@ if (logThrottleNormal) {
   logThrottleNormal.addEventListener('change', () => {
     stateThrottleOverride = logThrottleNormal.checked;
     localStorage.setItem('stateThrottleOverride', stateThrottleOverride.toString());
-    if (socket) socket.emit('state_throttle_override', { enabled: stateThrottleOverride });
+    if (socket && stateThrottleOverrideServerAllowed) {
+      socket.emit('state_throttle_override', { enabled: stateThrottleOverride });
+    }
   });
 }
 

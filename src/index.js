@@ -14,7 +14,7 @@ import { addGuildMember, createGuild, getGuildByName, getGuildMember, getSabakOw
 import { createAdminSession, listUsers, verifyAdminSession, deleteUser } from './db/admin.js';
 import { sendMail, listMail, markMailRead, markMailClaimed } from './db/mail.js';
 import { createVipCodes, listVipCodes, useVipCode } from './db/vip.js';
-import { getVipSelfClaimEnabled, setVipSelfClaimEnabled, getLootLogEnabled, setLootLogEnabled, getStateThrottleEnabled, setStateThrottleEnabled, getStateThrottleIntervalSec, setStateThrottleIntervalSec, canUserClaimVip, incrementUserVipClaimCount, getWorldBossKillCount, setWorldBossKillCount } from './db/settings.js';
+import { getVipSelfClaimEnabled, setVipSelfClaimEnabled, getLootLogEnabled, setLootLogEnabled, getStateThrottleEnabled, setStateThrottleEnabled, getStateThrottleIntervalSec, setStateThrottleIntervalSec, getStateThrottleOverrideServerAllowed, setStateThrottleOverrideServerAllowed, canUserClaimVip, incrementUserVipClaimCount, getWorldBossKillCount, setWorldBossKillCount } from './db/settings.js';
 import { listMobRespawns, upsertMobRespawn, clearMobRespawn, saveMobState } from './db/mobs.js';
 import {
   listConsignments,
@@ -435,22 +435,29 @@ app.get('/admin/state-throttle-status', async (req, res) => {
   if (!admin) return res.status(401).json({ error: '无管理员权限。' });
   const enabled = await getStateThrottleEnabled();
   const intervalSec = await getStateThrottleIntervalSec();
-  res.json({ ok: true, enabled, intervalSec });
+  const overrideServerAllowed = await getStateThrottleOverrideServerAllowed();
+  res.json({ ok: true, enabled, intervalSec, overrideServerAllowed });
 });
 
 app.post('/admin/state-throttle-toggle', async (req, res) => {
   const admin = await requireAdmin(req);
   if (!admin) return res.status(401).json({ error: '无管理员权限。' });
-  const { enabled, intervalSec } = req.body || {};
+  const { enabled, intervalSec, overrideServerAllowed } = req.body || {};
   const nextEnabled = enabled === true;
   await setStateThrottleEnabled(nextEnabled);
   if (intervalSec !== undefined) {
     await setStateThrottleIntervalSec(intervalSec);
   }
+  if (overrideServerAllowed !== undefined) {
+    await setStateThrottleOverrideServerAllowed(overrideServerAllowed === true);
+    stateThrottleOverrideAllowedCachedValue = overrideServerAllowed === true;
+    stateThrottleOverrideAllowedLastUpdate = Date.now();
+  }
   stateThrottleCachedValue = nextEnabled;
   stateThrottleLastUpdate = Date.now();
   const intervalValue = await getStateThrottleIntervalSec();
-  res.json({ ok: true, enabled: nextEnabled, intervalSec: intervalValue });
+  const overrideAllowed = await getStateThrottleOverrideServerAllowed();
+  res.json({ ok: true, enabled: nextEnabled, intervalSec: intervalValue, overrideServerAllowed: overrideAllowed });
 });
 
 app.get('/admin/backup', async (req, res) => {
@@ -1891,6 +1898,8 @@ let stateThrottleCachedValue = null;
 let stateThrottleLastUpdate = 0;
 let stateThrottleIntervalCachedValue = null;
 let stateThrottleIntervalLastUpdate = 0;
+let stateThrottleOverrideAllowedCachedValue = null;
+let stateThrottleOverrideAllowedLastUpdate = 0;
 let lootLogEnabled = false;
 const stateThrottleLastSent = new Map();
 const stateThrottleLastExits = new Map();
@@ -1913,9 +1922,14 @@ async function getStateThrottleSettingsCached() {
     stateThrottleIntervalCachedValue = await getStateThrottleIntervalSec();
     stateThrottleIntervalLastUpdate = now;
   }
+  if (now - stateThrottleOverrideAllowedLastUpdate > STATE_THROTTLE_CACHE_TTL) {
+    stateThrottleOverrideAllowedCachedValue = await getStateThrottleOverrideServerAllowed();
+    stateThrottleOverrideAllowedLastUpdate = now;
+  }
   return {
     enabled: Boolean(stateThrottleCachedValue),
-    intervalSec: Math.max(1, Number(stateThrottleIntervalCachedValue) || 10)
+    intervalSec: Math.max(1, Number(stateThrottleIntervalCachedValue) || 10),
+    overrideServerAllowed: Boolean(stateThrottleOverrideAllowedCachedValue)
   };
 }
 
@@ -2188,7 +2202,7 @@ async function buildState(player) {
     vipSelfClaimEnabled = vipSelfClaimCachedValue;
   }
 
-  const { enabled: stateThrottleEnabled, intervalSec: stateThrottleIntervalSec } =
+  const { enabled: stateThrottleEnabled, intervalSec: stateThrottleIntervalSec, overrideServerAllowed } =
     await getStateThrottleSettingsCached();
   return {
     player: {
@@ -2266,14 +2280,15 @@ async function buildState(player) {
     server_time: Date.now(),
     vip_self_claim_enabled: vipSelfClaimEnabled,
     state_throttle_enabled: stateThrottleEnabled,
-    state_throttle_interval_sec: stateThrottleIntervalSec
+    state_throttle_interval_sec: stateThrottleIntervalSec,
+    state_throttle_override_server_allowed: overrideServerAllowed
   };
 }
 
 async function sendState(player) {
   if (!player.socket) return;
-  const { enabled, intervalSec } = await getStateThrottleSettingsCached();
-  const override = Boolean(player.stateThrottleOverride);
+  const { enabled, intervalSec, overrideServerAllowed } = await getStateThrottleSettingsCached();
+  const override = Boolean(player.stateThrottleOverride) && overrideServerAllowed;
   const inBossRoom = player.position
     ? isBossRoom(player.position.zone, player.position.room)
     : false;

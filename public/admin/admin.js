@@ -142,7 +142,7 @@ async function refreshUsers(page = 1) {
     usersList.innerHTML = '';
     if (!data.users || data.users.length === 0) {
       usersList.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #999;">暂无用户</td></tr>';
-      usersPaginationInfo.textContent = currentUsersSearch ? `未找到匹配“${currentUsersSearch}”的用户` : '';
+      usersPaginationInfo.textContent = currentUsersSearch ? `未找到匹配"${currentUsersSearch}"的用户` : '';
       return;
     }
     
@@ -597,6 +597,168 @@ async function importBackup() {
   }
 }
 
+// 区服管理相关
+const realmsList = document.getElementById('realms-list');
+const realmsMsg = document.getElementById('realms-msg');
+const realmNameInput = document.getElementById('realm-name-input');
+const mergeSourceSelect = document.getElementById('merge-source-realm');
+const mergeTargetSelect = document.getElementById('merge-target-realm');
+const mergeMsg = document.getElementById('merge-msg');
+
+async function refreshRealms() {
+  if (!realmsList) return;
+  try {
+    const data = await api('/admin/realms', 'GET');
+    const realms = data.realms || [];
+    
+    realmsList.innerHTML = '';
+    if (!realms || realms.length === 0) {
+      realmsList.innerHTML = '<tr><td colspan="6" style="text-align: center; color: #999;">暂无区服</td></tr>';
+      return;
+    }
+    
+    realms.forEach((r) => {
+      const tr = document.createElement('tr');
+      
+      // ID
+      const tdId = document.createElement('td');
+      tdId.textContent = r.id;
+      tr.appendChild(tdId);
+      
+      // 区名
+      const tdName = document.createElement('td');
+      tdName.textContent = r.name;
+      tr.appendChild(tdName);
+      
+      // 角色数
+      const tdChars = document.createElement('td');
+      tdChars.textContent = r.character_count || 0;
+      tr.appendChild(tdChars);
+      
+      // 行会数
+      const tdGuilds = document.createElement('td');
+      tdGuilds.textContent = r.guild_count || 0;
+      tr.appendChild(tdGuilds);
+      
+      // 创建时间
+      const tdTime = document.createElement('td');
+      tdTime.textContent = new Date(r.created_at).toLocaleString('zh-CN', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+      tr.appendChild(tdTime);
+      
+      // 操作
+      const tdAction = document.createElement('td');
+      
+      // 编辑区名按钮
+      const btnEdit = document.createElement('button');
+      btnEdit.className = 'btn-small';
+      btnEdit.textContent = '改名';
+      btnEdit.addEventListener('click', () => editRealmName(r.id, r.name));
+      tdAction.appendChild(btnEdit);
+      
+      tr.appendChild(tdAction);
+      realmsList.appendChild(tr);
+    });
+    
+    // 更新合区下拉框
+    updateMergeSelects(realms);
+  } catch (err) {
+    realmsList.innerHTML = `<tr><td colspan="6" style="text-align: center; color: #dc3545;">${err.message}</td></tr>`;
+  }
+}
+
+function updateMergeSelects(realms) {
+  if (!mergeSourceSelect || !mergeTargetSelect) return;
+  
+  mergeSourceSelect.innerHTML = '';
+  mergeTargetSelect.innerHTML = '';
+  
+  realms.forEach((r) => {
+    const option1 = document.createElement('option');
+    option1.value = r.id;
+    option1.textContent = `${r.id} - ${r.name}`;
+    mergeSourceSelect.appendChild(option1);
+    
+    const option2 = document.createElement('option');
+    option2.value = r.id;
+    option2.textContent = `${r.id} - ${r.name}`;
+    mergeTargetSelect.appendChild(option2);
+  });
+}
+
+async function createRealm() {
+  if (!realmNameInput || !realmsMsg) return;
+  const name = realmNameInput.value.trim();
+  if (!name) {
+    realmsMsg.textContent = '请输入区服名称';
+    return;
+  }
+  
+  if (!confirm(`确定要创建新区 "${name}" 吗？`)) return;
+  
+  try {
+    await api('/admin/realms/create', 'POST', { name });
+    realmsMsg.textContent = '新区创建成功';
+    realmNameInput.value = '';
+    await refreshRealms();
+  } catch (err) {
+    realmsMsg.textContent = err.message;
+  }
+}
+
+async function editRealmName(realmId, currentName) {
+  const newName = prompt(`修改区名 (当前: ${currentName}):`, currentName);
+  if (!newName || newName.trim() === currentName) return;
+  
+  try {
+    await api('/admin/realms/update', 'POST', { realmId, name: newName.trim() });
+    alert('区名修改成功');
+    await refreshRealms();
+  } catch (err) {
+    alert(`修改失败: ${err.message}`);
+  }
+}
+
+async function mergeRealms() {
+  if (!mergeSourceSelect || !mergeTargetSelect || !mergeMsg) return;
+  const sourceId = Number(mergeSourceSelect.value);
+  const targetId = Number(mergeTargetSelect.value);
+  
+  if (!sourceId || !targetId) {
+    mergeMsg.textContent = '请选择源区和目标区';
+    return;
+  }
+  
+  if (sourceId === targetId) {
+    mergeMsg.textContent = '源区和目标区不能相同';
+    return;
+  }
+  
+  const sourceText = mergeSourceSelect.options[mergeSourceSelect.selectedIndex].text;
+  const targetText = mergeTargetSelect.options[mergeTargetSelect.selectedIndex].text;
+  
+  if (!confirm(`⚠️ 警告：合区操作将强制下线所有玩家！\n\n源区: ${sourceText}\n目标区: ${targetText}\n\n确定要继续吗？`)) {
+    return;
+  }
+  
+  if (!confirm(`⚠️ 最终确认：合区后源区将被删除，所有数据（角色、行会、邮件、寄售）将合并到目标区，目标区沙巴克状态将重置为无人占领！\n\n确定要执行合区吗？`)) {
+    return;
+  }
+  
+  try {
+    const data = await api('/admin/realms/merge', 'POST', { sourceId, targetId });
+    mergeMsg.textContent = data.message || '合区完成';
+    await refreshRealms();
+  } catch (err) {
+    mergeMsg.textContent = err.message;
+  }
+}
+
 if (adminToken) {
   showDashboard();
   refreshUsers();
@@ -605,7 +767,7 @@ if (adminToken) {
   refreshStateThrottleStatus();
   refreshConsignExpireStatus();
   refreshRoomVariantStatus();
-  refreshRealmCountStatus();
+  refreshRealms();
 }
 
 applyTheme(localStorage.getItem('adminTheme') || 'light');
@@ -664,12 +826,21 @@ if (consignExpireSaveBtn) {
 if (roomVariantSaveBtn) {
   roomVariantSaveBtn.addEventListener('click', saveRoomVariantCount);
 }
-if (realmCountSaveBtn) {
-  realmCountSaveBtn.addEventListener('click', saveRealmCount);
-}
 document.getElementById('backup-download').addEventListener('click', downloadBackup);
 document.getElementById('import-btn').addEventListener('click', importBackup);
 if (themeToggleBtn) themeToggleBtn.addEventListener('click', toggleTheme);
+
+// 区服管理事件
+if (document.getElementById('realm-create-btn')) {
+  document.getElementById('realm-create-btn').addEventListener('click', createRealm);
+}
+if (document.getElementById('realm-refresh-btn')) {
+  document.getElementById('realm-refresh-btn').addEventListener('click', refreshRealms);
+}
+if (document.getElementById('merge-realms-btn')) {
+  document.getElementById('merge-realms-btn').addEventListener('click', mergeRealms);
+}
+
 if (adminPwCancel) {
   adminPwCancel.addEventListener('click', () => {
     pendingPwUser = null;

@@ -537,7 +537,33 @@ app.post('/admin/room-variant-update', async (req, res) => {
 app.get('/admin/realms', async (req, res) => {
   const admin = await requireAdmin(req);
   if (!admin) return res.status(401).json({ error: '无管理员权限。' });
-  const realms = await listRealms();
+  const realms = await knex('realms')
+    .select(
+      'realms.id',
+      'realms.name',
+      'realms.created_at',
+      knex.raw('COALESCE(char_counts.count, 0) as character_count'),
+      knex.raw('COALESCE(guild_counts.count, 0) as guild_count')
+    )
+    .leftJoin(
+      knex('characters')
+        .groupBy('realm_id')
+        .select('realm_id')
+        .count('* as count')
+        .as('char_counts'),
+      'char_counts.realm_id',
+      'realms.id'
+    )
+    .leftJoin(
+      knex('guilds')
+        .groupBy('realm_id')
+        .select('realm_id')
+        .count('* as count')
+        .as('guild_counts'),
+      'guild_counts.realm_id',
+      'realms.id'
+    )
+    .orderBy('realms.id');
   res.json({ ok: true, realms });
 });
 

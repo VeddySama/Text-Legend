@@ -1700,6 +1700,7 @@ function renderMailList(mails) {
 
 function refreshMailItemOptions() {
   if (!mailUi.item) return;
+  const currentValue = mailUi.item.value;
   mailUi.item.innerHTML = '';
   const empty = document.createElement('option');
   empty.value = '';
@@ -1712,6 +1713,10 @@ function refreshMailItemOptions() {
     opt.textContent = `${formatItemName(item)} x${item.qty}`;
     mailUi.item.appendChild(opt);
   });
+  // 恢复之前选中的值（如果它仍然存在于新选项中）
+  if (currentValue && Array.from(mailUi.item.options).some(opt => opt.value === currentValue)) {
+    mailUi.item.value = currentValue;
+  }
   updateMailQtyLimit();
 }
 

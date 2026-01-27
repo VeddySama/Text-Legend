@@ -603,7 +603,7 @@ function partyStatus(party) {
   return `队伍成员: ${party.members.join(', ')}`;
 }
 
-export async function handleCommand({ player, players, input, source, send, partyApi, guildApi, tradeApi, mailApi, consignApi }) {
+export async function handleCommand({ player, players, input, source, send, partyApi, guildApi, tradeApi, mailApi, consignApi, onMove }) {
   const [cmdRaw, ...rest] = input.trim().split(' ');
   const cmd = (cmdRaw || '').toLowerCase();
   const args = rest.join(' ').trim();
@@ -622,6 +622,7 @@ export async function handleCommand({ player, players, input, source, send, part
     }
     case 'go':
     case 'move': {
+      const fromRoom = { zone: player.position.zone, room: player.position.room };
       const room = getRoom(player.position.zone, player.position.room);
       if (!room) {
         send('你所在的房间不存在。');
@@ -715,10 +716,15 @@ export async function handleCommand({ player, players, input, source, send, part
       const roomName = zone?.rooms[player.position.room]?.name;
       send(`你前往 ${roomName || dirLabel(dir)}。`);
       sendRoomDescription(player, send);
+      if (onMove) {
+        const toRoom = { zone: player.position.zone, room: player.position.room };
+        onMove({ from: fromRoom, to: toRoom });
+      }
       return;
     }
     case 'goto_room': {
       if (!args) return send('要前往哪个房间？');
+      const fromRoom = { zone: player.position.zone, room: player.position.room };
       let zoneId = '';
       let roomId = '';
       if (args.includes(':')) {
@@ -750,16 +756,25 @@ export async function handleCommand({ player, players, input, source, send, part
       const bossName = room.spawns?.map(id => MOB_TEMPLATES[id]?.name).filter(Boolean).join('、') || 'BOSS';
       send(`你已前往 ${bossName} 的房间。`);
       sendRoomDescription(player, send);
+      if (onMove) {
+        const toRoom = { zone: player.position.zone, room: player.position.room };
+        onMove({ from: fromRoom, to: toRoom });
+      }
       return;
     }
     case 'goto': {
       if (!args) return send('要前往哪个玩家？');
+      const fromRoom = { zone: player.position.zone, room: player.position.room };
       const target = players.find((p) => p.name === args);
       if (!target) return send('玩家不在线。');
       player.position.zone = target.position.zone;
       player.position.room = target.position.room;
       send(`你前往 ${target.name} 的位置。`);
       sendRoomDescription(player, send);
+      if (onMove) {
+        const toRoom = { zone: player.position.zone, room: player.position.room };
+        onMove({ from: fromRoom, to: toRoom });
+      }
       return;
     }
     case 'say': {

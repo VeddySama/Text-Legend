@@ -3160,6 +3160,14 @@ io.on('connection', (socket) => {
       input: payload.text || '',
       source: payload.source || '',
       send: (msg) => sendTo(player, msg),
+      onMove: ({ from, to }) => {
+        if (from && from.zone && from.room) {
+          sendRoomState(from.zone, from.room);
+        }
+        if (to && to.zone && to.room) {
+          sendRoomState(to.zone, to.room);
+        }
+      },
       partyApi: {
         parties,
         invites: partyInvites,

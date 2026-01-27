@@ -2885,8 +2885,10 @@ function handleIncomingState(payload) {
     const intervalSec = Math.max(1, Number(payload.state_throttle_interval_sec) || 10);
     stateThrottleIntervalMs = intervalSec * 1000;
   }
+  const roomChanged = payload.room && (!lastState || !lastState.room ||
+    payload.room.zoneId !== lastState.room.zoneId || payload.room.roomId !== lastState.room.roomId);
   const inBossRoom = isBossRoomState(payload) || isBossRoomState(lastState);
-  const effectiveThrottleEnabled = stateThrottleEnabled && !stateThrottleOverride && !inBossRoom;
+  const effectiveThrottleEnabled = stateThrottleEnabled && !stateThrottleOverride && !inBossRoom && !roomChanged;
   if (!effectiveThrottleEnabled) {
     if (stateThrottleTimer) {
       clearTimeout(stateThrottleTimer);

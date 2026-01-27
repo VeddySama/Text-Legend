@@ -48,7 +48,7 @@ function scaledStats(tpl) {
     mdef: Math.floor(def * 0.5)
   };
   if (tpl.worldBoss) {
-    const growth = 1 + Math.floor(worldBossKillCount / 10) * 0.01;
+    const growth = 1 + Math.floor(worldBossKillCount / 5) * 0.01;
     stats = {
       hp: Math.floor(stats.hp * growth),
       atk: Math.floor(stats.atk * growth),

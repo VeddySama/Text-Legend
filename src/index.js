@@ -967,7 +967,8 @@ function getRealmState(realmId = 1) {
 
 async function refreshRealmCache() {
   const realms = await listRealms();
-  realmCache = Array.isArray(realms) && realms.length ? realms : [{ id: 1, name: '新区1' }];
+  // 如果数据库中有realm记录,使用它们;否则返回空数组,让前端处理
+  realmCache = Array.isArray(realms) ? realms : [];
   return realmCache;
 }
 

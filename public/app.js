@@ -495,8 +495,9 @@ async function loadRealms() {
   } catch {
     realmList = [];
   }
+  // 如果服务器列表为空,显示提示信息
   if (!Array.isArray(realmList) || realmList.length === 0) {
-    realmList = [{ id: 1, name: '新区1' }];
+    realmList = [{ id: 1, name: '无服务器' }];
   }
   if (realmSelect) {
     realmSelect.innerHTML = '';
@@ -532,7 +533,7 @@ async function refreshCharactersForRealm() {
     const list = Array.isArray(data.characters) ? data.characters : [];
     localStorage.setItem(charsKey, JSON.stringify(list));
     renderCharacters(list);
-  } catch {
+  } catch (err) {
     let cached = [];
     try {
       cached = JSON.parse(localStorage.getItem(charsKey) || '[]');
@@ -540,6 +541,12 @@ async function refreshCharactersForRealm() {
       cached = [];
     }
     renderCharacters(Array.isArray(cached) ? cached : []);
+    // 如果是"新区不存在"错误,清除旧的realmId
+    if (err.message && err.message.includes('新区不存在') && username) {
+      const key = getUserStorageKey('lastRealm', username);
+      localStorage.removeItem(key);
+      showToast('服务器已合并,请刷新页面重新选择服务器');
+    }
   }
 }
 
@@ -3838,9 +3845,13 @@ async function login() {
     token = data.token;
     const storageKey = getUserStorageKey('savedToken', username);
     localStorage.setItem(storageKey, token);
+    // 重新加载服务器列表,确保获取最新的服务器信息
+    realmList = [];
+    realmInitPromise = null;
     await ensureRealmsLoaded();
+    // 使用后端返回的realmId,而不是localStorage中的
     const count = realmList.length || 1;
-    const preferredRealmId = normalizeRealmId(getStoredRealmId(username) || data.realmId || 1, count);
+    const preferredRealmId = data.realmId || normalizeRealmId(1, count);
     setCurrentRealmId(preferredRealmId, username);
     if (preferredRealmId === data.realmId && Array.isArray(data.characters)) {
       const charsKey = getUserStorageKey('savedCharacters', username, preferredRealmId);
@@ -3873,7 +3884,7 @@ async function login() {
         token = data.token;
         const storageKey = getUserStorageKey('savedToken', username);
         localStorage.setItem(storageKey, token);
-        const preferredRealmId = normalizeRealmId(getStoredRealmId(username) || data.realmId || 1, count);
+        const preferredRealmId = data.realmId || normalizeRealmId(1, count);
         setCurrentRealmId(preferredRealmId, username);
         if (preferredRealmId === data.realmId && Array.isArray(data.characters)) {
           const charsKey = getUserStorageKey('savedCharacters', username, preferredRealmId);
@@ -3983,7 +3994,16 @@ async function createCharacter() {
       show(authSection);
       return;
     }
-    charMsg.textContent = err.message;
+    if (err.message && err.message.includes('新区不存在')) {
+      const username = localStorage.getItem('rememberedUser');
+      if (username) {
+        const key = getUserStorageKey('lastRealm', username);
+        localStorage.removeItem(key);
+      }
+      charMsg.textContent = '服务器已合并,请刷新页面重新选择服务器';
+    } else {
+      charMsg.textContent = err.message;
+    }
   }
 }
 
@@ -3993,7 +4013,7 @@ function enterGame(name) {
     socket.disconnect();
     socket = null;
   }
-  
+
   activeChar = name;
   const username = localStorage.getItem('rememberedUser');
   const storageKey = getUserStorageKey('lastCharacter', username, currentRealmId);
@@ -4024,7 +4044,9 @@ function enterGame(name) {
     }
     return rawEmit(event, payload);
   };
-  socket.on('connect', () => {
+  socket.on('connect', async () => {
+    // 确保realmList是最新的
+    await ensureRealmsLoaded();
     socket.emit('auth', { token, name, realmId: currentRealmId });
     socket.emit('cmd', { text: 'stats' });
     if (stateThrottleOverrideServerAllowed) {

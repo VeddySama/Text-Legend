@@ -12,6 +12,12 @@ let serverTimeBase = null;
 let serverTimeLocal = null;
 let serverTimeTimer = null;
 let vipSelfClaimEnabled = true;
+let stateThrottleEnabled = false;
+let pendingState = null;
+let stateThrottleTimer = null;
+let lastStateRenderAt = 0;
+const STATE_THROTTLE_INTERVAL = 10000;
+let stateThrottleOverride = localStorage.getItem('stateThrottleOverride') === 'true';
 let bossRespawnTimer = null;
 let bossRespawnTarget = null;
 let bossRespawnTimerEl = null;
@@ -2868,6 +2874,64 @@ async function promptChangePassword() {
   }
 }
 
+function handleIncomingState(payload) {
+  if (!payload) return;
+  if (payload.state_throttle_enabled !== undefined) {
+    stateThrottleEnabled = payload.state_throttle_enabled === true;
+    syncStateThrottleToggle();
+  }
+  const inBossRoom = isBossRoomState(payload) || isBossRoomState(lastState);
+  const effectiveThrottleEnabled = stateThrottleEnabled && !stateThrottleOverride && !inBossRoom;
+  if (!effectiveThrottleEnabled) {
+    if (stateThrottleTimer) {
+      clearTimeout(stateThrottleTimer);
+      stateThrottleTimer = null;
+    }
+    pendingState = null;
+    renderState(payload);
+    lastStateRenderAt = Date.now();
+    return;
+  }
+  pendingState = payload;
+  const now = Date.now();
+  const elapsed = now - lastStateRenderAt;
+  if (elapsed >= STATE_THROTTLE_INTERVAL) {
+    renderState(pendingState);
+    pendingState = null;
+    lastStateRenderAt = now;
+    return;
+  }
+  if (!stateThrottleTimer) {
+    stateThrottleTimer = setTimeout(() => {
+      stateThrottleTimer = null;
+      if (!pendingState) return;
+      renderState(pendingState);
+      pendingState = null;
+      lastStateRenderAt = Date.now();
+    }, Math.max(0, STATE_THROTTLE_INTERVAL - elapsed));
+  }
+}
+
+function isStateThrottleActive() {
+  return stateThrottleEnabled && !stateThrottleOverride && !isBossRoomState(lastState);
+}
+
+function isBossRoomState(state) {
+  if (!state || !state.room) return false;
+  const { zoneId, roomId } = state.room;
+  if (!zoneId || !roomId) return false;
+  if (zoneId === 'wb' && roomId === 'lair') return true;
+  if (zoneId === 'molong' && roomId === 'deep') return true;
+  if (zoneId === 'sb_guild' && roomId === 'sanctum') return true;
+  if (zoneId === 'dark_bosses' && roomId === 'dark_woma_lair') return true;
+  if (zoneId === 'dark_bosses' && roomId === 'dark_zuma_lair') return true;
+  if (zoneId === 'dark_bosses' && roomId === 'dark_hongmo_lair') return true;
+  if (zoneId === 'dark_bosses' && roomId === 'dark_huangquan_lair') return true;
+  if (zoneId === 'dark_bosses' && roomId === 'dark_doublehead_lair') return true;
+  if (zoneId === 'dark_bosses' && roomId === 'dark_skeleton_lair') return true;
+  return false;
+}
+
 function renderState(state) {
   const prevState = lastState;
   lastState = state;
@@ -3783,7 +3847,9 @@ function enterGame(name) {
   });
   socket.on('output', (payload) => {
     appendLine(payload);
-    parseStats(payload.text);
+    if (!isStateThrottleActive()) {
+      parseStats(payload.text);
+    }
     if (isChatLine(payload.text)) {
       appendChatLine(payload);
     }
@@ -3894,7 +3960,7 @@ function enterGame(name) {
     if (payload.ok && socket) socket.emit('mail_list');
   });
   socket.on('state', (payload) => {
-    renderState(payload);
+    handleIncomingState(payload);
   });
   
   socket.on('observe_data', (data) => {
@@ -4607,6 +4673,7 @@ const logWrap = document.getElementById('log-wrap');
 const logToggle = document.getElementById('log-toggle');
 const logShowDamage = document.getElementById('log-show-damage');
 const logShowExpGold = document.getElementById('log-show-exp-gold');
+const logThrottleNormal = document.getElementById('log-throttle-normal');
 
 if (logWrap && logToggle) {
   // 应用初始状态
@@ -4644,6 +4711,20 @@ if (logShowExpGold) {
   logShowExpGold.addEventListener('change', () => {
     showExpGold = logShowExpGold.checked;
     localStorage.setItem('showExpGold', showExpGold.toString());
+  });
+}
+
+function syncStateThrottleToggle() {
+  if (!logThrottleNormal) return;
+  logThrottleNormal.checked = stateThrottleOverride;
+  logThrottleNormal.disabled = !stateThrottleEnabled;
+}
+
+if (logThrottleNormal) {
+  syncStateThrottleToggle();
+  logThrottleNormal.addEventListener('change', () => {
+    stateThrottleOverride = logThrottleNormal.checked;
+    localStorage.setItem('stateThrottleOverride', stateThrottleOverride.toString());
   });
 }
 

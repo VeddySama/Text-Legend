@@ -60,6 +60,21 @@ export async function setLootLogEnabled(enabled) {
 }
 
 /**
+ * 获取状态刷新节流开关
+ */
+export async function getStateThrottleEnabled() {
+  const enabled = await getSetting('state_throttle_enabled', 'false');
+  return enabled === 'true' || enabled === '1';
+}
+
+/**
+ * 设置状态刷新节流开关
+ */
+export async function setStateThrottleEnabled(enabled) {
+  await setSetting('state_throttle_enabled', enabled ? 'true' : 'false');
+}
+
+/**
  * 获取玩家已领取的VIP激活码数量
  */
 export async function getUserVipClaimCount(userId) {

@@ -9,6 +9,7 @@ const vipCodesList = document.getElementById('vip-codes-list');
 const vipCodesTableContainer = document.getElementById('vip-codes-table-container');
 const vipSelfClaimStatus = document.getElementById('vip-self-claim-status');
 const vipSelfClaimMsg = document.getElementById('vip-self-claim-msg');
+const vipSelfClaimToggle = document.getElementById('vip-self-claim-toggle');
 const usersPaginationInfo = document.getElementById('users-pagination-info');
 const backupMsg = document.getElementById('backup-msg');
 const importFileInput = document.getElementById('import-file');
@@ -16,6 +17,10 @@ const themeToggleBtn = document.getElementById('theme-toggle');
 const collapseAllBtn = document.getElementById('collapse-all');
 const lootLogStatus = document.getElementById('loot-log-status');
 const lootLogMsg = document.getElementById('loot-log-msg');
+const lootLogToggle = document.getElementById('loot-log-toggle');
+const stateThrottleToggle = document.getElementById('state-throttle-toggle');
+const stateThrottleStatus = document.getElementById('state-throttle-status');
+const stateThrottleMsg = document.getElementById('state-throttle-msg');
 const usersSearchInput = document.getElementById('users-search');
 const usersSearchBtn = document.getElementById('users-search-btn');
 const adminPwModal = document.getElementById('admin-pw-modal');
@@ -337,6 +342,7 @@ async function refreshVipSelfClaimStatus() {
     const data = await api('/admin/vip/self-claim-status', 'GET');
     vipSelfClaimStatus.textContent = data.enabled ? '已开启' : '已关闭';
     vipSelfClaimStatus.style.color = data.enabled ? 'green' : 'red';
+    if (vipSelfClaimToggle) vipSelfClaimToggle.checked = data.enabled === true;
   } catch (err) {
     vipSelfClaimStatus.textContent = '加载失败';
   }
@@ -359,6 +365,7 @@ async function refreshLootLogStatus() {
     const data = await api('/admin/loot-log-status', 'GET');
     lootLogStatus.textContent = data.enabled ? '已开启' : '已关闭';
     lootLogStatus.style.color = data.enabled ? 'green' : 'red';
+    if (lootLogToggle) lootLogToggle.checked = data.enabled === true;
   } catch (err) {
     lootLogStatus.textContent = '加载失败';
   }
@@ -373,6 +380,30 @@ async function toggleLootLog(enabled) {
     await refreshLootLogStatus();
   } catch (err) {
     lootLogMsg.textContent = err.message;
+  }
+}
+
+async function refreshStateThrottleStatus() {
+  if (!stateThrottleStatus) return;
+  try {
+    const data = await api('/admin/state-throttle-status', 'GET');
+    stateThrottleStatus.textContent = data.enabled ? '已开启(10秒)' : '已关闭';
+    stateThrottleStatus.style.color = data.enabled ? 'green' : 'red';
+    if (stateThrottleToggle) stateThrottleToggle.checked = data.enabled === true;
+  } catch (err) {
+    stateThrottleStatus.textContent = '加载失败';
+  }
+}
+
+async function toggleStateThrottle(enabled) {
+  if (!stateThrottleMsg) return;
+  stateThrottleMsg.textContent = '';
+  try {
+    await api('/admin/state-throttle-toggle', 'POST', { enabled });
+    stateThrottleMsg.textContent = enabled ? '状态刷新节流已开启' : '状态刷新节流已关闭';
+    await refreshStateThrottleStatus();
+  } catch (err) {
+    stateThrottleMsg.textContent = err.message;
   }
 }
 
@@ -434,6 +465,7 @@ if (adminToken) {
   refreshUsers();
   refreshVipSelfClaimStatus();
   refreshLootLogStatus();
+  refreshStateThrottleStatus();
 }
 
 applyTheme(localStorage.getItem('adminTheme') || 'light');
@@ -469,10 +501,15 @@ document.getElementById('char-update-btn').addEventListener('click', updateChara
 document.getElementById('mail-send-btn').addEventListener('click', sendMail);
 document.getElementById('vip-create-btn').addEventListener('click', createVipCodes);
 document.getElementById('vip-list-btn').addEventListener('click', listVipCodes);
-document.getElementById('vip-self-claim-on').addEventListener('click', () => toggleVipSelfClaim(true));
-document.getElementById('vip-self-claim-off').addEventListener('click', () => toggleVipSelfClaim(false));
-document.getElementById('loot-log-on').addEventListener('click', () => toggleLootLog(true));
-document.getElementById('loot-log-off').addEventListener('click', () => toggleLootLog(false));
+if (vipSelfClaimToggle) {
+  vipSelfClaimToggle.addEventListener('change', () => toggleVipSelfClaim(vipSelfClaimToggle.checked));
+}
+if (lootLogToggle) {
+  lootLogToggle.addEventListener('change', () => toggleLootLog(lootLogToggle.checked));
+}
+if (stateThrottleToggle) {
+  stateThrottleToggle.addEventListener('change', () => toggleStateThrottle(stateThrottleToggle.checked));
+}
 document.getElementById('backup-download').addEventListener('click', downloadBackup);
 document.getElementById('import-btn').addEventListener('click', importBackup);
 if (themeToggleBtn) themeToggleBtn.addEventListener('click', toggleTheme);

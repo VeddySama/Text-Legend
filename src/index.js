@@ -14,7 +14,7 @@ import { addGuildMember, createGuild, getGuildByName, getGuildMember, getSabakOw
 import { createAdminSession, listUsers, verifyAdminSession, deleteUser } from './db/admin.js';
 import { sendMail, listMail, markMailRead, markMailClaimed } from './db/mail.js';
 import { createVipCodes, listVipCodes, useVipCode } from './db/vip.js';
-import { getVipSelfClaimEnabled, setVipSelfClaimEnabled, getLootLogEnabled, setLootLogEnabled, canUserClaimVip, incrementUserVipClaimCount, getWorldBossKillCount, setWorldBossKillCount } from './db/settings.js';
+import { getVipSelfClaimEnabled, setVipSelfClaimEnabled, getLootLogEnabled, setLootLogEnabled, getStateThrottleEnabled, setStateThrottleEnabled, canUserClaimVip, incrementUserVipClaimCount, getWorldBossKillCount, setWorldBossKillCount } from './db/settings.js';
 import { listMobRespawns, upsertMobRespawn, clearMobRespawn, saveMobState } from './db/mobs.js';
 import {
   listConsignments,
@@ -427,6 +427,24 @@ app.post('/admin/loot-log-toggle', async (req, res) => {
   const nextEnabled = enabled === true;
   await setLootLogEnabled(nextEnabled);
   lootLogEnabled = nextEnabled;
+  res.json({ ok: true, enabled: nextEnabled });
+});
+
+app.get('/admin/state-throttle-status', async (req, res) => {
+  const admin = await requireAdmin(req);
+  if (!admin) return res.status(401).json({ error: '无管理员权限。' });
+  const enabled = await getStateThrottleEnabled();
+  res.json({ ok: true, enabled });
+});
+
+app.post('/admin/state-throttle-toggle', async (req, res) => {
+  const admin = await requireAdmin(req);
+  if (!admin) return res.status(401).json({ error: '无管理员权限。' });
+  const { enabled } = req.body || {};
+  const nextEnabled = enabled === true;
+  await setStateThrottleEnabled(nextEnabled);
+  stateThrottleCachedValue = nextEnabled;
+  stateThrottleLastUpdate = Date.now();
   res.json({ ok: true, enabled: nextEnabled });
 });
 
@@ -1856,8 +1874,11 @@ let roomStateLastUpdate = 0;
 let roomStateCachedData = null;
 const ROOM_STATE_TTL = 100; // 100ms缓存时间
 const VIP_SELF_CLAIM_CACHE_TTL = 10000; // VIP自领缓存10秒
+const STATE_THROTTLE_CACHE_TTL = 10000; // 状态节流缓存10秒
 let vipSelfClaimCachedValue = null;
 let vipSelfClaimLastUpdate = 0;
+let stateThrottleCachedValue = null;
+let stateThrottleLastUpdate = 0;
 let lootLogEnabled = false;
 
 function logLoot(message) {
@@ -2128,6 +2149,15 @@ async function buildState(player) {
   } else {
     vipSelfClaimEnabled = vipSelfClaimCachedValue;
   }
+
+  let stateThrottleEnabled;
+  if (Date.now() - stateThrottleLastUpdate > STATE_THROTTLE_CACHE_TTL) {
+    stateThrottleEnabled = await getStateThrottleEnabled();
+    stateThrottleCachedValue = stateThrottleEnabled;
+    stateThrottleLastUpdate = Date.now();
+  } else {
+    stateThrottleEnabled = stateThrottleCachedValue;
+  }
   return {
     player: {
       name: player.name,
@@ -2202,7 +2232,8 @@ async function buildState(player) {
     players: roomPlayers,
     bossRespawn: nextRespawn,
     server_time: Date.now(),
-    vip_self_claim_enabled: vipSelfClaimEnabled
+    vip_self_claim_enabled: vipSelfClaimEnabled,
+    state_throttle_enabled: stateThrottleEnabled
   };
 }
 

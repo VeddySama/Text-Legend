@@ -1896,6 +1896,13 @@ const stateThrottleLastSent = new Map();
 const stateThrottleLastExits = new Map();
 const stateThrottleLastRoom = new Map();
 
+function getStateThrottleKey(player, socket = null) {
+  if (player) {
+    return player.userId || player.name || player.socket?.id || socket?.id || null;
+  }
+  return socket?.id || null;
+}
+
 async function getStateThrottleSettingsCached() {
   const now = Date.now();
   if (now - stateThrottleLastUpdate > STATE_THROTTLE_CACHE_TTL) {
@@ -2273,12 +2280,12 @@ async function sendState(player) {
   let forceSend = false;
   let exitsHash = null;
   let roomKey = null;
+  const key = getStateThrottleKey(player);
   if (enabled && !override && !inBossRoom) {
     if (player.position) {
       roomKey = `${player.position.zone}:${player.position.room}`;
       const exits = buildRoomExits(player.position.zone, player.position.room);
       exitsHash = JSON.stringify(exits);
-      const key = player.userId || player.name || player.socket.id;
       const lastRoom = stateThrottleLastRoom.get(key);
       const lastHash = stateThrottleLastExits.get(key);
       if (lastRoom !== roomKey || lastHash !== exitsHash) {
@@ -2287,7 +2294,6 @@ async function sendState(player) {
     }
   }
   if (enabled && !override && !inBossRoom && !forceSend) {
-    const key = player.userId || player.name || player.socket.id;
     const now = Date.now();
     const lastSent = stateThrottleLastSent.get(key) || 0;
     if (now - lastSent < intervalSec * 1000) {
@@ -2295,13 +2301,11 @@ async function sendState(player) {
     }
     stateThrottleLastSent.set(key, now);
   } else if (enabled && !override && !inBossRoom) {
-    const key = player.userId || player.name || player.socket.id;
     stateThrottleLastSent.set(key, Date.now());
   }
   const state = await buildState(player);
   player.socket.emit('state', state);
-  if (exitsHash && (player.userId || player.name || player.socket.id)) {
-    const key = player.userId || player.name || player.socket.id;
+  if (exitsHash && key) {
     stateThrottleLastExits.set(key, exitsHash);
     if (roomKey) stateThrottleLastRoom.set(key, roomKey);
   }
@@ -3081,6 +3085,12 @@ io.on('connection', (socket) => {
     loaded.guild = null;
     if (!loaded.flags) loaded.flags = {};
     loaded.stateThrottleOverride = socket.data?.stateThrottleOverride === true;
+    const throttleKey = getStateThrottleKey(loaded, socket);
+    if (throttleKey) {
+      stateThrottleLastSent.delete(throttleKey);
+      stateThrottleLastExits.delete(throttleKey);
+      stateThrottleLastRoom.delete(throttleKey);
+    }
 
     // 自动恢复召唤物
     const savedSummons = Array.isArray(loaded.flags.savedSummons)
@@ -3473,6 +3483,12 @@ io.on('connection', (socket) => {
       }
       await savePlayer(player);
       lastSaveTime.delete(player.name); // 清理保存时间记录
+      const throttleKey = getStateThrottleKey(player, socket);
+      if (throttleKey) {
+        stateThrottleLastSent.delete(throttleKey);
+        stateThrottleLastExits.delete(throttleKey);
+        stateThrottleLastRoom.delete(throttleKey);
+      }
       players.delete(socket.id);
     }
   });

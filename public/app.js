@@ -1165,7 +1165,8 @@ function paginateItems(items, page) {
 function renderConsignMarket(items) {
   if (!consignUi.marketList) return;
   consignUi.marketList.innerHTML = '';
-  const filtered = filterConsignItems(items, consignMarketFilter);
+  const filtered = filterConsignItems(items, consignMarketFilter).slice()
+    .sort((a, b) => sortByRarityDesc(a.item, b.item));
   const { totalPages, page, slice } = paginateItems(filtered, consignMarketPage);
   consignMarketPage = page;
   if (!slice.length) {
@@ -1219,7 +1220,8 @@ function renderConsignMarket(items) {
 function renderConsignMine(items) {
   if (!consignUi.myList) return;
   consignUi.myList.innerHTML = '';
-  const { totalPages, page, slice } = paginateItems(items, consignMyPage);
+  const sorted = (items || []).slice().sort((a, b) => sortByRarityDesc(a.item, b.item));
+  const { totalPages, page, slice } = paginateItems(sorted, consignMyPage);
   consignMyPage = page;
   if (!slice.length) {
     const empty = document.createElement('div');
@@ -1258,8 +1260,9 @@ function renderConsignInventory(items) {
   const equipItems = (items || []).filter((item) =>
     item && ['weapon', 'armor', 'accessory', 'book'].includes(item.type)
   );
-  consignInventoryItems = equipItems;
-  const { totalPages, page, slice } = paginateItems(equipItems, consignInventoryPage);
+  const sortedItems = equipItems.slice().sort(sortByRarityDesc);
+  consignInventoryItems = sortedItems;
+  const { totalPages, page, slice } = paginateItems(sortedItems, consignInventoryPage);
   consignInventoryPage = page;
   if (!slice.length) {
     const empty = document.createElement('div');
@@ -2013,11 +2016,11 @@ function showBagModal() {
     renderBagModal();
   }
 
-  function renderBagModal() {
-    if (!bagUi.modal || !bagUi.list) return;
-    bagUi.list.innerHTML = '';
-    const filtered = filterBagItems(bagItems, bagFilter);
-    const totalPages = Math.max(1, Math.ceil(filtered.length / BAG_PAGE_SIZE));
+function renderBagModal() {
+  if (!bagUi.modal || !bagUi.list) return;
+  bagUi.list.innerHTML = '';
+  const filtered = filterBagItems(bagItems, bagFilter).slice().sort(sortByRarityDesc);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / BAG_PAGE_SIZE));
     bagPage = Math.min(Math.max(0, bagPage), totalPages - 1);
     const start = bagPage * BAG_PAGE_SIZE;
     const pageItems = filtered.slice(start, start + BAG_PAGE_SIZE);
@@ -2412,6 +2415,29 @@ const RARITY_LABELS = {
   uncommon: '\u9ad8\u7ea7',
   common: '\u666e\u901a'
 };
+
+const RARITY_ORDER = {
+  common: 0,
+  uncommon: 1,
+  rare: 2,
+  epic: 3,
+  legendary: 4,
+  supreme: 5
+};
+
+function rarityRank(item) {
+  if (!item || !item.rarity) return 0;
+  const key = typeof item.rarity === 'string' ? item.rarity.toLowerCase() : item.rarity;
+  return RARITY_ORDER[key] ?? 0;
+}
+
+function sortByRarityDesc(a, b) {
+  const diff = rarityRank(b) - rarityRank(a);
+  if (diff !== 0) return diff;
+  const nameA = a?.name || '';
+  const nameB = b?.name || '';
+  return nameA.localeCompare(nameB, 'zh-Hans-CN');
+}
 
   function repairMultiplier(rarity) {
     switch (rarity) {
@@ -3472,7 +3498,9 @@ function renderState(state) {
       tooltip: formatItemTooltip(i),
       className: `${i.rarity ? `rarity-${i.rarity}` : ''}${i.is_set ? ' item-set' : ''}`.trim()
     }));
-  bagItems = allItems.map((i) => ({ ...i, tooltip: formatItemTooltip(i) }));
+  bagItems = allItems
+    .map((i) => ({ ...i, tooltip: formatItemTooltip(i) }))
+    .sort(sortByRarityDesc);
   const inlineItems = displayChips.length > BAG_PAGE_SIZE
     ? displayChips.slice(0, BAG_PAGE_SIZE).concat([{ id: 'bag-more', label: '更多...', raw: null }])
     : displayChips;

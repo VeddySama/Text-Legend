@@ -1808,12 +1808,26 @@ function applyOfflineRewards(player) {
   const maxHours = player.flags.vip ? 24 : 12;
   const offlineMinutes = Math.min(Math.floor((Date.now() - offlineAt) / 60000), maxHours * 60);
   if (offlineMinutes <= 0) return;
-  const expGain = Math.floor(offlineMinutes * (6 + player.level * 2));
-  const goldGain = Math.floor(offlineMinutes * (4 + player.level));
+  const offlineMultiplier = player.flags.vip ? 2 : 1;
+  const expGain = Math.floor(offlineMinutes * player.level * offlineMultiplier);
+  const goldGain = Math.floor(offlineMinutes * player.level * offlineMultiplier);
+  let fruitGain = 0;
+  for (let i = 0; i < offlineMinutes; i += 1) {
+    if (Math.random() <= 0.01) {
+      fruitGain += 1;
+    }
+  }
   gainExp(player, expGain);
   player.gold += goldGain;
+  if (fruitGain > 0) {
+    addItem(player, 'training_fruit', fruitGain);
+  }
   player.flags.offlineAt = null;
-  player.send(`离线挂机收益: ${expGain} 经验, ${goldGain} 金币。`);
+  if (fruitGain > 0) {
+    player.send(`离线挂机收益: ${expGain} 经验, ${goldGain} 金币, 修炼果 x${fruitGain}。`);
+  } else {
+    player.send(`离线挂机收益: ${expGain} 经验, ${goldGain} 金币。`);
+  }
 }
 
 function transferAllInventory(from, to) {

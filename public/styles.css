@@ -303,6 +303,50 @@ body.dark .afk-skill-item {
   color: #e8e0d4;
 }
 
+body.dark .bag-item.rarity-uncommon,
+body.dark .bag-item.rarity-rare,
+body.dark .bag-item.rarity-epic,
+body.dark .bag-item.rarity-legendary,
+body.dark .bag-item.rarity-supreme,
+body.dark .shop-sell-item.rarity-uncommon,
+body.dark .shop-sell-item.rarity-rare,
+body.dark .shop-sell-item.rarity-epic,
+body.dark .shop-sell-item.rarity-legendary,
+body.dark .shop-sell-item.rarity-supreme,
+body.dark .consign-item.rarity-uncommon,
+body.dark .consign-item.rarity-rare,
+body.dark .consign-item.rarity-epic,
+body.dark .consign-item.rarity-legendary,
+body.dark .consign-item.rarity-supreme,
+body.dark .consign-history-item.rarity-uncommon,
+body.dark .consign-history-item.rarity-rare,
+body.dark .consign-history-item.rarity-epic,
+body.dark .consign-history-item.rarity-legendary,
+body.dark .consign-history-item.rarity-supreme,
+body.dark .repair-item.rarity-uncommon,
+body.dark .repair-item.rarity-rare,
+body.dark .repair-item.rarity-epic,
+body.dark .repair-item.rarity-legendary,
+body.dark .repair-item.rarity-supreme,
+body.dark .forge-item.rarity-uncommon,
+body.dark .forge-item.rarity-rare,
+body.dark .forge-item.rarity-epic,
+body.dark .forge-item.rarity-legendary,
+body.dark .forge-item.rarity-supreme,
+body.dark .trade-item.rarity-uncommon,
+body.dark .trade-item.rarity-rare,
+body.dark .trade-item.rarity-epic,
+body.dark .trade-item.rarity-legendary,
+body.dark .trade-item.rarity-supreme,
+body.dark .mail-attach-item.rarity-uncommon,
+body.dark .mail-attach-item.rarity-rare,
+body.dark .mail-attach-item.rarity-epic,
+body.dark .mail-attach-item.rarity-legendary,
+body.dark .mail-attach-item.rarity-supreme {
+  border-color: currentColor;
+  color: currentColor;
+}
+
 body.dark .mail-item {
   color: #f1e5ce;
   background: rgba(255, 255, 255, 0.06);

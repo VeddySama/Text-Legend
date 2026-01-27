@@ -1894,6 +1894,7 @@ let stateThrottleIntervalLastUpdate = 0;
 let lootLogEnabled = false;
 const stateThrottleLastSent = new Map();
 const stateThrottleLastExits = new Map();
+const stateThrottleLastRoom = new Map();
 
 async function getStateThrottleSettingsCached() {
   const now = Date.now();
@@ -2271,13 +2272,16 @@ async function sendState(player) {
     : false;
   let forceSend = false;
   let exitsHash = null;
+  let roomKey = null;
   if (enabled && !override && !inBossRoom) {
     if (player.position) {
+      roomKey = `${player.position.zone}:${player.position.room}`;
       const exits = buildRoomExits(player.position.zone, player.position.room);
       exitsHash = JSON.stringify(exits);
       const key = player.userId || player.name || player.socket.id;
+      const lastRoom = stateThrottleLastRoom.get(key);
       const lastHash = stateThrottleLastExits.get(key);
-      if (lastHash !== exitsHash) {
+      if (lastRoom !== roomKey || lastHash !== exitsHash) {
         forceSend = true;
       }
     }
@@ -2299,6 +2303,7 @@ async function sendState(player) {
   if (exitsHash && (player.userId || player.name || player.socket.id)) {
     const key = player.userId || player.name || player.socket.id;
     stateThrottleLastExits.set(key, exitsHash);
+    if (roomKey) stateThrottleLastRoom.set(key, roomKey);
   }
 }
 

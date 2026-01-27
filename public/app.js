@@ -479,10 +479,12 @@ function getStoredRealmId(username) {
 
 function setCurrentRealmId(realmId, username) {
   currentRealmId = realmId;
+  console.log(`setCurrentRealmId: realmId=${realmId}, username=${username}, realmList=${JSON.stringify(realmList.map(r => ({id: r.id, name: r.name})))}`);
   if (realmSelect) {
     const stringValue = String(realmId);
     // 检查选择框中是否存在该选项，如果不存在则不设置（避免无效值）
     const hasOption = Array.from(realmSelect.options).some(opt => opt.value === stringValue);
+    console.log(`setCurrentRealmId: hasOption=${hasOption}, options=${Array.from(realmSelect.options).map(o => o.value)}`);
     if (hasOption) {
       realmSelect.value = stringValue;
     } else {
@@ -520,7 +522,8 @@ async function loadRealms() {
   const stored = getStoredRealmId(username);
   // 确保设置的realmId在当前服务器列表中存在
   const storedRealm = realmList.find(r => r.id === stored);
-  const validRealmId = storedRealm ? storedRealm.id : Math.max(1, realmList[0]?.id);
+  const validRealmId = storedRealm ? storedRealm.id : Math.max(1, realmList[0]?.id || 1);
+  console.log(`loadRealms: username=${username}, stored=${stored}, storedRealm=${storedRealm?.id}, validRealmId=${validRealmId}, realmList=${JSON.stringify(realmList.map(r => r.id))}`);
   setCurrentRealmId(normalizeRealmId(validRealmId, count), username);
 }
 
@@ -3084,6 +3087,7 @@ function renderState(state) {
   }
   if (state.player) {
     const realmName = realmList.find(r => r.id === currentRealmId)?.name || `新区${currentRealmId}`;
+    console.log(`renderState: currentRealmId=${currentRealmId}, realmList=${JSON.stringify(realmList.map(r => ({id: r.id, name: r.name})))}, realmName=${realmName}`);
     if (ui.realm) ui.realm.textContent = realmName;
     ui.name.textContent = state.player.name || '-';
     const classLabel = classNames[state.player.classId] || state.player.classId || '-';

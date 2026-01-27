@@ -19,6 +19,7 @@ import { listMobRespawns, upsertMobRespawn, clearMobRespawn, saveMobState } from
 import {
   listConsignments,
   listConsignmentsBySeller,
+  listExpiredConsignments,
   getConsignment,
   createConsignment,
   updateConsignmentQty,
@@ -1281,9 +1282,13 @@ const tradeApi = {
 
 const CONSIGN_EQUIPMENT_TYPES = new Set(['weapon', 'armor', 'accessory', 'book']);
 const CONSIGN_FEE_RATE = 0.1;
+const CONSIGN_EXPIRE_MS = 48 * 60 * 60 * 1000;
+const CONSIGN_CLEANUP_INTERVAL_MS = 10 * 60 * 1000;
+let consignCleanupRunning = false;
 
 const consignApi = {
     async listMarket(player) {
+      await cleanupExpiredConsignments();
       const rows = await listConsignments();
       const items = rows.map((row) => ({
         id: row.id,
@@ -1296,6 +1301,7 @@ const consignApi = {
       return items;
     },
     async listMine(player) {
+      await cleanupExpiredConsignments();
       const rows = await listConsignmentsBySeller(player.name);
       const items = rows.map((row) => ({
         id: row.id,
@@ -1352,6 +1358,7 @@ const consignApi = {
       return { ok: true, msg: `寄售成功，编号 ${id}。` };
     },
   async buy(player, listingId, qty) {
+    await cleanupExpiredConsignments();
     // 验证listingId和qty
     const idResult = validateNumber(listingId, 1, Number.MAX_SAFE_INTEGER);
     if (!idResult.ok) return { ok: false, msg: '寄售ID无效。' };
@@ -1415,6 +1422,7 @@ const consignApi = {
     return { ok: true, msg: `购买成功，花费 ${serverTotal} 金币。` };
   },
   async cancel(player, listingId) {
+    await cleanupExpiredConsignments();
     // 验证listingId
     const idResult = validateNumber(listingId, 1, Number.MAX_SAFE_INTEGER);
     if (!idResult.ok) return { ok: false, msg: '寄售ID无效。' };
@@ -1444,6 +1452,49 @@ const consignApi = {
     return items;
   }
 };
+
+async function cleanupExpiredConsignments() {
+  if (consignCleanupRunning) return;
+  consignCleanupRunning = true;
+  try {
+    const cutoff = new Date(Date.now() - CONSIGN_EXPIRE_MS);
+    const rows = await listExpiredConsignments(cutoff);
+    if (!rows.length) return;
+    const refreshedSellers = new Set();
+    for (const row of rows) {
+      const qty = Math.max(0, Number(row.qty || 0));
+      if (!qty) {
+        await deleteConsignment(row.id);
+        continue;
+      }
+      const effects = parseJson(row.effects_json);
+      const seller = playersByName(row.seller_name);
+      if (seller) {
+        addItem(seller, row.item_id, qty, effects, row.durability, row.max_durability);
+        seller.send(`寄售到期自动下架：${ITEM_TEMPLATES[row.item_id]?.name || row.item_id} x${qty} 已返还背包。`);
+        seller.forceStateRefresh = true;
+        refreshedSellers.add(seller);
+        savePlayer(seller);
+      } else {
+        const sellerRow = await findCharacterByName(row.seller_name);
+        if (sellerRow) {
+          const sellerPlayer = await loadCharacter(sellerRow.user_id, sellerRow.name);
+          if (sellerPlayer) {
+            addItem(sellerPlayer, row.item_id, qty, effects, row.durability, row.max_durability);
+            await saveCharacter(sellerRow.user_id, sellerPlayer);
+          }
+        }
+      }
+      await deleteConsignment(row.id);
+    }
+    for (const seller of refreshedSellers) {
+      await consignApi.listMine(seller);
+      await consignApi.listMarket(seller);
+    }
+  } finally {
+    consignCleanupRunning = false;
+  }
+}
 
 function partyMembersOnline(party, playersList) {
   return party.members
@@ -5304,6 +5355,15 @@ async function start() {
       console.warn('Failed to save mob states:', err);
     }
   }, 30000);
+
+  // 寄售到期自动下架（每10分钟）
+  setInterval(async () => {
+    try {
+      await cleanupExpiredConsignments();
+    } catch (err) {
+      console.warn('Failed to cleanup expired consignments:', err);
+    }
+  }, CONSIGN_CLEANUP_INTERVAL_MS);
   
   try {
     const result = await cleanupInvalidItems();

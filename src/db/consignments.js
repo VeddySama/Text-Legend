@@ -8,6 +8,12 @@ export async function listConsignmentsBySeller(sellerName) {
   return knex('consignments').where({ seller_name: sellerName }).orderBy('created_at', 'desc');
 }
 
+export async function listExpiredConsignments(cutoff) {
+  return knex('consignments')
+    .where('created_at', '<', cutoff)
+    .orderBy('created_at', 'asc');
+}
+
 export async function getConsignment(id) {
   return knex('consignments').where({ id }).first();
 }

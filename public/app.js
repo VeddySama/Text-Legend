@@ -4033,8 +4033,19 @@ function enterGame(name) {
   });
   socket.on('auth_error', (payload) => {
     appendLine(`认证失败: ${payload.error}`);
-    showToast('登录已过期，请重新登录。');
-    exitGame();
+    // 如果是"新区不存在"错误,清除旧的realmId并提示用户
+    if (payload.error && payload.error.includes('新区不存在')) {
+      const username = localStorage.getItem('rememberedUser');
+      if (username) {
+        const key = getUserStorageKey('lastRealm', username);
+        localStorage.removeItem(key);
+      }
+      showToast('服务器已合并,已自动清除旧服务器信息,请重新选择服务器');
+      exitGame();
+    } else {
+      showToast('登录已过期，请重新登录。');
+      exitGame();
+    }
   });
   socket.on('output', (payload) => {
     appendLine(payload);

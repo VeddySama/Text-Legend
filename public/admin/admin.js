@@ -120,6 +120,7 @@ async function login() {
     await refreshStateThrottleStatus();
     await refreshConsignExpireStatus();
     await refreshRoomVariantStatus();
+    await loadWorldBossSettings();
   } catch (err) {
     loginMsg.textContent = err.message;
   }
@@ -854,6 +855,7 @@ if (adminToken) {
   refreshConsignExpireStatus();
   refreshRoomVariantStatus();
   refreshRealms();
+  loadWorldBossSettings();
 }
 
 applyTheme(localStorage.getItem('adminTheme') || 'light');
@@ -885,7 +887,6 @@ document.getElementById('users-next-page').addEventListener('click', () => {
     refreshUsers(currentUsersPage + 1);
   }
 });
-document.getElementById('wb-load-btn').addEventListener('click', loadWorldBossSettings);
 document.getElementById('wb-save-btn').addEventListener('click', saveWorldBossSettings);
 if (document.getElementById('wb-add-bonus-btn')) {
   document.getElementById('wb-add-bonus-btn').addEventListener('click', addPlayerBonusConfig);

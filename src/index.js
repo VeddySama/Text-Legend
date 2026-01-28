@@ -4608,6 +4608,11 @@ function processMobDeath(player, mob, online) {
   const shareExp = hasParty ? totalExp : Math.floor(totalExp / eligibleCount);
   const shareGold = hasParty ? totalGold : Math.floor(totalGold / eligibleCount);
 
+  // 追踪传说和至尊装备掉落数量
+  let legendaryDropCount = 0;
+  let supremeDropCount = 0;
+  const playerDropTracker = new Map(); // 玩家掉落追踪: playerName -> { legendary: count, supreme: count }
+
     let sabakTaxExp = 0;
     let sabakTaxGold = 0;
     const sabakMembers = listSabakMembersOnline(realmId);
@@ -4647,8 +4652,6 @@ function processMobDeath(player, mob, online) {
     }
 
     const dropTargets = [];
-    let legendaryDropGiven = false;
-    let supremeDropGiven = false;
     if (isSpecialBoss) {
       const topEntries = entries.slice(0, 10);
       const totalDamage = entries.reduce((sum, [, dmg]) => sum + dmg, 0) || 1;
@@ -4741,13 +4744,35 @@ function processMobDeath(player, mob, online) {
               logLoot(`[loot][special][skip] ${owner.name} ${entry.id} (rank:${rank})`);
               return;
             }
-            if (rarity === 'legendary' && legendaryDropGiven) {
-              logLoot(`[loot][special][skip] ${owner.name} ${entry.id} (legendary given)`);
-              return;
+            if (rarity === 'legendary') {
+              // 检查该玩家是否已经获得过传说装备
+              if (actualDrops.some(d => {
+                const dItem = ITEM_TEMPLATES[d.id];
+                return dItem && rarityByPrice(dItem) === 'legendary';
+              })) {
+                logLoot(`[loot][special][skip] ${owner.name} ${entry.id} (player already has legendary)`);
+                return;
+              }
+              // 检查全服是否已掉落3件传说装备
+              if (legendaryDropCount >= 3) {
+                logLoot(`[loot][special][skip] ${owner.name} ${entry.id} (legendary limit reached)`);
+                return;
+              }
             }
-            if (rarity === 'supreme' && supremeDropGiven) {
-              logLoot(`[loot][special][skip] ${owner.name} ${entry.id} (supreme given)`);
-              return;
+            if (rarity === 'supreme') {
+              // 检查该玩家是否已经获得过至尊装备
+              if (actualDrops.some(d => {
+                const dItem = ITEM_TEMPLATES[d.id];
+                return dItem && rarityByPrice(dItem) === 'supreme';
+              })) {
+                logLoot(`[loot][special][skip] ${owner.name} ${entry.id} (player already has supreme)`);
+                return;
+              }
+              // 检查全服是否已掉落3件至尊装备
+              if (supremeDropCount >= 3) {
+                logLoot(`[loot][special][skip] ${owner.name} ${entry.id} (supreme limit reached)`);
+                return;
+              }
             }
           }
 
@@ -4758,9 +4783,9 @@ function processMobDeath(player, mob, online) {
           if (item) {
             const rarity = rarityByPrice(item);
             if (rarity === 'legendary') {
-              legendaryDropGiven = true;
+              legendaryDropCount++;
             } else if (rarity === 'supreme') {
-              supremeDropGiven = true;
+              supremeDropCount++;
             }
           }
           if (!item) return;

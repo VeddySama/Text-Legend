@@ -3392,6 +3392,8 @@ function renderState(state) {
         updateSavedCharacters(state.player);
       }
     }
+    // 更新赞助玩家称号按钮的显示状态
+    updateSponsorTitleButtonVisibility();
   }
   if (state.stats) {
     setBar(ui.hp, state.stats.hp, state.stats.max_hp);

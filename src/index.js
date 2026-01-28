@@ -30,6 +30,7 @@ import {
   listConsignmentHistory,
   createConsignmentHistory
 } from './db/consignment_history.js';
+import { listAllSponsors, addSponsor, updateSponsor, deleteSponsor, getSponsorById } from './db/sponsors.js';
 import { runMigrations } from './db/migrate.js';
 import { newCharacter, computeDerived, gainExp, addItem, removeItem, getItemKey, normalizeInventory, normalizeEquipment } from './game/player.js';
 import { handleCommand, awardKill, summonStats } from './game/commands.js';
@@ -1080,6 +1081,69 @@ app.post('/admin/import', async (req, res) => {
     }
   });
   res.json({ ok: true, counts });
+});
+
+// 赞助管理接口
+app.get('/admin/sponsors', async (req, res) => {
+  const admin = await requireAdmin(req);
+  if (!admin) return res.status(401).json({ error: '无管理员权限。' });
+  const sponsors = await listAllSponsors();
+  res.json({ ok: true, sponsors });
+});
+
+app.post('/admin/sponsors', async (req, res) => {
+  const admin = await requireAdmin(req);
+  if (!admin) return res.status(401).json({ error: '无管理员权限。' });
+  const { playerName, amount } = req.body || {};
+  if (!playerName || amount === undefined || amount === null) {
+    return res.status(400).json({ error: '缺少参数。' });
+  }
+  if (amount < 0) {
+    return res.status(400).json({ error: '金额不能为负数。' });
+  }
+  try {
+    await addSponsor(playerName, amount);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: '添加失败: ' + err.message });
+  }
+});
+
+app.put('/admin/sponsors/:id', async (req, res) => {
+  const admin = await requireAdmin(req);
+  if (!admin) return res.status(401).json({ error: '无管理员权限。' });
+  const { id } = req.params;
+  const { playerName, amount } = req.body || {};
+  if (!playerName || amount === undefined || amount === null) {
+    return res.status(400).json({ error: '缺少参数。' });
+  }
+  if (amount < 0) {
+    return res.status(400).json({ error: '金额不能为负数。' });
+  }
+  try {
+    await updateSponsor(Number(id), playerName, amount);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: '更新失败: ' + err.message });
+  }
+});
+
+app.delete('/admin/sponsors/:id', async (req, res) => {
+  const admin = await requireAdmin(req);
+  if (!admin) return res.status(401).json({ error: '无管理员权限。' });
+  const { id } = req.params;
+  try {
+    await deleteSponsor(Number(id));
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: '删除失败: ' + err.message });
+  }
+});
+
+// 前台获取赞助名单接口
+app.get('/api/sponsors', async (req, res) => {
+  const sponsors = await listAllSponsors();
+  res.json({ ok: true, sponsors });
 });
 
 const players = new Map();

@@ -322,6 +322,11 @@ const observeUi = {
   content: document.getElementById('observe-content'),
   close: document.getElementById('observe-close')
 };
+const sponsorUi = {
+  modal: document.getElementById('sponsor-modal'),
+  content: document.getElementById('sponsor-content'),
+  close: document.getElementById('sponsor-close')
+};
 const itemTooltip = document.getElementById('item-tooltip');
 let lastShopItems = [];
 let consignMarketItems = [];
@@ -375,6 +380,7 @@ const CHAT_CACHE_LIMIT = 200;
 let realmList = [];
 let currentRealmId = 1;
 let realmInitPromise = null;
+let sponsorNames = new Set(); // 存储赞助玩家名称
 
 function showToast(message) {
   authToast.textContent = message;
@@ -622,6 +628,10 @@ function buildLine(payload) {
     text.classList.add('line-text');
     text.textContent = ` ${guildMatch[3] || ''}`.trimStart();
     p.appendChild(text);
+    // 检查是否是赞助玩家
+    if (sponsorNames.has(guildMatch[2])) {
+      addSponsorBadge(p, guildMatch[2]);
+    }
   } else if (normalMatch) {
     const nameBtn = document.createElement('button');
     nameBtn.className = 'chat-name-btn';
@@ -632,6 +642,10 @@ function buildLine(payload) {
     text.classList.add('line-text');
     text.textContent = ` ${normalMatch[2] || ''}`.trimStart();
     p.appendChild(text);
+    // 检查是否是赞助玩家
+    if (sponsorNames.has(normalMatch[1])) {
+      addSponsorBadge(p, normalMatch[1]);
+    }
   } else {
     const text = document.createElement('span');
     text.classList.add('line-text');
@@ -639,6 +653,21 @@ function buildLine(payload) {
     p.appendChild(text);
   }
   return p;
+}
+
+function addSponsorBadge(line, playerName) {
+  // 查找玩家名按钮并添加赞助称号
+  const nameBtns = line.querySelectorAll('.chat-name-btn');
+  nameBtns.forEach((btn) => {
+    if (btn.textContent === `[${playerName}]`) {
+      btn.classList.add('sponsor-player-name');
+      // 在名字前添加赞助称号
+      const badge = document.createElement('span');
+      badge.className = 'sponsor-badge';
+      badge.textContent = '赞助玩家';
+      line.insertBefore(badge, btn);
+    }
+  });
 }
 
 function applyAnnounceMarquee(line) {
@@ -2072,6 +2101,9 @@ function handleItemAction(item) {
     if (item.className) {
       item.className.split(' ').filter(Boolean).forEach((name) => btn.classList.add(name));
     }
+    if (item.highlight) {
+      btn.classList.add('highlight-marquee');
+    }
     btn.textContent = item.label;
     if (item.tooltip) {
       btn.addEventListener('mouseenter', (evt) => showItemTooltip(item.tooltip, evt));
@@ -2483,6 +2515,152 @@ function showDropsModal() {
   dropsUi.closeBtn.addEventListener('click', () => {
     dropsUi.modal.classList.add('hidden');
   });
+}
+
+async function showSponsorModal() {
+  if (!sponsorUi.modal || !sponsorUi.content) return;
+  hideItemTooltip();
+  await renderSponsorContent();
+  sponsorUi.modal.classList.remove('hidden');
+
+  // 绑定关闭按钮
+  sponsorUi.close.addEventListener('click', () => {
+    sponsorUi.modal.classList.add('hidden');
+  });
+}
+
+function parseMarkdown(markdown) {
+  if (!markdown) return '';
+
+  // 简单的Markdown解析器
+  let html = markdown;
+
+  // 解析表格
+  html = html.replace(/\|([^|]+)\|([^|]+)\|/g, (match, col1, col2) => {
+    // 表头行
+    if (col1.trim() === '---' && col2.trim() === '---') {
+      return '</tr></thead><tbody><tr>';
+    }
+    // 表格行
+    return `<tr><td>${col1.trim()}</td><td>${col2.trim()}</td></tr>`;
+  });
+
+  // 添加表格标签
+  if (html.includes('<tr>')) {
+    html = html.replace(/^[\s\S]*?(<tr>)/, '<table>$1');
+    html = html.replace(/(<\/tr>)[\s\S]*$/, '$1</tbody></table>');
+  }
+
+  return html;
+}
+
+async function loadSponsors() {
+  try {
+    const res = await fetch('/api/sponsors');
+    const data = await res.json();
+    if (data.ok && Array.isArray(data.sponsors)) {
+      sponsorNames = new Set(data.sponsors.map(s => s.player_name));
+    }
+  } catch (err) {
+    console.error('获取赞助名单失败:', err);
+  }
+}
+
+async function renderSponsorContent() {
+  if (!sponsorUi.content) return;
+
+  // 赞助内容,支持Markdown格式
+  const sponsorMarkdown = `
+| 支付宝 | 微信 |
+| --- | --- |
+| <img src="img/zfb.png" alt="alipay" width="260"> | <img src="img/wx.png" alt="wechat" width="260"> |
+
+⚠️ **重要提示：** 赞助时请务必在备注中填写您的**游戏角色名**，以便添加到赞助名单中！
+  `;
+
+  // 从API获取赞助名单（如果还没有加载）
+  let sponsorList = [];
+  if (sponsorNames.size === 0) {
+    await loadSponsors();
+  }
+  try {
+    const res = await fetch('/api/sponsors');
+    const data = await res.json();
+    if (data.ok && Array.isArray(data.sponsors)) {
+      sponsorList = data.sponsors.map(s => ({
+        name: s.player_name,
+        amount: s.amount
+      }));
+      // 按金额从高到低排序
+      sponsorList.sort((a, b) => b.amount - a.amount);
+    }
+  } catch (err) {
+    console.error('获取赞助名单失败:', err);
+    // 失败时使用空列表
+  }
+
+  // 只显示前5位,超过5位支持滚动显示
+  const displayList = sponsorList.slice(0, 5);
+  const hasMoreSponsors = sponsorList.length > 5;
+
+  const htmlContent = parseMarkdown(sponsorMarkdown);
+
+  sponsorUi.content.innerHTML = `
+    <div class="sponsor-markdown">${htmlContent}</div>
+    <div class="sponsor-list-title">赞助名单</div>
+    <div class="sponsor-list-container">
+      <div class="sponsor-list-scroll">
+        ${displayList.length > 0 ? sponsorList.map((item, index) => `
+          <div class="sponsor-item">
+            <span class="sponsor-rank">${index + 1}</span>
+            <span class="sponsor-name">${item.name}</span>
+            <span class="sponsor-amount">${item.amount}元</span>
+          </div>
+        `).join('') : '<div style="text-align: center; color: #999; padding: 20px;">暂无赞助名单</div>'}
+      </div>
+    </div>
+  `;
+
+  // 超过5位时启动自动滚动
+  if (hasMoreSponsors) {
+    const scrollContainer = sponsorUi.content.querySelector('.sponsor-list-scroll');
+    if (scrollContainer && sponsorList.length > 5) {
+      let scrollDirection = 1;
+      let autoScrollInterval = setInterval(() => {
+        const maxScroll = scrollContainer.scrollHeight - scrollContainer.clientHeight;
+        const currentScroll = scrollContainer.scrollTop;
+
+        if (scrollDirection === 1 && currentScroll >= maxScroll) {
+          scrollDirection = -1;
+        } else if (scrollDirection === -1 && currentScroll <= 0) {
+          scrollDirection = 1;
+        }
+
+        scrollContainer.scrollTop += scrollDirection * 1;
+      }, 50);
+
+      // 鼠标悬停时暂停滚动
+      scrollContainer.addEventListener('mouseenter', () => {
+        clearInterval(autoScrollInterval);
+      });
+
+      // 鼠标离开时恢复滚动
+      scrollContainer.addEventListener('mouseleave', () => {
+        autoScrollInterval = setInterval(() => {
+          const maxScroll = scrollContainer.scrollHeight - scrollContainer.clientHeight;
+          const currentScroll = scrollContainer.scrollTop;
+
+          if (scrollDirection === 1 && currentScroll >= maxScroll) {
+            scrollDirection = -1;
+          } else if (scrollDirection === -1 && currentScroll <= 0) {
+            scrollDirection = 1;
+          }
+
+          scrollContainer.scrollTop += scrollDirection * 1;
+        }, 50);
+      });
+    }
+  }
 }
 
 function renderDropsContent(setId) {
@@ -3708,7 +3886,8 @@ function renderState(state) {
     { id: 'consign', label: '\u5BC4\u552E' },
     { id: 'drops', label: '\u5957\u88c5\u6389\u843d' },
     { id: 'switch', label: '\u5207\u6362\u89d2\u8272' },
-    { id: 'logout', label: '\u9000\u51fa\u6e38\u620f' }
+    { id: 'logout', label: '\u9000\u51fa\u6e38\u620f' },
+    { id: 'sponsor', label: '\u8d5e\u52a9\u4f5c\u8005', highlight: true }
   ];
   // 只对非VIP玩家显示VIP激活按钮，并且自助领取功能开启时显示领取按钮
   if (!state.stats || !state.stats.vip) {
@@ -3793,6 +3972,10 @@ function renderState(state) {
     }
     if (a.id === 'drops') {
       showDropsModal();
+      return;
+    }
+    if (a.id === 'sponsor') {
+      showSponsorModal();
       return;
     }
     if (a.id === 'switch') {
@@ -4075,6 +4258,8 @@ function enterGame(name) {
     if (stateThrottleOverrideServerAllowed) {
       socket.emit('state_throttle_override', { enabled: stateThrottleOverride });
     }
+    // 加载赞助者列表
+    loadSponsors();
   });
   socket.on('auth_error', (payload) => {
     appendLine(`认证失败: ${payload.error}`);

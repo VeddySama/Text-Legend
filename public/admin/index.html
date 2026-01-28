@@ -269,6 +269,41 @@
 
         <div class="block" data-collapsible>
           <div class="block-title">
+            <h2>赞助名单管理</h2>
+            <button class="btn-small block-toggle">折叠</button>
+          </div>
+          <div class="block-body">
+            <p class="muted" style="margin-bottom: 8px;">玩家名和金额由GM在后台设置，在前台显示前5位</p>
+            <div class="row" style="margin-bottom: 8px;">
+              <input id="sponsor-name" type="text" placeholder="玩家名" style="max-width: 150px;">
+              <input id="sponsor-amount" type="number" min="0" placeholder="金额" style="max-width: 100px;">
+              <button id="sponsor-add-btn" class="btn-small">添加</button>
+              <button id="sponsor-refresh-btn" class="btn-small">刷新列表</button>
+            </div>
+            <div class="table-container">
+              <table>
+                <thead>
+                  <tr>
+                    <th>排名</th>
+                    <th>玩家名</th>
+                    <th>金额</th>
+                    <th>添加时间</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody id="sponsors-list">
+                  <tr>
+                    <td colspan="5" style="text-align: center; color: #999;">点击刷新获取数据</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div id="sponsor-msg" class="msg"></div>
+          </div>
+        </div>
+
+        <div class="block" data-collapsible>
+          <div class="block-title">
             <h2>合区操作</h2>
             <button class="btn-small block-toggle">折叠</button>
           </div>

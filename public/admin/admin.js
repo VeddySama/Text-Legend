@@ -32,6 +32,12 @@ const roomVariantInput = document.getElementById('room-variant-count');
 const roomVariantSaveBtn = document.getElementById('room-variant-save');
 const usersSearchInput = document.getElementById('users-search');
 const usersSearchBtn = document.getElementById('users-search-btn');
+const sponsorsList = document.getElementById('sponsors-list');
+const sponsorNameInput = document.getElementById('sponsor-name');
+const sponsorAmountInput = document.getElementById('sponsor-amount');
+const sponsorAddBtn = document.getElementById('sponsor-add-btn');
+const sponsorRefreshBtn = document.getElementById('sponsor-refresh-btn');
+const sponsorMsg = document.getElementById('sponsor-msg');
 const adminPwModal = document.getElementById('admin-pw-modal');
 const adminPwTitle = document.getElementById('admin-pw-title');
 const adminPwText = document.getElementById('admin-pw-text');
@@ -973,6 +979,143 @@ async function fixRealmId() {
   }
 }
 
+// 赞助管理函数
+async function listSponsors() {
+  if (!sponsorsList) return;
+  sponsorsList.innerHTML = '';
+
+  try {
+    const data = await api('/admin/sponsors', 'GET');
+    if (!data.sponsors || data.sponsors.length === 0) {
+      const tr = document.createElement('tr');
+      tr.innerHTML = '<td colspan="5" style="text-align: center; color: #999;">暂无赞助记录</td>';
+      sponsorsList.appendChild(tr);
+      return;
+    }
+
+    data.sponsors.forEach((s, index) => {
+      const tr = document.createElement('tr');
+
+      // 排名
+      const tdRank = document.createElement('td');
+      tdRank.textContent = index + 1;
+      tdRank.style.fontWeight = 'bold';
+      tr.appendChild(tdRank);
+
+      // 玩家名
+      const tdName = document.createElement('td');
+      tdName.textContent = s.player_name;
+      tr.appendChild(tdName);
+
+      // 金额
+      const tdAmount = document.createElement('td');
+      tdAmount.textContent = s.amount;
+      tdAmount.style.fontWeight = 'bold';
+      tdAmount.style.color = '#c56b2a';
+      tr.appendChild(tdAmount);
+
+      // 添加时间
+      const tdCreatedAt = document.createElement('td');
+      if (s.created_at) {
+        const date = new Date(s.created_at);
+        tdCreatedAt.textContent = date.toLocaleString('zh-CN', {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+      } else {
+        tdCreatedAt.textContent = '-';
+      }
+      tr.appendChild(tdCreatedAt);
+
+      // 操作
+      const tdActions = document.createElement('td');
+      const editBtn = document.createElement('button');
+      editBtn.textContent = '编辑';
+      editBtn.className = 'btn-small';
+      editBtn.style.marginRight = '4px';
+      editBtn.onclick = () => editSponsor(s.id, s.player_name, s.amount);
+
+      const deleteBtn = document.createElement('button');
+      deleteBtn.textContent = '删除';
+      deleteBtn.className = 'btn-small';
+      deleteBtn.style.background = '#c00';
+      deleteBtn.onclick = () => deleteSponsor(s.id, s.player_name);
+
+      tdActions.appendChild(editBtn);
+      tdActions.appendChild(deleteBtn);
+      tr.appendChild(tdActions);
+
+      sponsorsList.appendChild(tr);
+    });
+  } catch (err) {
+    if (sponsorMsg) sponsorMsg.textContent = `加载失败: ${err.message}`;
+  }
+}
+
+async function addSponsor() {
+  if (!sponsorMsg) return;
+  const playerName = sponsorNameInput.value.trim();
+  const amount = parseInt(sponsorAmountInput.value, 10);
+
+  if (!playerName) {
+    sponsorMsg.textContent = '请输入玩家名';
+    return;
+  }
+  if (isNaN(amount) || amount < 0) {
+    sponsorMsg.textContent = '请输入有效的金额';
+    return;
+  }
+
+  try {
+    await api('/admin/sponsors', 'POST', { playerName, amount });
+    sponsorMsg.textContent = '添加成功';
+    sponsorNameInput.value = '';
+    sponsorAmountInput.value = '';
+    await listSponsors();
+    setTimeout(() => {
+      sponsorMsg.textContent = '';
+    }, 2000);
+  } catch (err) {
+    sponsorMsg.textContent = `添加失败: ${err.message}`;
+  }
+}
+
+async function editSponsor(id, currentName, currentAmount) {
+  const newName = prompt('请输入新的玩家名:', currentName);
+  if (newName === null) return;
+
+  const newAmount = prompt('请输入新的金额:', currentAmount);
+  if (newAmount === null) return;
+
+  const amount = parseInt(newAmount, 10);
+  if (isNaN(amount) || amount < 0) {
+    alert('请输入有效的金额');
+    return;
+  }
+
+  try {
+    await api(`/admin/sponsors/${id}`, 'PUT', { playerName: newName.trim(), amount });
+    await listSponsors();
+  } catch (err) {
+    alert(`更新失败: ${err.message}`);
+  }
+}
+
+async function deleteSponsor(id, playerName) {
+  const confirmed = confirm(`确定要删除玩家 "${playerName}" 的赞助记录吗？`);
+  if (!confirmed) return;
+
+  try {
+    await api(`/admin/sponsors/${id}`, 'DELETE');
+    await listSponsors();
+  } catch (err) {
+    alert(`删除失败: ${err.message}`);
+  }
+}
+
 if (adminToken) {
   showDashboard();
   refreshUsers();
@@ -1062,6 +1205,14 @@ if (document.getElementById('fix-realm-btn')) {
 }
 if (document.getElementById('merge-realms-btn')) {
   document.getElementById('merge-realms-btn').addEventListener('click', mergeRealms);
+}
+
+// 赞助管理事件
+if (sponsorAddBtn) {
+  sponsorAddBtn.addEventListener('click', addSponsor);
+}
+if (sponsorRefreshBtn) {
+  sponsorRefreshBtn.addEventListener('click', listSponsors);
 }
 
 if (adminPwCancel) {

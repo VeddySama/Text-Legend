@@ -354,15 +354,28 @@
 
   <script src="admin.js?v=3"></script>
   
-  <footer style="display: flex; justify-content: center; align-items: center; gap: 30px; padding: 20px 0; color: #7b5a3a; font-size: 0.9rem; flex-wrap: wrap;">
-    <a href="https://github.com/e5sub/Text-Legend" target="_blank" rel="noopener noreferrer" style="color: var(--accent); text-decoration: none;">
-      GitHub: e5sub/Text-Legend
-    </a>
-    <span style="color: #7b5a3a;">玩家QQ群: 169924359</span>
-    <span style="color: #7b5a3a;">微信公众号: 菜芽创作小助手</span>
-    <a href="https://cq.071717.xyz" target="_blank" rel="noopener noreferrer" style="color: var(--accent); text-decoration: none;">
-      演示站：https://cq.071717.xyz
-    </a>
-  </footer>
+  <footer id="footer-copyright" style="display: flex; justify-content: center; align-items: center; gap: 30px; padding: 20px 0; color: #7b5a3a; font-size: 0.9rem; flex-wrap: wrap;"></footer>
+
+  <script>
+    (function() {
+      var _0x4a6b=['aHR0cHM6Ly9naXRodWIuY29tL2U1c3ViL1RleHQtTGVnZW5k','Z2l0aHViOmU1c3ViL1RleHQtTGVnZW5k','5qGc5YW25pOw5a6M6ZuoMTY5OTI0MzU5','5pOc5Li05qGc5aSE55CG6Ie054mH57Sn','5LyY5a6M5pWw5o2u6ICB6ZKI6K+V','PGEgaHJlZj0i','IiB0YXJnZXQ9Il9ibGFuayIgcmVsPSJub29wZW5lciBub3JlZmVycmVyIiBzdHlsZT0iY29sb3I6IHZhcigtLWFjY2VudCk7IHRleHQtZGVjb3JhdGlvbjogbm9uZTsiPg==','PC9hPg==','PHNwYW4gc3R5bGU9ImNvbG9yOiAjN2I1YTNhOyI+','PC9zcGFuPg=='];
+      var footerData = {
+        github: { text: atob(_0x4a6b[1]), link: atob(_0x4a6b[0]) },
+        qq: atob(_0x4a6b[2]),
+        wechat: atob(_0x4a6b[3]),
+        demo: { text: atob(_0x4a6b[4]), link: atob(_0x4a6b[5]) }
+      };
+
+      var footer = document.getElementById('footer-copyright');
+      if (footer) {
+        var html = '';
+        html += atob(_0x4a6b[6]) + footerData.github.link + atob(_0x4a6b[7]) + footerData.github.text + atob(_0x4a6b[8]);
+        html += atob(_0x4a6b[9]) + footerData.qq + atob(_0x4a6b[10]);
+        html += atob(_0x4a6b[9]) + footerData.wechat + atob(_0x4a6b[10]);
+        html += atob(_0x4a6b[6]) + footerData.demo.link + atob(_0x4a6b[7]) + footerData.demo.text + atob(_0x4a6b[8]);
+        footer.innerHTML = html;
+      }
+    })();
+  </script>
 </body>
 </html>

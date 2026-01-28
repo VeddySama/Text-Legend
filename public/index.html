@@ -548,16 +548,29 @@
     </div>
   </div>
 
-  <footer style="display: flex; justify-content: center; align-items: center; gap: 30px; padding: 12px; background: rgba(120, 64, 20, 0.9); color: #fff3df; font-size: 0.85rem; margin-top: 20px;">
-    <a href="https://github.com/e5sub/Text-Legend" target="_blank" rel="noopener noreferrer" style="color: #ffd699; text-decoration: none;">
-      GitHub: e5sub/Text-Legend
-    </a>
-    <span style="color: #fff3df;">玩家QQ群: 169924359</span>
-    <span style="color: #fff3df;">微信公众号: 菜芽创作小助手</span>
-    <a href="https://cq.071717.xyz" target="_blank" rel="noopener noreferrer" style="color: #ffd699; text-decoration: none;">
-      演示站：https://cq.071717.xyz
-    </a>
-  </footer>
+  <footer id="footer-copyright" style="display: flex; justify-content: center; align-items: center; gap: 30px; padding: 12px; background: rgba(120, 64, 20, 0.9); color: #fff3df; font-size: 0.85rem; margin-top: 20px;"></footer>
+
+  <script>
+    (function() {
+      var _0x4a6b=['aHR0cHM6Ly9naXRodWIuY29tL2U1c3ViL1RleHQtTGVnZW5k','Z2l0aHViOmU1c3ViL1RleHQtTGVnZW5k','5qGc5YW25pOw5a6M6ZuoMTY5OTI0MzU5','5pOc5Li05qGc5aSE55CG6Ie054mH57Sn','5LyY5a6M5pWw5o2u6ICB6ZKI6K+V','PGEgaHJlZj0i','IiB0YXJnZXQ9Il9ibGFuayIgcmVsPSJub29wZW5lciBub3JlZmVycmVyIiBzdHlsZT0iY29sb3I6ICNmZmQ2OTk7IHRleHQtZGVjb3JhdGlvbjogbm9uZTsiPg==','PC9hPg==','PHNwYW4gc3R5bGU9ImNvbG9yOiAjZmZmM2RmOyI+','PC9zcGFuPg=='];
+      var footerData = {
+        github: { text: atob(_0x4a6b[1]), link: atob(_0x4a6b[0]) },
+        qq: atob(_0x4a6b[2]),
+        wechat: atob(_0x4a6b[3]),
+        demo: { text: atob(_0x4a6b[4]), link: atob(_0x4a6b[5]) }
+      };
+
+      var footer = document.getElementById('footer-copyright');
+      if (footer) {
+        var html = '';
+        html += atob(_0x4a6b[6]) + footerData.github.link + atob(_0x4a6b[7]) + footerData.github.text + atob(_0x4a6b[8]);
+        html += atob(_0x4a6b[9]) + footerData.qq + atob(_0x4a6b[10]);
+        html += atob(_0x4a6b[9]) + footerData.wechat + atob(_0x4a6b[10]);
+        html += atob(_0x4a6b[6]) + footerData.demo.link + atob(_0x4a6b[7]) + footerData.demo.text + atob(_0x4a6b[8]);
+        footer.innerHTML = html;
+      }
+    })();
+  </script>
 
   <script src="/socket.io/socket.io.js"></script>
   <script src="app.js?v=4"></script>

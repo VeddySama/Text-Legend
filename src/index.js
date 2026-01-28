@@ -733,8 +733,8 @@ app.post('/admin/class-level-bonus/update', async (req, res) => {
   if (!['warrior', 'mage', 'taoist'].includes(classId)) {
     return res.status(400).json({ error: '无效的职业ID' });
   }
-  // 验证配置格式
-  const validFields = ['hpPerLevel', 'mpPerLevel', 'atkPerLevel', 'defPerLevel', 'magPerLevel', 'spiritPerLevel', 'mdefPerLevel', 'strPerLevel', 'dexPerLevel', 'intPerLevel', 'conPerLevel', 'baseSpiritPerLevel'];
+  // 验证配置格式 - 只验证前端实际发送的字段
+  const validFields = ['hpPerLevel', 'mpPerLevel', 'atkPerLevel', 'defPerLevel', 'magPerLevel', 'spiritPerLevel', 'mdefPerLevel', 'dexPerLevel'];
   for (const field of validFields) {
     if (config[field] === undefined || config[field] === null || isNaN(config[field])) {
       return res.status(400).json({ error: `字段 ${field} 必须为有效数字` });

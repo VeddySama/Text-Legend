@@ -1159,17 +1159,13 @@ const classBonusFields = {
   mag: 'class-bonus-mag',
   spirit: 'class-bonus-spirit',
   mdef: 'class-bonus-mdef',
-  str: 'class-bonus-str',
-  dex: 'class-bonus-dex',
-  int: 'class-bonus-int',
-  con: 'class-bonus-con',
-  baseSpirit: 'class-bonus-baseSpirit'
+  dex: 'class-bonus-dex'
 };
 
 const defaultClassBonusConfig = {
-  warrior: { hpPerLevel: 3, mpPerLevel: 10, atkPerLevel: 0.5, defPerLevel: 3, magPerLevel: 0, spiritPerLevel: 0, mdefPerLevel: 3, strPerLevel: 1.2, dexPerLevel: 0.6, intPerLevel: 0.3, conPerLevel: 1.0, baseSpiritPerLevel: 0.4 },
-  mage: { hpPerLevel: 5, mpPerLevel: 10, atkPerLevel: 0, defPerLevel: 2, magPerLevel: 2, spiritPerLevel: 0, mdefPerLevel: 1, strPerLevel: 0.4, dexPerLevel: 0.6, intPerLevel: 1.4, conPerLevel: 0.6, baseSpiritPerLevel: 1.0 },
-  taoist: { hpPerLevel: 5, mpPerLevel: 10, atkPerLevel: 0, defPerLevel: 2, magPerLevel: 0, spiritPerLevel: 2, mdefPerLevel: 1, strPerLevel: 0.7, dexPerLevel: 0.8, intPerLevel: 0.9, conPerLevel: 0.8, baseSpiritPerLevel: 1.2 }
+  warrior: { hpPerLevel: 3, mpPerLevel: 10, atkPerLevel: 0.5, defPerLevel: 3, magPerLevel: 0, spiritPerLevel: 0, mdefPerLevel: 3, dexPerLevel: 0.6 },
+  mage: { hpPerLevel: 5, mpPerLevel: 10, atkPerLevel: 0, defPerLevel: 2, magPerLevel: 2, spiritPerLevel: 0, mdefPerLevel: 1, dexPerLevel: 0.6 },
+  taoist: { hpPerLevel: 5, mpPerLevel: 10, atkPerLevel: 0, defPerLevel: 2, magPerLevel: 0, spiritPerLevel: 2, mdefPerLevel: 1, dexPerLevel: 0.8 }
 };
 
 async function loadClassBonusConfig() {

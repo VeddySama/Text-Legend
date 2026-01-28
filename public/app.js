@@ -2562,7 +2562,7 @@ function parseMarkdown(markdown) {
   // 添加表格标签
   if (html.includes('<tr>')) {
     html = html.replace(/^[\s\S]*?(<tr>)/, '<table>$1');
-    html = html.replace(/(<\/table>)[\s\S]*$/, '$1');
+    html = html.replace(/(<\/table>)/, '$1');
   }
 
   // 处理表格外的换行 - 只在表格之外的文本中处理

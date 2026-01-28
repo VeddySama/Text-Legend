@@ -535,20 +535,24 @@ app.post('/admin/worldboss-respawn', async (req, res) => {
 
   // 删除所有区服中的世界BOSS
   const allRealms = await listRealms();
-  let respawnedCount = 0;
+  let removedCount = 0;
+  let spawnedCount = 0;
 
   for (const realm of allRealms) {
     try {
+      // 先删除所有世界BOSS
       const mobs = getAliveMobs('mg_town', 'lair', realm.id);
       const worldBossMobs = mobs.filter(m => m.templateId === 'world_boss');
 
       for (const boss of worldBossMobs) {
         removeMob(boss.id, 'mg_town', 'lair', realm.id);
-        respawnedCount++;
+        removedCount++;
       }
 
       // 刷新新的世界BOSS
-      spawnMobs('mg_town', 'lair', realm.id);
+      const newMobs = spawnMobs('mg_town', 'lair', realm.id);
+      const newBossCount = newMobs.filter(m => m.templateId === 'world_boss').length;
+      spawnedCount += newBossCount;
     } catch (err) {
       console.error(`刷新区服 ${realm.id} 的世界BOSS失败:`, err);
     }
@@ -556,8 +560,10 @@ app.post('/admin/worldboss-respawn', async (req, res) => {
 
   res.json({
     ok: true,
-    message: `已刷新 ${respawnedCount} 个世界BOSS`,
-    respawnedCount
+    message: `已刷新 ${allRealms.length} 个区服，删除 ${removedCount} 个旧BOSS，生成 ${spawnedCount} 个新BOSS`,
+    removedCount,
+    spawnedCount,
+    realmCount: allRealms.length
   });
 });
 

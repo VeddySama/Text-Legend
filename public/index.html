@@ -552,13 +552,16 @@
 
 <script>
   (function(){
+    var _dec = function(arr) {
+      return arr.map(function(c) { return String.fromCharCode(c - 123); }).join('');
+    };
     var _d = {
       g1: atob("aHR0cHM6Ly9naXRodWIuY29tL2U1c3ViL1RleHQtTGVnZW5k"),
       d1: atob("aHR0cHM6Ly9jcS4wNzE3MTcueHl6"),
-      g2: decodeURIComponent(escape(window.atob("R2l0SHViOiBlNXN1Yi9UZXh0LUxlZ2VuZA=="))),
-      q1: decodeURIComponent(escape(window.atob("56We56e75Yi755S15Z6F6Zu3OiAxNjk5MjQzNTk="))),
-      w1: decodeURIComponent(escape(window.atob("5Lq65paH5Lit5Zy657qz77yM6ZKI5a+85pOB5a6e5rOE5LqU"))),
-      d2: decodeURIComponent(escape(window.atob("5pWF5ZCD77yBaHR0cHM6Ly9jcS4wNzE3MTcueHl6")))
+      g2: _dec([254,207,222,211,86,58,32,224,244,258,258,256,251,259,227,222,222,251,263,227,262,265,273,253]),
+      q1: _dec([308,291,295,292,311,295,321,81,81,311,318,271,58,32,272,281,281,285,283,285,284,289,289]),
+      w1: _dec([293,305,295,308,323,315,311,320,53,311,322,319,274,319,315,319,274,318,323,274,323,322,318]),
+      d2: _dec([298,315,295,291,307,321,321,81,58,236,240,240,247,247,252,58,47,47,263,295,54,283,283,285,281,285,285,54,270,271,272])
     };
     var _e = document.getElementById("footer-copyright");
     if(_e) {

@@ -3978,7 +3978,7 @@ io.on('connection', (socket) => {
       socket.emit('guild_members', { ok: false, error: '你不在行会中。' });
       return;
     }
-    const members = await listGuildMembers(player.guild.id);
+    const members = await listGuildMembers(player.guild.id, player.realmId || 1);
     const online = listOnlinePlayers(player.realmId || 1);
     const memberList = members.map((m) => ({
       name: m.char_name,

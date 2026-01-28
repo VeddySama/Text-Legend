@@ -2593,12 +2593,12 @@ async function loadSponsors() {
           sponsorCustomTitles.set(s.player_name, s.custom_title);
         }
       });
+      // 赞助名单加载完成后更新按钮显示
+      updateSponsorTitleButtonVisibility();
     }
   } catch (err) {
     console.error('获取赞助名单失败:', err);
   }
-  // 加载完成后更新赞助玩家称号按钮的显示状态
-  updateSponsorTitleButtonVisibility();
 }
 
 async function renderSponsorContent() {
@@ -2785,15 +2785,8 @@ function updateSponsorTitleButtonVisibility() {
   if (!btn) return;
 
   const currentPlayerName = state.player?.name;
-  const sponsorList = Array.from(sponsorNames);
-  const isSponsor = currentPlayerName && sponsorNames.has(currentPlayerName);
-
-  // 在页面显示调试信息（仅在日志中）
-  appendLine(`[调试] 玩家: ${currentPlayerName}, 赞助人数: ${sponsorList.length}, 是赞助: ${isSponsor}`);
-
-  if (isSponsor) {
+  if (currentPlayerName && sponsorNames.has(currentPlayerName)) {
     btn.classList.remove('hidden');
-    appendLine('[调试] 显示设置称号按钮');
   } else {
     btn.classList.add('hidden');
   }
@@ -4108,7 +4101,7 @@ if (remembered) {
 }
 (async () => {
   // 加载赞助者名单，确保刷新页面后特效依然有效
-  loadSponsors();
+  await loadSponsors();
   await ensureRealmsLoaded();
   const tokenKey = getUserStorageKey('savedToken', remembered);
   const savedToken = localStorage.getItem(tokenKey);
@@ -4378,7 +4371,7 @@ function enterGame(name) {
       socket.emit('state_throttle_override', { enabled: stateThrottleOverride });
     }
     // 加载赞助者列表
-    loadSponsors();
+    await loadSponsors();
   });
   socket.on('auth_error', (payload) => {
     appendLine(`认证失败: ${payload.error}`);

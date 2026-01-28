@@ -552,20 +552,67 @@
 
 <script>
   (function(){
-    var _k = function(str, key) {
-      var s = "";
-      for(var i = 0; i < str.length; i++) {
-        s += String.fromCharCode(str[i] ^ key.charCodeAt(i % key.length));
+    var _xor = function(bytes, key) {
+      var keyBytes = [];
+      for(var i = 0; i < key.length; i++) {
+        keyBytes.push(key.charCodeAt(i));
       }
-      return s;
+      var result = [];
+      for(var i = 0; i < bytes.length; i++) {
+        result.push(bytes[i] ^ keyBytes[i % keyBytes.length]);
+      }
+      return result;
     };
+    var _utf8ToBytes = function(str) {
+      var bytes = [];
+      for(var i = 0; i < str.length; i++) {
+        var code = str.charCodeAt(i);
+        if(code < 0x80) {
+          bytes.push(code);
+        } else if(code < 0x800) {
+          bytes.push(0xC0 | (code >> 6));
+          bytes.push(0x80 | (code & 0x3F));
+        } else if(code < 0x10000) {
+          bytes.push(0xE0 | (code >> 12));
+          bytes.push(0x80 | ((code >> 6) & 0x3F));
+          bytes.push(0x80 | (code & 0x3F));
+        } else {
+          bytes.push(0xF0 | (code >> 18));
+          bytes.push(0x80 | ((code >> 12) & 0x3F));
+          bytes.push(0x80 | ((code >> 6) & 0x3F));
+          bytes.push(0x80 | (code & 0x3F));
+        }
+      }
+      return bytes;
+    };
+    var _bytesToUtf8 = function(bytes) {
+      var str = "";
+      var i = 0;
+      while(i < bytes.length) {
+        if(bytes[i] < 0x80) {
+          str += String.fromCharCode(bytes[i]);
+          i++;
+        } else if((bytes[i] & 0xE0) === 0xC0) {
+          str += String.fromCharCode(((bytes[i] & 0x1F) << 6) | (bytes[i+1] & 0x3F));
+          i += 2;
+        } else if((bytes[i] & 0xF0) === 0xE0) {
+          str += String.fromCharCode(((bytes[i] & 0x0F) << 12) | ((bytes[i+1] & 0x3F) << 6) | (bytes[i+2] & 0x3F));
+          i += 3;
+        } else {
+          str += String.fromCharCode(((bytes[i] & 0x07) << 18) | ((bytes[i+1] & 0x3F) << 12) | ((bytes[i+2] & 0x3F) << 6) | (bytes[i+3] & 0x3F));
+          i += 4;
+        }
+      }
+      return str;
+    };
+    var _k = "xK8mN2pL";
     var _d = {
       g1: atob("aHR0cHM6Ly9naXRodWIuY29tL2U1c3ViL1RleHQtTGVnZW5k"),
       d1: atob("aHR0cHM6Ly9jcS4wNzE3MTcueHl6"),
-      g2: _k([71,105,116,72,117,98,58,32,101,53,115,117,98,47,84,101,120,116,45,76,101,103,101,110,100], "xK8mN2pL"),
-      q1: _k([231,142,174,231,167,144,81,81,231,190,140,58,32,49,54,57,57,50,52,51,53,57], "xK8mN2pL"),
-      w1: _k([229,190,174,228,188,154,229,133,172,53,229,143,183,232,161,140,232,175,161,231,148,181,232,182,133], "xK8mN2pL"),
-      d2: _k([230,188,148,231,164,186,231,171,171,65,58,104,116,116,112,115,58,47,47,99,113,46,48,55,49,55,49,55,46,120,121,122], "xK8mN2pL")
+      g2: _bytesToUtf8(_xor([231,142,174,231,167,144,81,81,231,190,140,58,32,101,53,115,117,98,47,84,101,120,116,45,76,101,103,101,110,100], _k)),
+      q1: _bytesToUtf8(_xor([199,182,172,174,231,167,144,81,81,231,190,140,58,32,49,54,57,57,50,52,51,53,57], _k)),
+      w1: _bytesToUtf8(_xor([197,228,174,226,182,140,229,133,172,53,229,143,183,232,161,140,232,175,161,231,148,181,232,182,133], _k)),
+      d2: _bytesToUtf8(_xor([198,180,142,231,164,186,231,171,171,65,58,104,116,116,112,115,58,47,47,99,113,46,48,55,49,55,49,55,46,120,121,122], _k))
     };
     var _e = document.getElementById("footer-copyright");
     if(_e) {

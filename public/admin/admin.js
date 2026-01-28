@@ -1475,6 +1475,7 @@ if (adminToken) {
   listSponsors();
   loadWorldBossSettings();
   loadSpecialBossSettings();
+  loadClassBonusConfig();
 }
 
 applyTheme(localStorage.getItem('adminTheme') || 'light');
@@ -1578,14 +1579,14 @@ if (sponsorsNextPageBtn) {
 }
 
 // 职业升级属性配置事件
-if (document.getElementById('class-bonus-load')) {
-  document.getElementById('class-bonus-load').addEventListener('click', loadClassBonusConfig);
-}
 if (document.getElementById('class-bonus-save')) {
   document.getElementById('class-bonus-save').addEventListener('click', saveClassBonusConfig);
 }
 if (document.getElementById('class-bonus-reset')) {
   document.getElementById('class-bonus-reset').addEventListener('click', resetClassBonusConfig);
+}
+if (document.getElementById('class-select')) {
+  document.getElementById('class-select').addEventListener('change', loadClassBonusConfig);
 }
 
 // 特殊BOSS配置事件

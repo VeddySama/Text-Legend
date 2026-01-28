@@ -29,28 +29,26 @@ function isBossTemplate(tpl) {
 function scaledStats(tpl, realmId = 1) {
   if (!tpl) return { hp: 0, atk: 0, def: 0, mdef: 0 };
 
-  // 特殊BOSS和世界BOSS使用配置的值，不进行缩放
-  if (tpl.specialBoss || tpl.worldBoss) {
-    const baseStats = {
+  // 特殊BOSS：不进行任何属性缩放，直接使用GM设置的值（房间人数加成由外部函数处理）
+  if (tpl.specialBoss) {
+    return {
       hp: tpl.hp || 0,
       atk: tpl.atk || 0,
       def: tpl.def || 0,
       mdef: tpl.mdef || 0
     };
+  }
 
-    // 世界BOSS根据击杀次数进行成长
-    if (tpl.worldBoss) {
-      const count = worldBossKillCounts.get(realmId) || 0;
-      const growth = 1 + Math.floor(count / 5) * 0.01;
-      return {
-        hp: Math.floor(baseStats.hp * growth),
-        atk: Math.floor(baseStats.atk * growth),
-        def: Math.floor(baseStats.def * growth),
-        mdef: Math.floor(baseStats.mdef * growth)
-      };
-    }
-
-    return baseStats;
+  // 世界BOSS：只保留击杀成长机制（每击杀5次提升1%），不进行其他缩放（房间人数加成由外部函数处理）
+  if (tpl.worldBoss) {
+    const count = worldBossKillCounts.get(realmId) || 0;
+    const growth = 1 + Math.floor(count / 5) * 0.01;
+    return {
+      hp: Math.floor((tpl.hp || 0) * growth),
+      atk: Math.floor((tpl.atk || 0) * growth),
+      def: Math.floor((tpl.def || 0) * growth),
+      mdef: Math.floor((tpl.mdef || 0) * growth)
+    };
   }
 
   // 普通怪物

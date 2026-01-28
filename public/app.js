@@ -2593,8 +2593,6 @@ async function loadSponsors() {
           sponsorCustomTitles.set(s.player_name, s.custom_title);
         }
       });
-      // 赞助名单加载完成后更新按钮显示
-      updateSponsorTitleButtonVisibility();
     }
   } catch (err) {
     console.error('获取赞助名单失败:', err);
@@ -2726,12 +2724,12 @@ async function showSponsorTitleModal() {
   hideItemTooltip();
 
   const currentPlayerName = state.player?.name;
-  if (!currentPlayerName || !sponsorNames.has(currentPlayerName)) {
-    showToast('只有赞助玩家才能设置自定义称号');
+  if (!currentPlayerName) {
+    showToast('请先登录游戏');
     return;
   }
 
-  // 获取当前称号
+  // 获取当前称号（如果有）
   const currentTitle = sponsorCustomTitles.get(currentPlayerName) || '';
   sponsorTitleUi.input.value = currentTitle;
   sponsorTitleUi.msg.textContent = '';
@@ -2778,18 +2776,6 @@ async function showSponsorTitleModal() {
       sponsorTitleUi.msg.style.color = '#e74c3c';
     }
   };
-}
-
-function updateSponsorTitleButtonVisibility() {
-  const btn = document.getElementById('chat-set-sponsor-title');
-  if (!btn) return;
-
-  const currentPlayerName = state.player?.name;
-  if (currentPlayerName && sponsorNames.has(currentPlayerName)) {
-    btn.classList.remove('hidden');
-  } else {
-    btn.classList.add('hidden');
-  }
 }
 
 const ITEM_TYPE_LABELS = {
@@ -4091,9 +4077,6 @@ function renderState(state) {
     }
       socket.emit('cmd', { text: a.id });
   });
-
-  // 更新赞助玩家称号按钮的显示状态
-  updateSponsorTitleButtonVisibility();
 }
 const remembered = localStorage.getItem('rememberedUser');
 if (remembered) {

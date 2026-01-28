@@ -551,24 +551,34 @@
   <footer id="footer-copyright" style="display: flex; justify-content: center; align-items: center; gap: 30px; padding: 12px; background: rgba(120, 64, 20, 0.9); color: #fff3df; font-size: 0.85rem; margin-top: 20px;"></footer>
 
 <script>
-  (function(){
-    var _dec = function(arr) {
-      return arr.map(function(c) { return String.fromCharCode(c - 123); }).join('');
-    };
+  (function () {
+    function b64d(b64) {
+      return decodeURIComponent(escape(atob(b64)));
+    }
     var _d = {
       g1: atob("aHR0cHM6Ly9naXRodWIuY29tL2U1c3ViL1RleHQtTGVnZW5k"),
       d1: atob("aHR0cHM6Ly9jcS4wNzE3MTcueHl6"),
-      g2: _dec([254,207,222,211,86,58,32,224,244,258,258,256,251,259,227,222,222,251,263,227,262,265,273,253]),
-      q1: _dec([308,291,295,292,311,295,321,81,81,311,318,271,58,32,272,281,281,285,283,285,284,289,289]),
-      w1: _dec([293,305,295,308,323,315,311,320,53,311,322,319,274,319,315,319,274,318,323,274,323,322,318]),
-      d2: _dec([298,315,295,291,307,321,321,81,58,236,240,240,247,247,252,58,47,47,263,295,54,283,283,285,281,285,285,54,270,271,272])
+
+      g2: b64d("R2l0SHViOiBlNXN1Yi9UZXh0LUxlZ2VuZA=="),
+      q1: b64d("546p5a626FFF5766pTogMTY5OTI0MzU5"),
+      w1: b64d("5b6u5L+h5YWs5LyX5Y+3OiDoj5LmnaDliJ3kvZzlsI/liqDmiYvliK0="),
+      d2: b64d("5ryU56S65p6ZQTrmhI/npLrnk5nlnLBBOmh0dHBzOi8vY3EuMDcxNzE3Lnh5eg==")
     };
     var _e = document.getElementById("footer-copyright");
-    if(_e) {
-      _e.innerHTML = '<a href="' + _d.g1 + '" target="_blank" rel="noopener noreferrer" style="color: #ffd699; text-decoration: none;">' + _d.g2 + '</a><span style="color: #fff3df;">' + _d.q1 + '</span><span style="color: #fff3df;">' + _d.w1 + '</span><a href="' + _d.d1 + '" target="_blank" rel="noopener noreferrer" style="color: #ffd699; text-decoration: none;">' + _d.d2 + '</a>';
+    if (_e) {
+      _e.innerHTML =
+        '<a href="' + _d.g1 + '" target="_blank" rel="noopener noreferrer" style="color:#ffd699;text-decoration:none;">' +
+        _d.g2 +
+        '</a>' +
+        '<span style="color:#fff3df;">' + _d.q1 + '</span>' +
+        '<span style="color:#fff3df;">' + _d.w1 + '</span>' +
+        '<a href="' + _d.d1 + '" target="_blank" rel="noopener noreferrer" style="color:#ffd699;text-decoration:none;">' +
+        _d.d2 +
+        '</a>';
     }
   })();
 </script>
+
 
   <script src="/socket.io/socket.io.js"></script>
   <script src="app.js?v=4"></script>

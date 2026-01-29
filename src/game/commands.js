@@ -724,6 +724,7 @@ export async function handleCommand({ player, players, input, source, send, part
     }
     case 'goto_room': {
       if (!args) return send('要前往哪个房间？');
+      console.log('goto_room command received, args:', args);
       const fromRoom = { zone: player.position.zone, room: player.position.room };
       let zoneId = '';
       let roomId = '';
@@ -734,6 +735,7 @@ export async function handleCommand({ player, players, input, source, send, part
         zoneId = parts[0];
         roomId = parts[1];
       }
+      console.log('Parsed zoneId:', zoneId, 'roomId:', roomId);
       if (!zoneId || !roomId || !WORLD[zoneId]) return send('目标地点无效。');
 
       // 检查房间是否存在，如果不存在则查找变种房间
@@ -765,7 +767,9 @@ export async function handleCommand({ player, players, input, source, send, part
       }
       // 允许前往BOSS房间或LOCATION_LOOKUP中定义的静态位置
       const isStaticLocation = ['mg_plains:gate', 'mg_town:mg_market', 'wms:entrance', 'zm:hall', 'cr:valley', 'wb:lair', 'molong:deep', 'sabak:palace', 'sabak:hall', 'sabak:throne'].includes(`${zoneId}:${targetRoomId}`);
-      if (!isBossRoom(zoneId, targetRoomId) && !isStaticLocation) {
+      const isBoss = isBossRoom(zoneId, targetRoomId);
+      console.log('isBoss:', isBoss, 'isStaticLocation:', isStaticLocation, 'location:', `${zoneId}:${targetRoomId}`);
+      if (!isBoss && !isStaticLocation) {
         return send('该地点无法直接前往。');
       }
 

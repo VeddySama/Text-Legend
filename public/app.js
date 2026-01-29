@@ -4672,6 +4672,7 @@ function enterGame(name) {
     }
   });
   socket.on('output', (payload) => {
+    console.log('Received output:', payload);
     appendLine(payload);
     if (!isStateThrottleActive()) {
       parseStats(payload.text);

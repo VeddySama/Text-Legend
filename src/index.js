@@ -828,6 +828,17 @@ app.post('/admin/training-settings/update', async (req, res) => {
   res.json({ ok: true, config: newConfig });
 });
 
+// 修炼配置（普通玩家）
+app.get('/api/training-config', async (req, res) => {
+  try {
+    const config = await getTrainingPerLevelConfigDb();
+    res.json({ ok: true, config });
+  } catch (err) {
+    console.error('修炼配置加载失败:', err);
+    res.status(500).json({ error: err.message || '加载失败' });
+  }
+});
+
 // 特殊BOSS配置（魔龙BOSS、暗之系列BOSS、沙巴克BOSS）
 app.get('/admin/specialboss-settings', async (req, res) => {
   const admin = await requireAdmin(req);

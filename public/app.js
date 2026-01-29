@@ -22,6 +22,30 @@ let stateThrottleOverrideServerAllowed = true;
 let bossRespawnTimer = null;
 let bossRespawnTarget = null;
 let bossRespawnTimerEl = null;
+let trainingConfig = null; // 修炼配置
+
+async function loadTrainingConfig() {
+  try {
+    const res = await fetch('/api/training-config');
+    if (res.ok) {
+      const data = await res.json();
+      if (data.ok && data.config) {
+        trainingConfig = data.config;
+      }
+    }
+  } catch (e) {
+    console.error('加载修炼配置失败:', e);
+  }
+}
+
+function getTrainingPerLevel(attr) {
+  if (trainingConfig && trainingConfig[attr] !== undefined) {
+    return trainingConfig[attr];
+  }
+  // 默认值
+  const defaults = { hp: 1, mp: 1, atk: 0.1, def: 0.1, mag: 0.1, mdef: 0.1, spirit: 0.1, dex: 0.1 };
+  return defaults[attr] || 0.1;
+}
 
 // 屏蔽F12开发者工具
 (function() {
@@ -1793,7 +1817,8 @@ function openTrainingBatchModal(trainingId) {
 
   const currentLevel = training[trainingId] || 0;
   const cost = trainingCost(currentLevel);
-  const totalBonus = currentLevel * opt.perLevel;
+  const perLevel = getTrainingPerLevel(trainingId);
+  const totalBonus = currentLevel * perLevel;
 
   // 显示修炼属性信息
   trainingBatchUi.modal.querySelector('.modal-title').textContent = opt.label;
@@ -1835,6 +1860,8 @@ function updateTrainingBatchCost() {
   const opt = TRAINING_OPTIONS.find(o => o.id === selectedTrainingType);
   if (!opt) return;
 
+  const perLevel = getTrainingPerLevel(selectedTrainingType);
+
   // 计算总费用
   let totalCost = 0;
   for (let i = 0; i < count; i++) {
@@ -1842,14 +1869,14 @@ function updateTrainingBatchCost() {
   }
 
   const targetLevel = currentLevel + count;
-  const targetBonus = targetLevel * opt.perLevel;
+  const targetBonus = targetLevel * perLevel;
 
   if (count === 1) {
     trainingBatchUi.costDisplay.innerHTML = `
       <div class="training-batch-total-cost">消耗：${totalCost} 金币</div>
     `;
   } else {
-    const currentBonus = currentLevel * opt.perLevel;
+    const currentBonus = currentLevel * perLevel;
     const bonusIncrease = targetBonus - currentBonus;
 
     trainingBatchUi.costDisplay.innerHTML = `
@@ -4370,7 +4397,8 @@ function renderState(state) {
     const trainingButtons = TRAINING_OPTIONS.map((opt) => {
       const currentLevel = training[opt.id] || 0;
       const cost = trainingCost(currentLevel);
-      const totalBonus = currentLevel * opt.perLevel;
+      const perLevel = getTrainingPerLevel(opt.id);
+      const totalBonus = currentLevel * perLevel;
       return {
         id: opt.id,
         label: `${opt.label} Lv${currentLevel}`,
@@ -4798,6 +4826,8 @@ function enterGame(name) {
     }
     // 加载赞助者列表
     await loadSponsors();
+    // 加载修炼配置
+    await loadTrainingConfig();
   });
   socket.on('auth_error', (payload) => {
     appendLine(`认证失败: ${payload.error}`);

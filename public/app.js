@@ -336,6 +336,7 @@ const sponsorTitleUi = {
   saveBtn: document.getElementById('title-save'),
   msg: document.getElementById('title-msg')
 };
+console.log('sponsorTitleUi:', sponsorTitleUi);
 const itemTooltip = document.getElementById('item-tooltip');
 let lastShopItems = [];
 let consignMarketItems = [];
@@ -392,13 +393,13 @@ let realmInitPromise = null;
 let sponsorNames = new Set(); // 存储赞助玩家名称
 let sponsorCustomTitles = new Map(); // 存储赞助玩家自定义称号
 
-function showToast(message) {
+function showToast(message, duration = 1600) {
   authToast.textContent = message;
   authToast.classList.remove('hidden');
   authToast.classList.add('show');
   setTimeout(() => {
     authToast.classList.remove('show');
-  }, 1600);
+  }, duration);
 }
 
 async function refreshCaptcha(target) {
@@ -2720,12 +2721,18 @@ function renderDropsContent(setId) {
 }
 
 async function showSponsorTitleModal() {
-  if (!sponsorTitleUi.modal) return;
+  console.log('showSponsorTitleModal 被调用');
+  console.log('sponsorTitleUi.modal:', sponsorTitleUi.modal);
+  if (!sponsorTitleUi.modal) {
+    console.warn('sponsorTitleUi.modal 不存在');
+    return;
+  }
   hideItemTooltip();
 
   const currentPlayerName = state.player?.name;
   if (!currentPlayerName) {
     showToast('请先登录游戏');
+    console.warn('玩家未登录,无法设置称号');
     return;
   }
 
@@ -4613,8 +4620,13 @@ if (chat.clearBtn) {
 }
 if (chat.setSponsorTitleBtn) {
   chat.setSponsorTitleBtn.addEventListener('click', () => {
+    console.log('点击设置称号按钮');
+    console.log('sponsorTitleUi.modal:', sponsorTitleUi.modal);
+    console.log('state.player?.name:', state.player?.name);
     showSponsorTitleModal();
   });
+} else {
+  console.warn('设置称号按钮未找到');
 }
 if (chat.emojiPanel) {
   document.addEventListener('click', (evt) => {

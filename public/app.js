@@ -860,7 +860,39 @@ function loadChatCache(name) {
     if (Array.isArray(list)) {
       list.forEach((entry) => {
         const p = buildLine(entry);
+        const loc = parseLocationMessage(normalizePayload(entry).text);
+        const data = normalizePayload(entry);
+        const staticLoc = parseStaticLocationLink(data.text);
+        // 重新绑定位置跳转按钮事件
+        if (loc && socket) {
+          const btn = document.createElement('button');
+          btn.className = 'chat-link-btn';
+          btn.textContent = '前往';
+          btn.addEventListener('click', () => {
+            socket.emit('cmd', { text: `goto ${loc.player}` });
+          });
+          p.appendChild(btn);
+        }
+        if (data.location && socket) {
+          const labelBtn = document.createElement('button');
+          labelBtn.className = 'chat-link-tag';
+          labelBtn.textContent = data.location.label || '世界BOSS领域 - 炎龙巢穴';
+          labelBtn.addEventListener('click', () => {
+            socket.emit('cmd', { text: `goto_room ${data.location.zoneId}:${data.location.roomId}` });
+          });
+          p.appendChild(labelBtn);
+        }
+        if (staticLoc && socket) {
+          const btn = document.createElement('button');
+          btn.className = 'chat-link-btn';
+          btn.textContent = '前往';
+          btn.addEventListener('click', () => {
+            socket.emit('cmd', { text: `goto_room ${staticLoc.zoneId}:${staticLoc.roomId}` });
+          });
+          p.appendChild(btn);
+        }
         chat.log.appendChild(p);
+        applyAnnounceMarquee(p);
       });
       chat.log.scrollTop = chat.log.scrollHeight;
     }

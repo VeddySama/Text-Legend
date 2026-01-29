@@ -3644,7 +3644,6 @@ function retaliateMobAgainstPlayer(mob, player, online) {
   }
 
   // 特殊BOSS攻击效果
-  const isSpecialBoss = Boolean(mobTemplate?.specialBoss);
   const now = Date.now();
   if (isSpecialBoss) {
 
@@ -6090,7 +6089,6 @@ async function combatTick() {
         dmg += calcMagicDamageFromValue(spiritBase, mobTarget);
       }
       // 特殊BOSS麻痹效果：魔龙教主、世界BOSS、沙巴克BOSS、暗之BOSS攻击时有20%几率麻痹目标2回合
-      const isSpecialBoss = Boolean(mobTemplate?.specialBoss);
       if (isSpecialBoss && Math.random() <= 0.2) {
         if (!mob.status) mob.status = {};
         if (!mobTarget.status) mobTarget.status = {};

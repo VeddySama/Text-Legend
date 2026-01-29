@@ -1730,19 +1730,86 @@ export async function handleCommand({ player, players, input, source, send, part
         });
         return;
       }
-      const raw = args.trim();
-      const key = TRAINING_ALIASES[raw] || TRAINING_ALIASES[raw.toLowerCase()];
-      if (!key || !TRAINING_OPTIONS[key]) return send('可修炼属性: 生命, 魔法值, 攻击, 防御, 魔法, 魔御, 道术, 敏捷');
-      const cost = trainingCost(player, key);
-      if (player.gold < cost) return send('金币不足。');
-      player.gold -= cost;
-      player.flags.training[key] = (player.flags.training[key] || 0) + TRAINING_OPTIONS[key].inc;
-      const newLevel = player.flags.training[key];
+
+      // 检查是否为批量修炼模式，格式如 "train 攻击 10" 或 "train atk 10"
+      const parts = args.trim().split(/\s+/).filter(Boolean);
+      let key = null;
+      let trainCount = 1;
+
+      if (parts.length >= 2) {
+        const countStr = parts[parts.length - 1];
+        const parsedCount = parseInt(countStr, 10);
+        if (!isNaN(parsedCount) && parsedCount > 0) {
+          // 最后一个参数是数字，认为是修炼次数
+          trainCount = parsedCount;
+          const keyStr = parts.slice(0, -1).join('');
+          key = TRAINING_ALIASES[keyStr] || TRAINING_ALIASES[keyStr.toLowerCase()];
+        } else {
+          // 不是数字，整个参数是修炼属性
+          const keyStr = parts.join('');
+          key = TRAINING_ALIASES[keyStr] || TRAINING_ALIASES[keyStr.toLowerCase()];
+        }
+      } else {
+        // 只有一个参数
+        const keyStr = parts[0];
+        key = TRAINING_ALIASES[keyStr] || TRAINING_ALIASES[keyStr.toLowerCase()];
+      }
+
+      if (!key || !TRAINING_OPTIONS[key]) {
+        send('可修炼属性: 生命, 魔法值, 攻击, 防御, 魔法, 魔御, 道术, 敏捷');
+        send('批量修炼格式: train 属性 次数 (例如: train 攻击 10)');
+        return;
+      }
+
+      // 单次修炼
+      if (trainCount === 1) {
+        const cost = trainingCost(player, key);
+        if (player.gold < cost) return send('金币不足。');
+        player.gold -= cost;
+        player.flags.training[key] = (player.flags.training[key] || 0) + TRAINING_OPTIONS[key].inc;
+        const newLevel = player.flags.training[key];
+        const totalBonus = newLevel * TRAINING_OPTIONS[key].perLevel;
+        computeDerived(player);
+        player.forceStateRefresh = true;
+        send(`修炼成功: ${TRAINING_OPTIONS[key].label} 升至 Lv${newLevel} (属性+${totalBonus.toFixed(2)})。`);
+        send(`消耗 ${cost} 金币。`);
+        return;
+      }
+
+      // 批量修炼
+      // 计算多次修炼的总费用
+      let totalCost = 0;
+      const costs = [];
+      let currentLevel = player.flags.training[key] || 0;
+
+      for (let i = 0; i < trainCount; i++) {
+        const cost = trainingCost(player, key);
+        costs.push(cost);
+        totalCost += cost;
+        // 临时增加等级以计算下一次的费用
+        player.flags.training[key] = currentLevel + (i + 1);
+      }
+
+      // 恢复原始等级
+      player.flags.training[key] = currentLevel;
+
+      // 检查金币是否足够
+      if (player.gold < totalCost) {
+        send(`金币不足。需要 ${totalCost} 金币进行 ${trainCount} 次修炼，当前只有 ${player.gold} 金币。`);
+        send(`预计修炼至 Lv${currentLevel + trainCount} (属性+${((currentLevel + trainCount) * TRAINING_OPTIONS[key].perLevel).toFixed(2)})`);
+        return;
+      }
+
+      // 执行批量修炼
+      player.gold -= totalCost;
+      const newLevel = currentLevel + trainCount;
+      player.flags.training[key] = newLevel;
       const totalBonus = newLevel * TRAINING_OPTIONS[key].perLevel;
       computeDerived(player);
       player.forceStateRefresh = true;
-      send(`修炼成功: ${TRAINING_OPTIONS[key].label} 升至 Lv${newLevel} (属性+${totalBonus.toFixed(2)})。`);
-      send(`消耗 ${cost} 金币。`);
+
+      send(`批量修炼成功: ${TRAINING_OPTIONS[key].label} 从 Lv${currentLevel} 升至 Lv${newLevel} (属性+${totalBonus.toFixed(2)})。`);
+      send(`共 ${trainCount} 次修炼，消耗 ${totalCost} 金币。`);
       return;
     }
     case 'party': {

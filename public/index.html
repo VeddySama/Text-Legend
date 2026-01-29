@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>这是一个神奇的文字页面</title>
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="training_batch.css">
 </head>
 <body>
   <div id="app">
@@ -313,6 +314,23 @@
       <div class="modal-actions">
         <button id="forge-confirm" disabled>&#x5408;&#x6210;</button>
         <button id="forge-close">&#x5173;&#x95ED;</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="training-batch-modal" class="modal hidden">
+    <div class="modal-card">
+      <div class="modal-title">修炼次数</div>
+      <div class="modal-list-wrapper">
+        <div class="modal-text" id="training-batch-text">请输入修炼次数</div>
+        <div class="training-batch-input">
+          <input id="training-batch-count" type="number" min="1" max="100" value="1" placeholder="输入次数">
+        </div>
+        <div id="training-batch-cost" class="training-batch-cost">总花费：计算中...</div>
+      </div>
+      <div class="modal-actions">
+        <button id="training-batch-confirm" disabled>确认修炼</button>
+        <button id="training-batch-close">取消</button>
       </div>
     </div>
   </div>

@@ -293,6 +293,14 @@ const consignUi = {
     tabs: Array.from(document.querySelectorAll('.bag-tab')),
     close: document.getElementById('bag-close')
   };
+  const trainingBatchUi = {
+    modal: document.getElementById('training-batch-modal'),
+    list: document.getElementById('training-batch-list'),
+    countInput: document.getElementById('training-batch-count'),
+    costDisplay: document.getElementById('training-batch-cost'),
+    confirm: document.getElementById('training-batch-confirm'),
+    close: document.getElementById('training-batch-close')
+  };
   const statsUi = {
     modal: document.getElementById('stats-modal'),
     summary: document.getElementById('stats-summary'),
@@ -1733,6 +1741,89 @@ function showForgeModal() {
   forgeUi.modal.classList.remove('hidden');
 }
 
+let selectedTrainingType = null;
+
+function openTrainingBatchModal(trainingId) {
+  if (!trainingBatchUi.modal) return;
+  hideItemTooltip();
+  selectedTrainingType = trainingId;
+
+  const training = lastState.training || { hp: 0, mp: 0, atk: 0, mag: 0, spirit: 0, dex: 0 };
+  const opt = TRAINING_OPTIONS.find(o => o.id === trainingId);
+  if (!opt) return;
+
+  const currentLevel = training[trainingId] || 0;
+  const cost = trainingCost(currentLevel);
+  const totalBonus = currentLevel * opt.perLevel;
+
+  // 显示修炼属性信息
+  trainingBatchUi.modal.querySelector('.modal-title').textContent = opt.label;
+  trainingBatchUi.modal.querySelector('#training-batch-text').innerHTML =
+    `当前等级：Lv${currentLevel}<br>属性加成：+${totalBonus.toFixed(2)}<br>单次消耗：${cost} 金币`;
+
+  // 重置输入
+  trainingBatchUi.countInput.value = 1;
+  updateTrainingBatchCost();
+
+  // 显示模态框
+  trainingBatchUi.modal.classList.remove('hidden');
+}
+
+function updateTrainingBatchCost() {
+  if (!trainingBatchUi.costDisplay || !selectedTrainingType || !lastState) return;
+
+  const count = parseInt(trainingBatchUi.countInput.value) || 1;
+  const training = lastState.training || { hp: 0, mp: 0, atk: 0, mag: 0, spirit: 0, dex: 0 };
+  const currentLevel = training[selectedTrainingType] || 0;
+  const opt = TRAINING_OPTIONS.find(o => o.id === selectedTrainingType);
+  if (!opt) return;
+
+  // 计算总费用
+  let totalCost = 0;
+  for (let i = 0; i < count; i++) {
+    totalCost += trainingCost(currentLevel + i);
+  }
+
+  const targetLevel = currentLevel + count;
+  const targetBonus = targetLevel * opt.perLevel;
+
+  if (count === 1) {
+    trainingBatchUi.costDisplay.innerHTML = `
+      <div class="training-batch-total-cost">消耗：${totalCost} 金币</div>
+    `;
+  } else {
+    const currentBonus = currentLevel * opt.perLevel;
+    const bonusIncrease = targetBonus - currentBonus;
+
+    trainingBatchUi.costDisplay.innerHTML = `
+      <div>修炼 ${count} 次：Lv${currentLevel} → Lv${targetLevel}</div>
+      <div>属性增加：+${bonusIncrease.toFixed(2)}</div>
+      <div class="training-batch-total-cost">总花费：${totalCost} 金币</div>
+    `;
+  }
+
+  // 检查金币是否足够
+  const playerGold = lastState.gold || 0;
+  trainingBatchUi.confirm.disabled = playerGold < totalCost;
+}
+
+function executeBatchTraining() {
+  if (!selectedTrainingType || !trainingBatchUi.countInput) return;
+
+  const count = parseInt(trainingBatchUi.countInput.value) || 1;
+  if (count < 1 || count > 100) {
+    alert('修炼次数必须在1-100之间');
+    return;
+  }
+
+  // 发送批量修炼命令
+  socket.emit('cmd', { text: `train ${selectedTrainingType} ${count}` });
+
+  // 关闭模态框
+  trainingBatchUi.modal.classList.add('hidden');
+  selectedTrainingType = null;
+}
+
 function showAfkModal(skills, activeIds) {
   if (!afkUi.modal || !afkUi.list) return;
   hideItemTooltip();
@@ -2762,7 +2853,6 @@ async function showSponsorTitleModal() {
   hideItemTooltip();
 
   const currentPlayerName = lastState?.player?.name;
-  const currentPlayerRealmId = lastState?.player?.realmId;
   if (!currentPlayerName) {
     showToast('请先登录游戏');
     console.warn('玩家未登录,无法设置称号');
@@ -2801,7 +2891,7 @@ async function showSponsorTitleModal() {
       const res = await fetch('/api/sponsors/custom-title', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token, customTitle, characterName: currentPlayerName, realmId: currentPlayerRealmId })
+        body: JSON.stringify({ token, customTitle, characterName: currentPlayerName })
       });
       const data = await res.json();
       if (data.ok) {
@@ -3990,13 +4080,13 @@ function renderState(state) {
       const totalBonus = currentLevel * opt.perLevel;
       return {
         id: opt.id,
-        label: `${opt.label} Lv${currentLevel} (${cost}金)`,
-        tooltip: `${opt.label} 属性+${totalBonus.toFixed(2)}`,
+        label: `${opt.label} Lv${currentLevel}`,
+        tooltip: `${opt.label} 属性+${totalBonus.toFixed(2)}\n单次消耗 ${cost} 金币\n点击选择修炼次数`,
         raw: { id: opt.id }
       };
     });
     renderChips(ui.training, trainingButtons, (opt) => {
-      socket.emit('cmd', { text: `train ${opt.raw.id}` });
+      openTrainingBatchModal(opt.raw.id);
     });
   }
   if (tradeUi.itemSelect && !tradeUi.modal.classList.contains('hidden')) {
@@ -4695,7 +4785,8 @@ document.addEventListener('click', (evt) => {
     afkUi?.modal,
     playerUi?.modal,
     guildUi?.modal,
-    partyUi?.modal
+    partyUi?.modal,
+    trainingBatchUi?.modal
   ];
 
   for (const modal of modals) {
@@ -4962,6 +5053,19 @@ if (forgeUi.confirm) {
     });
     forgeUi.modal.classList.add('hidden');
   });
+}
+if (trainingBatchUi.close) {
+  trainingBatchUi.close.addEventListener('click', () => {
+    trainingBatchUi.modal.classList.add('hidden');
+    selectedTrainingType = null;
+    hideItemTooltip();
+  });
+}
+if (trainingBatchUi.confirm) {
+  trainingBatchUi.confirm.addEventListener('click', executeBatchTraining);
+}
+if (trainingBatchUi.countInput) {
+  trainingBatchUi.countInput.addEventListener('input', updateTrainingBatchCost);
 }
 if (repairUi.all) {
   repairUi.all.addEventListener('click', () => {

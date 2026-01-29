@@ -1,0 +1,80 @@
+/* 批量修炼模态框样式 */
+#training-batch-modal .modal-card {
+  max-height: none;
+  width: min(360px, 90vw);
+}
+
+#training-batch-modal .modal-list-wrapper {
+  padding: 0;
+}
+
+#training-batch-modal .modal-text {
+  margin-bottom: 16px;
+  line-height: 1.6;
+}
+
+.training-batch-input {
+  margin-bottom: 12px;
+}
+
+.training-batch-input input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid rgba(118, 70, 22, 0.25);
+  border-radius: 6px;
+  font-size: 1rem;
+  background: #fff7ea;
+  text-align: center;
+}
+
+.training-batch-cost {
+  margin-top: 16px;
+  padding: 12px;
+  background: rgba(201, 168, 108, 0.1);
+  border-radius: 8px;
+  font-size: 0.9rem;
+  color: #5b3a1c;
+  line-height: 1.6;
+  text-align: center;
+}
+
+.training-batch-total-cost {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #b95412;
+  margin-top: 8px;
+}
+
+/* 暗黑模式 */
+body.dark #training-batch-modal .modal-card {
+  background: #25201c;
+  border-color: #4a3a30;
+}
+
+body.dark #training-batch-modal .modal-text {
+  color: #b8a898;
+}
+
+body.dark .training-batch-input input {
+  background: #2a2420;
+  border-color: #4a3a30;
+  color: #e8e0d4;
+}
+
+body.dark .training-batch-cost {
+  background: rgba(232, 160, 88, 0.1);
+  color: #b8a898;
+}
+
+body.dark .training-batch-total-cost {
+  color: #e8a058;
+}
+
+/* 手机设备优化 */
+@media (max-width: 768px) {
+  #training-batch-modal .modal-card {
+    width: calc(100vw - 16px);
+    padding: 16px 12px;
+    margin: 0 8px;
+  }
+}

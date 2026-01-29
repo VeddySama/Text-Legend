@@ -360,9 +360,6 @@ export function computeDerived(player) {
   const training = player.flags.training;
   const trainingFruit = player.flags.trainingFruit;
 
-  // 修炼果系数：从后台配置读取
-  const TRAINING_FRUIT_COEFFICIENT = getTrainingFruitCoefficient();
-
   // 修炼系统每级效果：从后台配置读取
   const TRAINING_PER_LEVEL = getTrainingPerLevelConfig();
 

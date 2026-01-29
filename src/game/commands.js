@@ -825,8 +825,47 @@ export async function handleCommand({ player, players, input, source, send, part
     }
     case 'say': {
       if (!args) return;
-      players.forEach((p) => p.send(`[${player.name}] ${args}`));
-
+      const message = `[${player.name}] ${args}`;
+      const locationMatch = args.match(/^我在\s+(.+?)\s+-\s+(.+)$/);
+      const payload = { text: message };
+      if (locationMatch) {
+        // 检查是否是已知的位置，发送位置ID信息
+        const locationName = `${locationMatch[1]} - ${locationMatch[2]}`;
+        const staticLocation = {
+          '盟重省 - 盟重入口': { zoneId: 'mg_plains', roomId: 'gate' },
+          '土城集市': { zoneId: 'mg_town', roomId: 'mg_market' },
+          '沃玛寺庙 - 寺庙入口': { zoneId: 'wms', roomId: 'entrance' },
+          '祖玛寺庙 - 祖玛大厅': { zoneId: 'zm', roomId: 'hall' },
+          '赤月峡谷 - 赤月入口': { zoneId: 'cr', roomId: 'valley' },
+          '世界BOSS领域 - 炎龙巢穴': { zoneId: 'wb', roomId: 'lair' },
+          '魔龙城 - 魔龙深处': { zoneId: 'molong', roomId: 'deep' },
+          '沙巴克宫殿 - 皇宫大门': { zoneId: 'sabak', roomId: 'palace' },
+          '沙巴克宫殿 - 皇宫大厅': { zoneId: 'sabak', roomId: 'hall' },
+          '沙巴克宫殿 - 皇宫内殿': { zoneId: 'sabak', roomId: 'throne' }
+        }[locationName];
+        if (staticLocation) {
+          payload.location = {
+            label: locationName,
+            ...staticLocation
+          };
+        } else {
+          // 尝试从当前玩家位置获取
+          const zone = WORLD[player.position.zone];
+          const room = zone?.rooms[player.position.room];
+          if (zone && room) {
+            payload.location = {
+              label: locationName,
+              zoneId: player.position.zone,
+              roomId: player.position.room
+            };
+          }
+        }
+      }
+      players.forEach((p) => {
+        if (p.socket) {
+          p.socket.emit('output', payload);
+        }
+      });
       return;
     }
     case 'who': {

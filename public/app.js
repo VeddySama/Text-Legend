@@ -834,6 +834,17 @@ function appendChatLine(payload) {
       socket.emit('cmd', { text: cmd });
     });
     p.appendChild(labelBtn);
+
+    // 添加前往按钮，跳转到具体房间
+    const gotoBtn = document.createElement('button');
+    gotoBtn.className = 'chat-link-btn';
+    gotoBtn.textContent = '前往';
+    gotoBtn.addEventListener('click', () => {
+      const cmd = `goto_room ${data.location.zoneId}:${data.location.roomId}`;
+      console.log('Sending goto_room command:', cmd);
+      socket.emit('cmd', { text: cmd });
+    });
+    p.appendChild(gotoBtn);
   }
   if (staticLoc && socket) {
     console.log('Static location found:', staticLoc);

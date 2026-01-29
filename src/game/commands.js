@@ -790,6 +790,7 @@ export async function handleCommand({ player, players, input, source, send, part
 
       player.position.zone = zoneId;
       player.position.room = targetRoomId;
+      player.forceStateRefresh = true;
 
       // 根据不同的房间类型发送不同的消息
       const room = WORLD[zoneId].rooms[targetRoomId];

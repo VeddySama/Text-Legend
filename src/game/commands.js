@@ -1018,14 +1018,14 @@ export async function handleCommand({ player, players, input, source, send, part
         }
 
         const attrOptions = [
-          { name: '攻击', attr: 'atk', value: 0.1 },
-          { name: '魔法', attr: 'matk', value: 0.1 },
-          { name: '道术', attr: 'dmg', value: 0.1 },
-          { name: '防御', attr: 'def', value: 0.1 },
-          { name: '魔御', attr: 'mdef', value: 0.1 },
-          { name: '敏捷', attr: 'agi', value: 0.1 },
-          { name: '生命上限', attr: 'max_hp', value: 0.1 },
-          { name: '魔法上限', attr: 'max_mp', value: 0.1 }
+          { name: '攻击', attr: 'atk', value: 0.5 },
+          { name: '魔法', attr: 'matk', value: 0.5 },
+          { name: '道术', attr: 'dmg', value: 0.5 },
+          { name: '防御', attr: 'def', value: 0.5 },
+          { name: '魔御', attr: 'mdef', value: 0.5 },
+          { name: '敏捷', attr: 'agi', value: 0.5 },
+          { name: '生命上限', attr: 'max_hp', value: 0.5 },
+          { name: '魔法上限', attr: 'max_mp', value: 0.5 }
         ];
 
         // 统计每个属性的提升次数，并累加到player.flags.trainingFruit

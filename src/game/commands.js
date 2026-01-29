@@ -763,7 +763,9 @@ export async function handleCommand({ player, players, input, source, send, part
           return send('只有沙巴克行会成员才能前往沙巴克BOSS房间。');
         }
       }
-      if (!isBossRoom(zoneId, targetRoomId)) {
+      // 允许前往BOSS房间或LOCATION_LOOKUP中定义的静态位置
+      const isStaticLocation = ['mg_plains:gate', 'mg_town:mg_market', 'wms:entrance', 'zm:hall', 'cr:valley', 'wb:lair', 'molong:deep', 'sabak:palace', 'sabak:hall', 'sabak:throne'].includes(`${zoneId}:${targetRoomId}`);
+      if (!isBossRoom(zoneId, targetRoomId) && !isStaticLocation) {
         return send('该地点无法直接前往。');
       }
 

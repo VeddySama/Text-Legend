@@ -752,11 +752,16 @@ app.post('/admin/class-level-bonus/update', async (req, res) => {
 
 // 修炼果配置
 app.get('/admin/training-fruit-settings', async (req, res) => {
-  const admin = await requireAdmin(req);
-  if (!admin) return res.status(401).json({ error: '无管理员权限。' });
-  const coefficient = await getTrainingFruitCoefficient();
-  const dropRate = await getTrainingFruitDropRate();
-  res.json({ ok: true, coefficient, dropRate });
+  try {
+    const admin = await requireAdmin(req);
+    if (!admin) return res.status(401).json({ error: '无管理员权限。' });
+    const coefficient = await getTrainingFruitCoefficient();
+    const dropRate = await getTrainingFruitDropRate();
+    res.json({ ok: true, coefficient, dropRate });
+  } catch (err) {
+    console.error('修炼果配置加载失败:', err);
+    res.status(500).json({ error: err.message || '加载失败' });
+  }
 });
 
 app.post('/admin/training-fruit-settings/update', async (req, res) => {
@@ -787,10 +792,15 @@ app.post('/admin/training-fruit-settings/update', async (req, res) => {
 
 // 修炼系统配置
 app.get('/admin/training-settings', async (req, res) => {
-  const admin = await requireAdmin(req);
-  if (!admin) return res.status(401).json({ error: '无管理员权限。' });
-  const config = await getTrainingPerLevelConfigDb();
-  res.json({ ok: true, config });
+  try {
+    const admin = await requireAdmin(req);
+    if (!admin) return res.status(401).json({ error: '无管理员权限。' });
+    const config = await getTrainingPerLevelConfigDb();
+    res.json({ ok: true, config });
+  } catch (err) {
+    console.error('修炼系统配置加载失败:', err);
+    res.status(500).json({ error: err.message || '加载失败' });
+  }
 });
 
 app.post('/admin/training-settings/update', async (req, res) => {

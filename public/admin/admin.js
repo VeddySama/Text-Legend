@@ -151,7 +151,7 @@ confirmCancel.addEventListener('click', () => {
     confirmCallback(false);
     confirmCallback = null;
   }
-}
+});
 
 // 修炼系统配置
 async function loadTrainingSettings() {

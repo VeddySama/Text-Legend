@@ -3552,16 +3552,23 @@ function renderState(state) {
 
   const players = (state.players || [])
     .filter((p) => p.name && (!state.player || p.name !== state.player.name))
-    .map((p) => ({
-      id: p.name,
-      label: `${p.name} Lv${p.level} ${classNames[p.classId] || p.classId}`,
-      raw: p,
-      className: (state.sabak && state.sabak.inZone)
-        ? (state.player && state.player.guildId && p.guildId === state.player.guildId
+    .map((p) => {
+      let className = '';
+      // 红名玩家显示深红色
+      if (p.pk >= 100) {
+        className = 'player-red-name';
+      } else if (state.sabak && state.sabak.inZone) {
+        className = (state.player && state.player.guildId && p.guildId === state.player.guildId
           ? 'player-friendly'
-          : 'player-enemy')
-        : ''
-    }));
+          : 'player-enemy');
+      }
+      return {
+        id: p.name,
+        label: `${p.name} Lv${p.level} ${classNames[p.classId] || p.classId}`,
+        raw: p,
+        className: className
+      };
+    });
   renderChips(ui.players, players, (p) => showPlayerModal(p.raw));
 
   const mobs = (state.mobs || []).map((m) => ({ id: m.id, label: `${m.name}(${m.hp})`, raw: m }));

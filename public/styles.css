@@ -594,6 +594,12 @@ body.dark .chip.player-enemy {
   color: #ca6a6a;
 }
 
+body.dark .chip.player-red-name {
+  background: #382a2a;
+  border-color: #8B0000;
+  color: #8B0000;
+}
+
 body.dark .target-label {
   background: #2a2420;
   border-color: #4a3828;
@@ -3815,6 +3821,12 @@ body.dark .rarity-supreme { color: #ff8c8c; }
 .chip.player-enemy {
   border-color: rgba(210, 92, 92, 0.55);
   color: #b63c3c;
+  background: #fff0f0;
+}
+
+.chip.player-red-name {
+  color: #8B0000;
+  border-color: rgba(139, 0, 0, 0.6);
   background: #fff0f0;
 }
 

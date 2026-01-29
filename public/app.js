@@ -1791,7 +1791,7 @@ function openTrainingBatchModal(trainingId) {
     if (!lastState) {
       console.warn('[openTrainingBatchModal] lastState is still null after delay');
     } else {
-      console.log('[openTrainingBatchModal] setTimeout check - lastState.gold:', lastState.gold);
+      console.log('[openTrainingBatchModal] setTimeout check - lastState.stats.gold:', lastState.stats?.gold);
     }
   }, 100);
 }
@@ -1838,7 +1838,7 @@ function updateTrainingBatchCost() {
   }
 
   // 检查金币是否足够
-  const playerGold = lastState?.gold || 0;
+  const playerGold = lastState?.stats?.gold || 0;
   console.log('[updateTrainingBatchCost] playerGold:', playerGold, 'totalCost:', totalCost);
   trainingBatchUi.confirm.disabled = playerGold < totalCost;
   console.log('[updateTrainingBatchCost] confirm.disabled:', trainingBatchUi.confirm.disabled);

@@ -1264,12 +1264,15 @@ app.get('/api/sponsors', async (req, res) => {
 
 // 更新赞助玩家自定义称号接口
 app.post('/api/sponsors/custom-title', async (req, res) => {
-  const { token, customTitle, characterName, realmId: rawRealmId } = req.body || {};
+  const { token, customTitle, characterName } = req.body || {};
   if (!token) {
     return res.status(401).json({ error: '未登录。' });
   }
   if (!customTitle || typeof customTitle !== 'string') {
     return res.status(400).json({ error: '缺少参数。' });
+  }
+  if (!characterName || typeof characterName !== 'string') {
+    return res.status(400).json({ error: '缺少角色名称。' });
   }
   const trimmedTitle = customTitle.trim();
   if (trimmedTitle.length > 10) {
@@ -1286,31 +1289,17 @@ app.post('/api/sponsors/custom-title', async (req, res) => {
       return res.status(401).json({ error: '会话已过期，请重新登录。' });
     }
 
-    let realmInfo = await resolveRealmId(rawRealmId);
-    // 如果请求的区服不存在，使用第一个可用的区服
-    if (realmInfo.error) {
-      const realms = await listRealms();
-      if (Array.isArray(realms) && realms.length > 0) {
-        realmInfo = { realmId: realms[0].id };
-      } else {
-        return res.status(400).json({ error: realmInfo.error });
-      }
-    }
-
-    const character = await loadCharacter(session.user_id, characterName, realmInfo.realmId);
-    if (!character) {
-      return res.status(404).json({ error: '角色不存在。' });
-    }
-    const playerName = character.name;
     // 检查是否是赞助玩家
-    const sponsor = await getSponsorByPlayerName(playerName);
+    const sponsor = await getSponsorByPlayerName(characterName);
     if (!sponsor) {
       return res.status(403).json({ error: '您不是赞助玩家，无法设置自定义称号。' });
     }
-    await updateSponsorCustomTitle(playerName, trimmedTitle || '赞助玩家');
+
+    await updateSponsorCustomTitle(characterName, trimmedTitle || '赞助玩家');
     io.emit('sponsors_updated');
     res.json({ ok: true });
   } catch (err) {
+    console.error('更新自定义称号失败:', err);
     res.status(500).json({ error: '更新失败: ' + err.message });
   }
 });

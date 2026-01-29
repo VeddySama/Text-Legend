@@ -811,7 +811,7 @@ function appendChatLine(payload) {
   const data = normalizePayload(payload);
   const staticLoc = parseStaticLocationLink(data.text);
   console.log('Parsed - loc:', loc, 'data.location:', data.location, 'staticLoc:', staticLoc);
-  if (loc && socket) {
+  if (loc && socket && !data.location) {
     console.log('Creating goto player button for:', loc.player);
     const btn = document.createElement('button');
     btn.className = 'chat-link-btn';
@@ -858,7 +858,7 @@ function appendChatLine(payload) {
     });
     p.appendChild(gotoBtn);
   }
-  if (staticLoc && socket) {
+  if (staticLoc && socket && !data.location) {
     console.log('Static location found:', staticLoc);
     const btn = document.createElement('button');
     btn.className = 'chat-link-btn';

@@ -16,7 +16,7 @@ import { CLASSES, expForLevel, getStartPosition, ROOM_VARIANT_COUNT } from './co
 import { getRoom, getAliveMobs, spawnMobs } from './state.js';
 import { clamp } from './utils.js';
 import { applyDamage } from './combat.js';
-import { getTrainingPerLevelConfig } from './settings.js';
+import { getTrainingPerLevelConfig, getTrainingFruitCoefficient } from './settings.js';
 
 function getSummons(player) {
   if (!player) return [];
@@ -1051,8 +1051,19 @@ export async function handleCommand({ player, players, allCharacters, input, sou
           return send('背包里没有该物品。');
         }
 
-        // 构建结果消息
-        const resultParts = Object.entries(attrStats).map(([name, count]) => `${name}+${count}次`);
+        // 获取修炼果系数
+        const coefficient = getTrainingFruitCoefficient();
+
+        // 构建结果消息，显示加成后的属性值而不是次数
+        const resultParts = Object.entries(attrStats)
+          .map(([name, count]) => {
+            const attrKey = attrOptions.find(opt => opt.name === name)?.attr;
+            if (attrKey) {
+              const bonus = count * coefficient;
+              return `${name}+${bonus.toFixed(1)}`;
+            }
+            return `${name}+${count}`;
+          });
         if (useCount === 1) {
           send(`使用了修炼果，${resultParts[0]}。`);
         } else {

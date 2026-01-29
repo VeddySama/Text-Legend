@@ -1716,6 +1716,8 @@ export async function handleCommand({ player, players, input, source, send, part
       return;
     }
     case 'train': {
+      console.log('[DEBUG] Train command received, args:', args);
+
       if (!player.flags) player.flags = {};
       if (!player.flags.training) {
         player.flags.training = { hp: 0, mp: 0, atk: 0, def: 0, mag: 0, mdef: 0, spirit: 0, dex: 0 };
@@ -1736,30 +1738,39 @@ export async function handleCommand({ player, players, input, source, send, part
       let key = null;
       let trainCount = 1;
 
+      console.log('[DEBUG] Parts:', parts);
+
       if (parts.length >= 2) {
         const countStr = parts[parts.length - 1];
         const parsedCount = parseInt(countStr, 10);
+        console.log('[DEBUG] countStr:', countStr, 'parsedCount:', parsedCount);
         if (!isNaN(parsedCount) && parsedCount > 0) {
           // 最后一个参数是数字，认为是修炼次数
           trainCount = parsedCount;
           const keyStr = parts.slice(0, -1).join('');
           key = TRAINING_ALIASES[keyStr] || TRAINING_ALIASES[keyStr.toLowerCase()];
+          console.log('[DEBUG] Batch mode: keyStr=', keyStr, 'key=', key, 'trainCount=', trainCount);
         } else {
           // 不是数字，整个参数是修炼属性
           const keyStr = parts.join('');
           key = TRAINING_ALIASES[keyStr] || TRAINING_ALIASES[keyStr.toLowerCase()];
+          console.log('[DEBUG] Single mode (not number): keyStr=', keyStr, 'key=', key);
         }
       } else {
         // 只有一个参数
         const keyStr = parts[0];
         key = TRAINING_ALIASES[keyStr] || TRAINING_ALIASES[keyStr.toLowerCase()];
+        console.log('[DEBUG] Single mode: keyStr=', keyStr, 'key=', key);
       }
 
       if (!key || !TRAINING_OPTIONS[key]) {
+        console.log('[DEBUG] Invalid key:', key);
         send('可修炼属性: 生命, 魔法值, 攻击, 防御, 魔法, 魔御, 道术, 敏捷');
         send('批量修炼格式: train 属性 次数 (例如: train 攻击 10)');
         return;
       }
+
+      console.log('[DEBUG] Final: key=', key, 'trainCount=', trainCount);
 
       // 单次修炼
       if (trainCount === 1) {

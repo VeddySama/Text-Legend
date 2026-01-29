@@ -1808,9 +1808,19 @@ function updateTrainingBatchCost() {
 }
 
 function executeBatchTraining() {
-  if (!selectedTrainingType || !trainingBatchUi.countInput) return;
+  console.log('[DEBUG] executeBatchTraining called');
+  console.log('[DEBUG] selectedTrainingType:', selectedTrainingType);
+  console.log('[DEBUG] trainingBatchUi.countInput:', trainingBatchUi.countInput);
+  console.log('[DEBUG] trainingBatchUi.confirm.disabled:', trainingBatchUi.confirm.disabled);
+
+  if (!selectedTrainingType || !trainingBatchUi.countInput) {
+    console.log('[DEBUG] Early return: missing selectedTrainingType or countInput');
+    return;
+  }
 
   const count = parseInt(trainingBatchUi.countInput.value) || 1;
+  console.log('[DEBUG] count:', count);
+
   if (count < 1 || count > 100) {
     alert('修炼次数必须在1-100之间');
     return;
@@ -1819,8 +1829,11 @@ function executeBatchTraining() {
   // 检查按钮是否被禁用
   if (trainingBatchUi.confirm.disabled) {
     alert('金币不足，无法修炼');
+    console.log('[DEBUG] Button is disabled, returning');
     return;
   }
+
+  console.log('[DEBUG] Sending command: train ' + selectedTrainingType + ' ' + count);
 
   // 发送批量修炼命令
   socket.emit('cmd', { text: `train ${selectedTrainingType} ${count}` });

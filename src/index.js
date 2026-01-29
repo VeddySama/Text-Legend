@@ -1280,7 +1280,7 @@ app.post('/api/sponsors/custom-title', async (req, res) => {
     if (!session) {
       return res.status(401).json({ error: '会话已过期，请重新登录。' });
     }
-    const character = await loadCharacter(session.userId, session.realmId, session.characterName);
+    const character = await loadCharacter(session.userId, session.characterName, session.realmId);
     if (!character) {
       return res.status(404).json({ error: '角色不存在。' });
     }

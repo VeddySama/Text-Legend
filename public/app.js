@@ -2730,6 +2730,7 @@ async function showSponsorTitleModal() {
   hideItemTooltip();
 
   const currentPlayerName = lastState?.player?.name;
+  const currentPlayerRealmId = lastState?.player?.realmId;
   if (!currentPlayerName) {
     showToast('请先登录游戏');
     console.warn('玩家未登录,无法设置称号');

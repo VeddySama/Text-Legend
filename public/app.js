@@ -1759,11 +1759,13 @@ function showForgeModal() {
 let selectedTrainingType = null;
 
 function openTrainingBatchModal(trainingId) {
+  console.log('[openTrainingBatchModal] called with trainingId:', trainingId);
+  console.log('[openTrainingBatchModal] lastState:', lastState);
   if (!trainingBatchUi.modal) return;
   hideItemTooltip();
   selectedTrainingType = trainingId;
 
-  const training = lastState.training || { hp: 0, mp: 0, atk: 0, mag: 0, spirit: 0, dex: 0 };
+  const training = lastState?.training || { hp: 0, mp: 0, atk: 0, mag: 0, spirit: 0, dex: 0 };
   const opt = TRAINING_OPTIONS.find(o => o.id === trainingId);
   if (!opt) return;
 
@@ -1782,13 +1784,31 @@ function openTrainingBatchModal(trainingId) {
 
   // 显示模态框
   trainingBatchUi.modal.classList.remove('hidden');
+
+  // 强制检查按钮状态（确保按钮被正确启用）
+  setTimeout(() => {
+    console.log('[openTrainingBatchModal] setTimeout check - confirm.disabled:', trainingBatchUi.confirm.disabled);
+    if (!lastState) {
+      console.warn('[openTrainingBatchModal] lastState is still null after delay');
+    } else {
+      console.log('[openTrainingBatchModal] setTimeout check - lastState.gold:', lastState.gold);
+    }
+  }, 100);
 }
 
 function updateTrainingBatchCost() {
-  if (!trainingBatchUi.costDisplay || !selectedTrainingType || !lastState) return;
+  console.log('[updateTrainingBatchCost] called');
+  console.log('[updateTrainingBatchCost] trainingBatchUi.costDisplay:', trainingBatchUi.costDisplay);
+  console.log('[updateTrainingBatchCost] selectedTrainingType:', selectedTrainingType);
+  console.log('[updateTrainingBatchCost] lastState:', lastState);
+
+  if (!trainingBatchUi.costDisplay || !selectedTrainingType) {
+    console.log('[updateTrainingBatchCost] Early return: missing required elements');
+    return;
+  }
 
   const count = parseInt(trainingBatchUi.countInput.value) || 1;
-  const training = lastState.training || { hp: 0, mp: 0, atk: 0, mag: 0, spirit: 0, dex: 0 };
+  const training = lastState?.training || { hp: 0, mp: 0, atk: 0, mag: 0, spirit: 0, dex: 0 };
   const currentLevel = training[selectedTrainingType] || 0;
   const opt = TRAINING_OPTIONS.find(o => o.id === selectedTrainingType);
   if (!opt) return;
@@ -1818,8 +1838,10 @@ function updateTrainingBatchCost() {
   }
 
   // 检查金币是否足够
-  const playerGold = lastState.gold || 0;
+  const playerGold = lastState?.gold || 0;
+  console.log('[updateTrainingBatchCost] playerGold:', playerGold, 'totalCost:', totalCost);
   trainingBatchUi.confirm.disabled = playerGold < totalCost;
+  console.log('[updateTrainingBatchCost] confirm.disabled:', trainingBatchUi.confirm.disabled);
 }
 
 function executeBatchTraining() {
@@ -5229,7 +5251,24 @@ if (trainingBatchUi.close) {
   });
 }
 if (trainingBatchUi.confirm) {
-  trainingBatchUi.confirm.addEventListener('click', executeBatchTraining);
+  console.log('[INIT] trainingBatchUi.confirm found:', trainingBatchUi.confirm);
+  console.log('[INIT] Adding click listener to trainingBatchUi.confirm');
+
+  // 方式1：使用 addEventListener
+  trainingBatchUi.confirm.addEventListener('click', (e) => {
+    console.log('[trainingBatchUi.confirm click] Event triggered via addEventListener');
+    console.log('[trainingBatchUi.confirm click] e.target:', e.target);
+    executeBatchTraining();
+  });
+
+  // 方式2：使用 onclick 属性（备用）
+  trainingBatchUi.confirm.onclick = (e) => {
+    console.log('[trainingBatchUi.confirm click] Event triggered via onclick');
+    console.log('[trainingBatchUi.confirm click] e.target:', e.target);
+    executeBatchTraining();
+  };
+} else {
+  console.error('[INIT] trainingBatchUi.confirm NOT FOUND!');
 }
 if (trainingBatchUi.countInput) {
   trainingBatchUi.countInput.addEventListener('input', updateTrainingBatchCost);

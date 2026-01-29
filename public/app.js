@@ -825,6 +825,18 @@ function appendChatLine(payload) {
   }
   if (data.location && socket) {
     console.log('Location data:', data.location);
+    // 移除原来的位置文字
+    const textSpan = p.querySelector('.line-text');
+    if (textSpan) {
+      // 移除 "我在 xxx - xxx" 文本
+      const locationText = textSpan.textContent;
+      const locationMatch = locationText.match(/^(.*?)我在\s+(.+?)\s+-\s+(.+?)$/);
+      if (locationMatch) {
+        textSpan.textContent = locationMatch[1] || '';
+      }
+    }
+
+    // 添加位置标签按钮
     const labelBtn = document.createElement('button');
     labelBtn.className = 'chat-link-tag';
     labelBtn.textContent = data.location.label || '世界BOSS领域 - 炎龙巢穴';

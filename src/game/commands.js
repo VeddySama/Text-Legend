@@ -765,13 +765,8 @@ export async function handleCommand({ player, players, input, source, send, part
           return send('只有沙巴克行会成员才能前往沙巴克BOSS房间。');
         }
       }
-      // 允许前往BOSS房间或LOCATION_LOOKUP中定义的静态位置
-      const isStaticLocation = ['mg_plains:gate', 'mg_town:mg_market', 'wms:entrance', 'zm:hall', 'cr:valley', 'wb:lair', 'molong:deep', 'sabak:palace', 'sabak:hall', 'sabak:throne'].includes(`${zoneId}:${targetRoomId}`);
-      const isBoss = isBossRoom(zoneId, targetRoomId);
-      console.log('isBoss:', isBoss, 'isStaticLocation:', isStaticLocation, 'location:', `${zoneId}:${targetRoomId}`);
-      if (!isBoss && !isStaticLocation) {
-        return send('该地点无法直接前往。');
-      }
+      // 移除限制，允许跳转到任何有效的房间
+      // 这样玩家发送位置信息后，其他玩家可以跳转到该房间
 
       // 如果是变种房间请求，尝试选择玩家最少的变种房间
       if (roomId !== targetRoomId) {

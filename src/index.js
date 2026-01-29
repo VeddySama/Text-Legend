@@ -5334,11 +5334,12 @@ function updateSpecialBossStatsBasedOnPlayers() {
         ).length;
 
         const tpl = MOB_TEMPLATES[specialBoss.templateId];
-        const baseStats = specialBoss.status?.baseStats;
-        const baseAtk = baseStats?.atk ?? tpl.atk;
-        const baseDef = baseStats?.def ?? tpl.def;
-        const baseMdef = baseStats?.mdef ?? tpl.mdef;
-        const baseMaxHp = baseStats?.max_hp ?? tpl.hp;
+
+        // 始终从模板读取基础属性，避免重复叠加
+        const baseAtk = tpl.atk || 0;
+        const baseDef = tpl.def || 0;
+        const baseMdef = tpl.mdef || 0;
+        const baseMaxHp = tpl.hp || 0;
 
         // 根据BOSS类型选择配置
         const isWorldBoss = specialBoss.templateId === 'world_boss';

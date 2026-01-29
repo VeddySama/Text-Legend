@@ -2755,13 +2755,20 @@ async function showSponsorTitleModal() {
       sponsorTitleUi.msg.style.color = '#e74c3c';
       return;
     }
+    // 过滤特殊字符
+    const invalidChars = /[<>"'&\\/]/;
+    if (invalidChars.test(customTitle)) {
+      sponsorTitleUi.msg.textContent = '称号包含非法字符！';
+      sponsorTitleUi.msg.style.color = '#e74c3c';
+      return;
+    }
     try {
       sponsorTitleUi.msg.textContent = '保存中...';
       sponsorTitleUi.msg.style.color = '#999';
       const res = await fetch('/api/sponsors/custom-title', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token, customTitle })
+        body: JSON.stringify({ token, customTitle, characterName: currentPlayerName, realmId: currentPlayerRealmId })
       });
       const data = await res.json();
       if (data.ok) {

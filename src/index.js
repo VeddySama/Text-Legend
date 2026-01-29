@@ -1264,7 +1264,7 @@ app.get('/api/sponsors', async (req, res) => {
 
 // 更新赞助玩家自定义称号接口
 app.post('/api/sponsors/custom-title', async (req, res) => {
-  const { token, customTitle } = req.body || {};
+  const { token, customTitle, characterName, realmId: rawRealmId } = req.body || {};
   if (!token) {
     return res.status(401).json({ error: '未登录。' });
   }
@@ -1275,12 +1275,29 @@ app.post('/api/sponsors/custom-title', async (req, res) => {
   if (trimmedTitle.length > 10) {
     return res.status(400).json({ error: '称号长度不能超过10个字。' });
   }
+  // 过滤特殊字符，避免程序异常
+  const invalidChars = /[<>\"'&\\\/\x00-\x1F]/;
+  if (invalidChars.test(trimmedTitle)) {
+    return res.status(400).json({ error: '称号包含非法字符。' });
+  }
   try {
     const session = await getSession(token);
     if (!session) {
       return res.status(401).json({ error: '会话已过期，请重新登录。' });
     }
-    const character = await loadCharacter(session.userId, session.characterName, session.realmId);
+
+    let realmInfo = await resolveRealmId(rawRealmId);
+    // 如果请求的区服不存在，使用第一个可用的区服
+    if (realmInfo.error) {
+      const realms = await listRealms();
+      if (Array.isArray(realms) && realms.length > 0) {
+        realmInfo = { realmId: realms[0].id };
+      } else {
+        return res.status(400).json({ error: realmInfo.error });
+      }
+    }
+
+    const character = await loadCharacter(session.user_id, characterName, realmInfo.realmId);
     if (!character) {
       return res.status(404).json({ error: '角色不存在。' });
     }

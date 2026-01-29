@@ -3170,10 +3170,10 @@ function renderGuildModal() {
       const row = document.createElement('div');
       row.className = 'guild-member';
       const name = document.createElement('div');
-      const roleLabel = member.role === 'leader' ? '会长' : (member.role === 'vice_leader' ? '副会长' : '成员');
       const online = member.online ? '在线' : '离线';
-      name.textContent = `${member.name} (${roleLabel}/${online})`;
+      name.textContent = `${member.name} (${online})`;
       row.appendChild(name);
+      const roleLabel = member.role === 'leader' ? '会长' : (member.role === 'vice_leader' ? '副会长' : '成员');
       const tag = document.createElement('span');
       tag.className = 'tag';
       tag.textContent = roleLabel;

@@ -812,6 +812,7 @@ export async function handleCommand({ player, players, input, source, send, part
       if (!target) return send('玩家不在线。');
       player.position.zone = target.position.zone;
       player.position.room = target.position.room;
+      player.forceStateRefresh = true;
       send(`你前往 ${target.name} 的位置。`);
       sendRoomDescription(player, send);
       console.log('Player moved to:', player.position);

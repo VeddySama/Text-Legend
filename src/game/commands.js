@@ -2536,6 +2536,60 @@ export async function handleCommand({ player, players, input, source, send, part
       send('你稍作休息，恢复了一些体力。');
       return;
     }
+    case 'rank': {
+      const subCmd = args.toLowerCase();
+      let classId = '';
+      let className = '';
+      let attrName = '';
+
+      if (subCmd === 'warrior') {
+        classId = 'warrior';
+        className = '战士';
+        attrName = '攻击';
+      } else if (subCmd === 'mage') {
+        classId = 'mage';
+        className = '法师';
+        attrName = '魔法';
+      } else if (subCmd === 'taoist') {
+        classId = 'taoist';
+        className = '道士';
+        attrName = '道术';
+      } else {
+        send('用法: rank <职业> (warrior/mage/taoist)');
+        return;
+      }
+
+      // 筛选该职业的玩家并按属性排序
+      const rankedPlayers = players
+        .filter(p => p.classId === classId)
+        .map(p => ({
+          name: p.name,
+          level: p.level,
+          atk: Math.floor(p.atk),
+          mag: Math.floor(p.mag),
+          spirit: Math.floor(p.spirit)
+        }))
+        .sort((a, b) => {
+          if (classId === 'warrior') return b.atk - a.atk;
+          if (classId === 'mage') return b.mag - a.mag;
+          return b.spirit - a.spirit;
+        })
+        .slice(0, 10);
+
+      if (rankedPlayers.length === 0) {
+        send(`${className}排行榜: 暂无数据`);
+        return;
+      }
+
+      const rankText = rankedPlayers.map((p, idx) => {
+        const attrValue = classId === 'warrior' ? p.atk :
+                         classId === 'mage' ? p.mag : p.spirit;
+        return `${idx + 1}.${p.name}(${attrValue})`;
+      }).join(' ');
+
+      send(`${className}排行榜: ${rankText}`);
+      return;
+    }
     default:
       return;
   }

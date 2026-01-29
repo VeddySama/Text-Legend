@@ -3278,6 +3278,10 @@ body.dark .mail-tab.active {
   color: #5b3a1c;
 }
 
+body.dark .rank-list {
+  color: #c6a57d;
+}
+
 .rank-item {
   display: flex;
   justify-content: space-between;
@@ -3288,9 +3292,69 @@ body.dark .mail-tab.active {
   padding: 4px 10px;
 }
 
+body.dark .rank-item {
+  background: #2a2420;
+  border-color: #4a3a30;
+  color: #e8e0d4;
+}
+
 .rank-item .rank-pos {
   font-weight: 600;
   color: #8f4a12;
+}
+
+body.dark .rank-item .rank-pos {
+  color: #e8a058;
+}
+
+.rank-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  justify-content: center;
+}
+
+.rank-tab {
+  flex: 1;
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid rgba(118, 70, 22, 0.25);
+  background: #f7e2c6;
+  color: #5b3a1c;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.rank-tab:hover {
+  background: #efd5b4;
+}
+
+body.dark .rank-tab {
+  background: #2a2420;
+  border-color: #4a3a30;
+  color: #c6a57d;
+}
+
+body.dark .rank-tab:hover {
+  background: #352d26;
+  border-color: #5a4a3a;
+}
+
+.rank-tab.active {
+  background: #b95412;
+  color: #fff7ea;
+  border-color: #b95412;
+}
+
+body.dark .rank-tab.active {
+  background: #e8a058;
+  color: #1a1414;
+  border-color: #e8a058;
+}
+
+.rank-card {
+  max-width: 450px;
 }
 
 .guild-list {

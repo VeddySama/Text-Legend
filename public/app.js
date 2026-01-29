@@ -813,18 +813,17 @@ function appendChatLine(payload) {
   console.log('Parsed - loc:', loc, 'data.location:', data.location, 'staticLoc:', staticLoc);
   if (data.location && socket) {
     console.log('Location data:', data.location);
-    // 移除原来的位置文字
+    // 修改位置文字，只保留"我在"部分
     const textSpan = p.querySelector('.line-text');
     if (textSpan) {
-      // 移除 "我在 xxx - xxx" 文本
       const locationText = textSpan.textContent;
       const locationMatch = locationText.match(/^(.*?)我在\s+(.+?)\s+-\s+(.+?)$/);
       if (locationMatch) {
-        textSpan.textContent = locationMatch[1] || '';
+        textSpan.textContent = locationMatch[1] + '我在 ';
       }
     }
 
-    // 添加位置标签按钮
+    // 添加位置标签按钮（可点击跳转）
     const labelBtn = document.createElement('button');
     labelBtn.className = 'chat-link-tag';
     labelBtn.textContent = data.location.label || '世界BOSS领域 - 炎龙巢穴';
@@ -834,23 +833,12 @@ function appendChatLine(payload) {
       socket.emit('cmd', { text: cmd });
     });
     p.appendChild(labelBtn);
-
-    // 添加前往按钮，跳转到具体房间
-    const gotoBtn = document.createElement('button');
-    gotoBtn.className = 'chat-link-btn';
-    gotoBtn.textContent = '前往';
-    gotoBtn.addEventListener('click', () => {
-      const cmd = `goto_room ${data.location.zoneId}:${data.location.roomId}`;
-      console.log('Sending goto_room command:', cmd);
-      socket.emit('cmd', { text: cmd });
-    });
-    p.appendChild(gotoBtn);
   }
   if (staticLoc && socket && !data.location) {
     console.log('Static location found:', staticLoc);
     const btn = document.createElement('button');
-    btn.className = 'chat-link-btn';
-    btn.textContent = '前往';
+    btn.className = 'chat-link-tag';
+    btn.textContent = staticLoc.label;
     btn.addEventListener('click', () => {
       const cmd = `goto_room ${staticLoc.zoneId}:${staticLoc.roomId}`;
       console.log('Sending command:', cmd);
@@ -917,14 +905,13 @@ function loadChatCache(name) {
         // 重新绑定位置跳转按钮事件
         if (data.location && socket) {
           console.log('Location data in history:', data.location);
-          // 移除原来的位置文字
+          // 修改位置文字，只保留"我在"部分
           const textSpan = p.querySelector('.line-text');
           if (textSpan) {
-            // 移除 "我在 xxx - xxx" 文本
             const locationText = textSpan.textContent;
             const locationMatch = locationText.match(/^(.*?)我在\s+(.+?)\s+-\s+(.+?)$/);
             if (locationMatch) {
-              textSpan.textContent = locationMatch[1] || '';
+              textSpan.textContent = locationMatch[1] + '我在 ';
             }
           }
           const labelBtn = document.createElement('button');
@@ -937,8 +924,8 @@ function loadChatCache(name) {
         }
         if (staticLoc && socket) {
           const btn = document.createElement('button');
-          btn.className = 'chat-link-btn';
-          btn.textContent = '前往';
+          btn.className = 'chat-link-tag';
+          btn.textContent = staticLoc.label;
           btn.addEventListener('click', () => {
             socket.emit('cmd', { text: `goto_room ${staticLoc.zoneId}:${staticLoc.roomId}` });
           });
@@ -2227,6 +2214,33 @@ function parseShopLine(text) {
   return list;
 }
 
+function parseRankLine(text) {
+  // 格式: 战士排行榜: 1.玩家名(攻击值) 2.玩家名(攻击值) ...
+  if (!text.includes('排行榜')) return null;
+  const match = text.match(/^(.+?)排行榜:\s*(.+)$/);
+  if (!match) return null;
+
+  const classType = match[1].trim();
+  let attrType = '攻击';
+  if (classType.includes('法师')) attrType = '魔法';
+  if (classType.includes('道士')) attrType = '道术';
+
+  const players = [];
+  const regex = /(\d+)\.([^(]+)\(([\d.]+)\)/g;
+  let playerMatch;
+  while ((playerMatch = regex.exec(match[2])) !== null) {
+    players.push({
+      rank: Number(playerMatch[1]),
+      name: playerMatch[2].trim(),
+      value: Number(playerMatch[3]),
+      attr: attrType
+    });
+  }
+
+  return players;
+}
+
+
 function isChatLine(text) {
   const match = text.match(/^\[([^\]]+)\]/);
   if (!match) return false;
@@ -2538,6 +2552,60 @@ function renderBagModal() {
   function showStatsModal() {
     hideItemTooltip();
     renderStatsModal();
+  }
+
+  function showRankModal() {
+    hideItemTooltip();
+    renderRankModal('warrior');
+  }
+
+  function renderRankModal(classType) {
+    const rankModal = document.getElementById('rank-modal');
+    const rankList = document.getElementById('rank-list');
+    const tabs = document.querySelectorAll('.rank-tab');
+
+    // Update active tab
+    tabs.forEach(tab => tab.classList.remove('active'));
+    document.getElementById(`rank-tab-${classType}`).classList.add('active');
+
+    // Clear and show loading
+    rankList.innerHTML = '<div class="modal-text">加载中...</div>';
+    rankModal.classList.remove('hidden');
+
+    // Request rank data from server
+    socket.emit('cmd', { text: `rank ${classType}` });
+  }
+
+  function renderRankList(players) {
+    const rankList = document.getElementById('rank-list');
+    if (!rankList) return;
+
+    if (!players || players.length === 0) {
+      rankList.innerHTML = '<div class="modal-text">暂无数据</div>';
+      return;
+    }
+
+    rankList.innerHTML = '';
+    players.forEach((player, index) => {
+      const item = document.createElement('div');
+      item.className = 'rank-item';
+
+      const pos = document.createElement('span');
+      pos.className = 'rank-pos';
+      pos.textContent = `${player.rank}.`;
+
+      const name = document.createElement('span');
+      name.textContent = player.name;
+
+      const value = document.createElement('span');
+      value.textContent = `${player.attr}: ${player.value}`;
+
+      item.appendChild(pos);
+      item.appendChild(name);
+      item.appendChild(value);
+
+      rankList.appendChild(item);
+    });
   }
 
   function renderSummonDetails(summon, levelMax) {
@@ -4336,6 +4404,7 @@ function renderState(state) {
     { id: 'party', label: '\u961f\u4f0d' },
     { id: 'guild', label: '\u884c\u4f1a' },
     { id: 'sabak status', label: '\u6c99\u5df4\u514b' },
+    { id: 'rank', label: '\u73a9\u5bb6\u6392\u884c' },
     { id: 'mail list', label: '\u90ae\u4ef6' },
     { id: 'shop', label: '\u5546\u5e97' },
     { id: 'repair', label: '\u4FEE\u7406' },
@@ -4343,6 +4412,7 @@ function renderState(state) {
     { id: 'consign', label: '\u5BC4\u552E' },
     { id: 'drops', label: '\u5957\u88c5\u6389\u843d' },
     { id: 'switch', label: '\u5207\u6362\u89d2\u8272' },
+    { id: 'sponsor', label: '\u8d5e\u52a9\u4f5c\u8005' },
     { id: 'logout', label: '\u9000\u51fa\u6e38\u620f' }
   ];
   // 只对非VIP玩家显示VIP激活按钮，并且自助领取功能开启时显示领取按钮
@@ -4429,6 +4499,10 @@ function renderState(state) {
     }
     if (a.id === 'drops') {
       showDropsModal();
+      return;
+    }
+    if (a.id === 'rank') {
+      showRankModal();
       return;
     }
     if (a.id === 'sponsor') {
@@ -4782,6 +4856,10 @@ function enterGame(name) {
     if (shopItems) {
       lastShopItems = shopItems;
       showShopModal(shopItems);
+    }
+    const rankData = parseRankLine(payload.text);
+    if (rankData) {
+      renderRankList(rankData);
     }
     if (payload.text.startsWith('\u4ea4\u6613')) {
       appendChatLine(payload);
@@ -5470,6 +5548,21 @@ if (consignUi.historyNext) {
   consignUi.historyNext.addEventListener('click', () => {
     consignHistoryPage += 1;
     renderConsignHistory(consignHistoryItems);
+  });
+}
+// Rank modal tabs
+const rankTabs = document.querySelectorAll('.rank-tab');
+if (rankTabs && rankTabs.length) {
+  rankTabs.forEach((tab) => {
+    tab.addEventListener('click', () => {
+      const classType = tab.id.replace('rank-tab-', '');
+      renderRankModal(classType);
+    });
+  });
+}
+if (document.getElementById('rank-close')) {
+  document.getElementById('rank-close').addEventListener('click', () => {
+    document.getElementById('rank-modal').classList.add('hidden');
   });
 }
   if (bagUi.tabs && bagUi.tabs.length) {

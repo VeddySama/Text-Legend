@@ -42,6 +42,12 @@ const sponsorsPaginationInfo = document.getElementById('sponsors-pagination-info
 const sponsorsPrevPageBtn = document.getElementById('sponsors-prev-page');
 const sponsorsNextPageBtn = document.getElementById('sponsors-next-page');
 
+// 修炼果配置相关
+const tfMsg = document.getElementById('tf-msg');
+const tfCoefficientInput = document.getElementById('tf-coefficient');
+const tfDropRateInput = document.getElementById('tf-drop-rate');
+const tfSaveBtn = document.getElementById('tf-save-btn');
+
 // 世界BOSS相关
 const wbMsg = document.getElementById('wb-msg');
 const wbPlayerBonusList = document.getElementById('wb-player-bonus-list');
@@ -1265,6 +1271,55 @@ async function resetClassBonusConfig() {
   }
 }
 
+// 修炼果配置
+async function loadTrainingFruitSettings() {
+  if (!tfCoefficientInput || !tfDropRateInput || !tfMsg) return;
+  tfMsg.textContent = '';
+  try {
+    const data = await api('/admin/training-fruit-settings', 'GET');
+    tfCoefficientInput.value = data.coefficient !== undefined ? data.coefficient : '';
+    tfDropRateInput.value = data.dropRate !== undefined ? data.dropRate : '';
+    tfMsg.textContent = '加载成功';
+    tfMsg.style.color = 'green';
+    setTimeout(() => {
+      tfMsg.textContent = '';
+    }, 2000);
+  } catch (err) {
+    tfMsg.textContent = `加载失败: ${err.message}`;
+    tfMsg.style.color = 'red';
+  }
+}
+
+async function saveTrainingFruitSettings() {
+  if (!tfCoefficientInput || !tfDropRateInput || !tfMsg) return;
+  tfMsg.textContent = '';
+  try {
+    const coefficient = tfCoefficientInput.value ? Number(tfCoefficientInput.value) : undefined;
+    const dropRate = tfDropRateInput.value ? Number(tfDropRateInput.value) : undefined;
+
+    if (coefficient !== undefined && (isNaN(coefficient) || coefficient < 0)) {
+      tfMsg.textContent = '系数必须为有效数字且不小于0';
+      tfMsg.style.color = 'red';
+      return;
+    }
+    if (dropRate !== undefined && (isNaN(dropRate) || dropRate < 0 || dropRate > 1)) {
+      tfMsg.textContent = '爆率必须为有效数字且在0到1之间';
+      tfMsg.style.color = 'red';
+      return;
+    }
+
+    await api('/admin/training-fruit-settings/update', 'POST', { coefficient, dropRate });
+    tfMsg.textContent = '保存成功，立即生效';
+    tfMsg.style.color = 'green';
+    setTimeout(() => {
+      tfMsg.textContent = '';
+    }, 2000);
+  } catch (err) {
+    tfMsg.textContent = `保存失败: ${err.message}`;
+    tfMsg.style.color = 'red';
+  }
+}
+
 // 世界BOSS配置
 let worldBossPlayerBonusConfig = [];
 
@@ -1476,6 +1531,7 @@ if (adminToken) {
   loadWorldBossSettings();
   loadSpecialBossSettings();
   loadClassBonusConfig();
+  loadTrainingFruitSettings();
 }
 
 applyTheme(localStorage.getItem('adminTheme') || 'light');
@@ -1595,6 +1651,11 @@ if (document.getElementById('sb-add-bonus-btn')) {
 }
 if (document.getElementById('sb-save-btn')) {
   document.getElementById('sb-save-btn').addEventListener('click', saveSpecialBossSettings);
+}
+
+// 修炼果配置事件
+if (tfSaveBtn) {
+  tfSaveBtn.addEventListener('click', saveTrainingFruitSettings);
 }
 
 if (adminPwCancel) {

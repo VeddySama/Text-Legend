@@ -786,6 +786,11 @@ function appendLine(payload) {
     return;
   }
 
+  // 过滤排行榜信息，不显示在实时日志中
+  if (parseRankLine(text)) {
+    return;
+  }
+
   const p = buildLine(normalizedPayload);
   log.appendChild(p);
   log.scrollTop = log.scrollHeight;

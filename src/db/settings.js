@@ -358,3 +358,27 @@ export async function setClassLevelBonusConfig(classId, config) {
   const normalized = JSON.stringify(config || {});
   await setSetting(`class_level_bonus_${classId}`, normalized);
 }
+
+// 修炼果系数配置
+export async function getTrainingFruitCoefficient() {
+  const value = await getSetting('training_fruit_coefficient', '0.5');
+  const parsed = parseFloat(value);
+  return Number.isFinite(parsed) ? Math.max(0, parsed) : 0.5;
+}
+
+export async function setTrainingFruitCoefficient(coefficient) {
+  const normalized = Math.max(0, Number(coefficient) || 0.5);
+  await setSetting('training_fruit_coefficient', String(normalized));
+}
+
+// 修炼果爆率配置
+export async function getTrainingFruitDropRate() {
+  const value = await getSetting('training_fruit_drop_rate', '0.01');
+  const parsed = parseFloat(value);
+  return Number.isFinite(parsed) ? Math.max(0, Math.min(1, parsed)) : 0.01;
+}
+
+export async function setTrainingFruitDropRate(rate) {
+  const normalized = Math.max(0, Math.min(1, Number(rate) || 0.01));
+  await setSetting('training_fruit_drop_rate', String(normalized));
+}

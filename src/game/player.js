@@ -156,6 +156,8 @@ export function newCharacter(name, classId) {
   };
 }
 
+import { getTrainingFruitCoefficient } from './settings.js';
+
 export function computeDerived(player) {
   if (!player.flags) player.flags = {};
   if (!player.flags.training) {
@@ -165,8 +167,8 @@ export function computeDerived(player) {
     // 修炼果记录：存储的是修炼果数量，每次计算时乘以系数
     player.flags.trainingFruit = { hp: 0, mp: 0, atk: 0, def: 0, mag: 0, mdef: 0, spirit: 0, dex: 0 };
   }
-  // 修炼果系数：可以通过调整此系数来修改修炼果的效果，不影响已使用的修炼果数量
-  const TRAINING_FRUIT_COEFFICIENT = 0.5;
+  // 修炼果系数：从后台配置读取
+  const TRAINING_FRUIT_COEFFICIENT = getTrainingFruitCoefficient();
   const SET_BONUS_RATE = 1.2;
   const SET_DEFS = [
     {

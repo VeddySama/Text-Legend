@@ -10,6 +10,12 @@ let classLevelBonusConfig = {
   taoist: null
 };
 
+// 修炼果系数配置（可由后台动态配置）
+let trainingFruitCoefficient = 0.5;
+
+// 修炼果爆率配置（可由后台动态配置，0.01 = 1%）
+let trainingFruitDropRate = 0.01;
+
 /**
  * 设置职业升级属性配置
  * @param {string} classId - 职业ID (warrior, mage, taoist)
@@ -61,4 +67,40 @@ export function resetClassLevelBonusConfig(classId = null) {
       taoist: null
     };
   }
+}
+
+/**
+ * 设置修炼果系数
+ * @param {number} coefficient - 系数值
+ */
+export function setTrainingFruitCoefficient(coefficient) {
+  if (typeof coefficient === 'number' && coefficient >= 0) {
+    trainingFruitCoefficient = coefficient;
+  }
+}
+
+/**
+ * 获取修炼果系数
+ * @returns {number} 系数值
+ */
+export function getTrainingFruitCoefficient() {
+  return trainingFruitCoefficient;
+}
+
+/**
+ * 设置修炼果爆率
+ * @param {number} rate - 爆率（0.01 = 1%）
+ */
+export function setTrainingFruitDropRate(rate) {
+  if (typeof rate === 'number' && rate >= 0 && rate <= 1) {
+    trainingFruitDropRate = rate;
+  }
+}
+
+/**
+ * 获取修炼果爆率
+ * @returns {number} 爆率（0.01 = 1%）
+ */
+export function getTrainingFruitDropRate() {
+  return trainingFruitDropRate;
 }

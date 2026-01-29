@@ -63,7 +63,12 @@ import { getRoomMobs, getAliveMobs, spawnMobs, removeMob, seedRespawnCache, setR
 import { calcHitChance, calcDamage, applyDamage, applyPoison, tickStatus, getDefenseMultiplier } from './game/combat.js';
 import { randInt, clamp } from './game/utils.js';
 import { expForLevel, setRoomVariantCount as applyRoomVariantCount } from './game/constants.js';
-import { setAllClassLevelBonusConfigs } from './game/settings.js';
+import {
+  setAllClassLevelBonusConfigs,
+  getTrainingFruitDropRate,
+  setTrainingFruitCoefficient,
+  setTrainingFruitDropRate as setTrainingFruitDropRateConfig
+} from './game/settings.js';
 
 const app = express();
 const server = http.createServer(app);
@@ -742,6 +747,41 @@ app.post('/admin/class-level-bonus/update', async (req, res) => {
   }
   await setClassLevelBonusConfig(classId, config);
   res.json({ ok: true, classId, config });
+});
+
+// 修炼果配置
+app.get('/admin/training-fruit-settings', async (req, res) => {
+  const admin = await requireAdmin(req);
+  if (!admin) return res.status(401).json({ error: '无管理员权限。' });
+  const coefficient = await getTrainingFruitCoefficient();
+  const dropRate = await getTrainingFruitDropRate();
+  res.json({ ok: true, coefficient, dropRate });
+});
+
+app.post('/admin/training-fruit-settings/update', async (req, res) => {
+  const admin = await requireAdmin(req);
+  if (!admin) return res.status(401).json({ error: '无管理员权限。' });
+  const { coefficient, dropRate } = req.body || {};
+  if (coefficient !== undefined) {
+    const parsed = Number(coefficient);
+    if (isNaN(parsed) || parsed < 0) {
+      return res.status(400).json({ error: '系数必须为有效数字且不小于0' });
+    }
+    await setTrainingFruitCoefficient(parsed);
+  }
+  if (dropRate !== undefined) {
+    const parsed = Number(dropRate);
+    if (isNaN(parsed) || parsed < 0 || parsed > 1) {
+      return res.status(400).json({ error: '爆率必须为有效数字且在0到1之间' });
+    }
+    await setTrainingFruitDropRate(parsed);
+  }
+  // 更新内存中的配置
+  const newCoefficient = await getTrainingFruitCoefficient();
+  const newDropRate = await getTrainingFruitDropRate();
+  setTrainingFruitCoefficient(newCoefficient);
+  setTrainingFruitDropRateConfig(newDropRate);
+  res.json({ ok: true, coefficient: newCoefficient, dropRate: newDropRate });
 });
 
 // 特殊BOSS配置（魔龙BOSS、暗之系列BOSS、沙巴克BOSS）
@@ -1879,8 +1919,8 @@ function dropLoot(mobTemplate, bonus = 1) {
       }
     });
   }
-  // 全地图怪物都有1%概率掉落修炼果
-  if (Math.random() <= 0.01) {
+  // 全地图怪物都有概率掉落修炼果（爆率可从后台配置）
+  if (Math.random() <= getTrainingFruitDropRate()) {
     loot.push({ id: 'training_fruit', effects: null });
   }
   const rarityDrop = rollRarityDrop(mobTemplate, finalBonus);
@@ -2882,8 +2922,9 @@ function applyOfflineRewards(player) {
   const expGain = Math.floor(offlineMinutes * player.level * offlineMultiplier);
   const goldGain = Math.floor(offlineMinutes * player.level * offlineMultiplier);
   let fruitGain = 0;
+  const fruitDropRate = getTrainingFruitDropRate();
   for (let i = 0; i < offlineMinutes; i += 1) {
-    if (Math.random() <= 0.01) {
+    if (Math.random() <= fruitDropRate) {
       fruitGain += 1;
     }
   }
@@ -6636,6 +6677,12 @@ async function start() {
   applyRoomVariantCount(roomVariantCount);
   shrinkRoomVariants(WORLD, roomVariantCount);
   expandRoomVariants(WORLD);
+
+  // 加载修炼果配置
+  const trainingFruitCoefficient = await getTrainingFruitCoefficient();
+  setTrainingFruitCoefficient(trainingFruitCoefficient);
+  const trainingFruitDropRate = await getTrainingFruitDropRate();
+  setTrainingFruitDropRateConfig(trainingFruitDropRate);
 
   // 加载职业升级属性配置
   const classLevelConfigs = {

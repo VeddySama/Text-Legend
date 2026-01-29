@@ -2111,6 +2111,39 @@ body.dark .chat-name-btn.sponsor-player-name:hover {
   filter: brightness(1.03);
 }
 
+.mail-tabs {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  margin-bottom: 8px;
+}
+
+.mail-tab {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid rgba(120, 64, 20, 0.35);
+  border-radius: 8px;
+  background: rgba(120, 64, 20, 0.08);
+  color: #5b3d22;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.mail-tab:hover {
+  background: rgba(120, 64, 20, 0.12);
+}
+
+.mail-tab.active {
+  background: rgba(120, 64, 20, 0.2);
+  border-color: rgba(120, 64, 20, 0.6);
+}
+
+.mail-btn-small {
+  padding: 6px 12px;
+  font-size: 0.85rem;
+}
+
 .mail-card {
   width: min(92vw, 720px);
 }

@@ -12,7 +12,7 @@ import { createUser, verifyUser, createSession, getSession, getUserByName, setAd
 import { listCharacters, loadCharacter, saveCharacter, findCharacterByName, findCharacterByNameInRealm } from './db/characters.js';
 import { addGuildMember, createGuild, getGuildByName, getGuildByNameInRealm, getGuildMember, getSabakOwner, isGuildLeader, isGuildLeaderOrVice, setGuildMemberRole, listGuildMembers, listSabakRegistrations, registerSabak, removeGuildMember, leaveGuild, setSabakOwner, clearSabakRegistrations, transferGuildLeader, ensureSabakState, applyToGuild, listGuildApplications, removeGuildApplication, approveGuildApplication, getApplicationByUser, listAllGuilds } from './db/guilds.js';
 import { createAdminSession, listUsers, verifyAdminSession, deleteUser } from './db/admin.js';
-import { sendMail, listMail, markMailRead, markMailClaimed, deleteMail } from './db/mail.js';
+import { sendMail, listMail, listSentMail, markMailRead, markMailClaimed, deleteMail } from './db/mail.js';
 import { createVipCodes, listVipCodes, useVipCode } from './db/vip.js';
 import { getVipSelfClaimEnabled, setVipSelfClaimEnabled, getLootLogEnabled, setLootLogEnabled, getStateThrottleEnabled, setStateThrottleEnabled, getStateThrottleIntervalSec, setStateThrottleIntervalSec, getStateThrottleOverrideServerAllowed, setStateThrottleOverrideServerAllowed, getConsignExpireHours, setConsignExpireHours, getRoomVariantCount, setRoomVariantCount, canUserClaimVip, incrementCharacterVipClaimCount, getWorldBossKillCount, setWorldBossKillCount, getWorldBossDropBonus, setWorldBossDropBonus, getWorldBossBaseHp, setWorldBossBaseHp, getWorldBossBaseAtk, setWorldBossBaseAtk, getWorldBossBaseDef, setWorldBossBaseDef, getWorldBossBaseMdef, setWorldBossBaseMdef, getWorldBossBaseExp, setWorldBossBaseExp, getWorldBossBaseGold, setWorldBossBaseGold, getWorldBossPlayerBonusConfig, setWorldBossPlayerBonusConfig, getClassLevelBonusConfig, setClassLevelBonusConfig, getSpecialBossDropBonus, setSpecialBossDropBonus, getSpecialBossBaseHp, setSpecialBossBaseHp, getSpecialBossBaseAtk, setSpecialBossBaseAtk, getSpecialBossBaseDef, setSpecialBossBaseDef, getSpecialBossBaseMdef, setSpecialBossBaseMdef, getSpecialBossBaseExp, setSpecialBossBaseExp, getSpecialBossBaseGold, setSpecialBossBaseGold, getSpecialBossPlayerBonusConfig, setSpecialBossPlayerBonusConfig } from './db/settings.js';
 import { listRealms, getRealmById, updateRealmName, createRealm } from './db/realms.js';
@@ -1499,6 +1499,7 @@ function buildMailPayload(row) {
   return {
     id: row.id,
     from_name: row.from_name,
+    to_name: row.to_name,
     title: row.title,
     body: row.body,
     created_at: row.created_at,
@@ -4425,7 +4426,7 @@ io.on('connection', (socket) => {
       player.gold -= gold;
     }
 
-    await sendMail(target.user_id, player.name, title, body, items.length ? items : null, gold, player.realmId || 1);
+    await sendMail(target.user_id, toName, player.name, player.userId, title, body, items.length ? items : null, gold, player.realmId || 1);
     const onlineTarget = playersByName(toName, player.realmId || 1);
     if (onlineTarget) {
       onlineTarget.send(`你收到来自 ${player.name} 的邮件：${title}`);
@@ -4476,15 +4477,28 @@ io.on('connection', (socket) => {
     socket.emit('mail_list', { ok: true, mails: mails.map(buildMailPayload) });
   });
 
+  socket.on('mail_list_sent', async (payload) => {
+    const player = players.get(socket.id);
+    if (!player) return;
+    const mails = await listSentMail(player.userId, player.realmId || 1);
+    socket.emit('mail_list', { ok: true, mails: mails.map(buildMailPayload), folder: 'sent' });
+  });
+
   socket.on('mail_delete', async (payload) => {
     const player = players.get(socket.id);
     if (!player) return;
     const mailId = Number(payload?.mailId || 0);
+    const folder = payload?.folder || 'inbox';
     if (!mailId) return socket.emit('mail_delete_result', { ok: false, msg: '邮件ID无效。' });
-    await deleteMail(player.userId, mailId, player.realmId || 1);
+    await deleteMail(player.userId, mailId, player.realmId || 1, folder);
     socket.emit('mail_delete_result', { ok: true, msg: '邮件已删除。' });
-    const mails = await listMail(player.userId, player.realmId || 1);
-    socket.emit('mail_list', { ok: true, mails: mails.map(buildMailPayload) });
+    if (folder === 'inbox') {
+      const mails = await listMail(player.userId, player.realmId || 1);
+      socket.emit('mail_list', { ok: true, mails: mails.map(buildMailPayload) });
+    } else if (folder === 'sent') {
+      const mails = await listSentMail(player.userId, player.realmId || 1);
+      socket.emit('mail_list', { ok: true, mails: mails.map(buildMailPayload), folder: 'sent' });
+    }
   });
 
   socket.on('guild_members', async () => {

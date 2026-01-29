@@ -240,6 +240,8 @@ const shopUi = {
 };
 const mailUi = {
   modal: document.getElementById('mail-modal'),
+  tabInbox: document.getElementById('mail-tab-inbox'),
+  tabSent: document.getElementById('mail-tab-sent'),
   list: document.getElementById('mail-list'),
   detailTitle: document.getElementById('mail-detail-title'),
   detailMeta: document.getElementById('mail-detail-meta'),
@@ -259,6 +261,8 @@ const mailUi = {
   gold: document.getElementById('mail-gold'),
   send: document.getElementById('mail-send')
 };
+
+let currentMailFolder = 'inbox'; // 'inbox' 或 'sent'
 const repairUi = {
   modal: document.getElementById('repair-modal'),
   list: document.getElementById('repair-list'),
@@ -2005,7 +2009,11 @@ function renderMailDetail(mail) {
   }
   renderTextWithItemHighlights(mailUi.detailTitle, mail.title || '\u65E0\u6807\u9898', mail.items || []);
   const dateText = formatMailDate(mail.created_at);
-  mailUi.detailMeta.textContent = `${mail.from_name || '\u7CFB\u7EDF'}${dateText ? ` | ${dateText}` : ''}`;
+  if (currentMailFolder === 'inbox') {
+    mailUi.detailMeta.textContent = `${mail.from_name || '\u7CFB\u7EDF'}${dateText ? ` | ${dateText}` : ''}`;
+  } else {
+    mailUi.detailMeta.textContent = `\u81F3: ${mail.to_name || '\u65E0'}${dateText ? ` | ${dateText}` : ''}`;
+  }
   renderTextWithItemHighlights(mailUi.detailBody, mail.body || '', mail.items || []);
   mailUi.detailItems.innerHTML = '';
   if (mail.gold && mail.gold > 0) {
@@ -2027,8 +2035,9 @@ function renderMailDetail(mail) {
     });
     mailUi.detailItems.appendChild(itemsLine);
   }
+  // 只有收件箱中的邮件显示领取附件按钮
   if (mailUi.claim) {
-    if ((mail.items && mail.items.length) || (mail.gold && mail.gold > 0)) {
+    if (currentMailFolder === 'inbox' && ((mail.items && mail.items.length) || (mail.gold && mail.gold > 0))) {
       if (mail.claimed_at) {
         mailUi.claim.classList.add('hidden');
       } else {
@@ -2049,7 +2058,7 @@ function renderMailList(mails) {
   mailUi.list.innerHTML = '';
   if (!mailCache.length) {
     const empty = document.createElement('div');
-    empty.textContent = '\u6682\u65E0\u90AE\u4EF6';
+    empty.textContent = currentMailFolder === 'inbox' ? '\u6682\u65E0\u90AE\u4EF6' : '\u6682\u65E0\u5DF2\u53D1\u90AE\u4EF6';
     mailUi.list.appendChild(empty);
     renderMailDetail(null);
     return;
@@ -2060,14 +2069,18 @@ function renderMailList(mails) {
     const claimed = mail.claimed_at;
     row.className = `mail-item${unread ? ' unread' : ''}${mail.id === selectedMailId ? ' active' : ''}`;
     const flags = [];
-    if (unread) flags.push('\u672A\u8BFB');
-    if (claimed) flags.push('\u5DF2\u9886');
-    row.textContent = `${mail.title || '\u65E0\u6807\u9898'} - ${mail.from_name || '\u7CFB\u7EDF'}${flags.length ? ` (${flags.join('/')})` : ''}`;
+    if (unread && currentMailFolder === 'inbox') flags.push('\u672A\u8BFB');
+    if (claimed && currentMailFolder === 'inbox') flags.push('\u5DF2\u9886');
+    if (currentMailFolder === 'inbox') {
+      row.textContent = `${mail.title || '\u65E0\u6807\u9898'} - ${mail.from_name || '\u7CFB\u7EDF'}${flags.length ? ` (${flags.join('/')})` : ''}`;
+    } else {
+      row.textContent = `${mail.title || '\u65E0\u6807\u9898'} -> ${mail.to_name || '\u65E0'}${flags.length ? ` (${flags.join('/')})` : ''}`;
+    }
     row.addEventListener('click', () => {
       selectedMailId = mail.id;
       renderMailList(mailCache);
       renderMailDetail(mail);
-      if (socket) socket.emit('mail_read', { mailId: mail.id });
+      if (currentMailFolder === 'inbox' && socket) socket.emit('mail_read', { mailId: mail.id });
     });
     mailUi.list.appendChild(row);
   });
@@ -2098,8 +2111,33 @@ function refreshMailItemOptions() {
   updateMailQtyLimit();
 }
 
+function updateMailTabs() {
+  if (mailUi.tabInbox) {
+    mailUi.tabInbox.classList.toggle('active', currentMailFolder === 'inbox');
+  }
+  if (mailUi.tabSent) {
+    mailUi.tabSent.classList.toggle('active', currentMailFolder === 'sent');
+  }
+}
+
+function switchMailFolder(folder) {
+  currentMailFolder = folder;
+  updateMailTabs();
+  selectedMailId = null;
+  if (socket) {
+    if (folder === 'inbox') {
+      socket.emit('mail_list');
+    } else {
+      socket.emit('mail_list_sent');
+    }
+  }
+  renderMailDetail(null);
+}
+
 function openMailModal() {
   if (!mailUi.modal) return;
+  currentMailFolder = 'inbox';
+  updateMailTabs();
   mailAttachments = [];
   renderMailAttachmentList();
   if (mailUi.to) mailUi.to.value = '';
@@ -5213,7 +5251,21 @@ if (mailUi.refresh) {
     mailUi.delete.addEventListener('click', () => {
       if (!socket || !selectedMailId) return;
       if (confirm('确定要删除这封邮件吗？')) {
-        socket.emit('mail_delete', { mailId: selectedMailId });
+        socket.emit('mail_delete', { mailId: selectedMailId, folder: currentMailFolder });
+      }
+    });
+  }
+  if (mailUi.tabInbox) {
+    mailUi.tabInbox.addEventListener('click', () => {
+      if (currentMailFolder !== 'inbox') {
+        switchMailFolder('inbox');
+      }
+    });
+  }
+  if (mailUi.tabSent) {
+    mailUi.tabSent.addEventListener('click', () => {
+      if (currentMailFolder !== 'sent') {
+        switchMailFolder('sent');
       }
     });
   }

@@ -1855,9 +1855,9 @@ function renderRefineModal() {
   const allEquipment = [];
   // 只获取已装备的装备
   if (lastState?.equipment) {
-    Object.entries(lastState.equipment).forEach(([slot, equipped]) => {
+    lastState.equipment.forEach((equipped) => {
       if (equipped && equipped.item && ['weapon', 'armor', 'accessory'].includes(equipped.item.type)) {
-        allEquipment.push({ ...equipped, slotName: slot, fromEquip: true });
+        allEquipment.push({ ...equipped, slotName: equipped.slot, fromEquip: true });
       }
     });
   }

@@ -306,7 +306,8 @@ const refineUi = {
   modal: document.getElementById('refine-modal'),
   list: document.getElementById('refine-main-list'),
   main: document.getElementById('refine-main-selected'),
-  materialCount: document.getElementById('refine-material-count'),
+  secondaryCount: document.getElementById('refine-secondary-count'),
+  secondaryList: document.getElementById('refine-secondary-list'),
   level: document.getElementById('refine-level'),
   successRate: document.getElementById('refine-success-rate'),
   protection: document.getElementById('refine-protection'),
@@ -1892,15 +1893,20 @@ function renderRefineModal() {
       const successRate = calculateRefineSuccessRate(nextLevel);
       refineUi.successRate.textContent = `成功率: ${successRate}%`;
 
+      // 更新副件装备列表
+      renderRefineSecondaryList();
+
       // 计算可用材料数量
       const materials = countRefineMaterials();
-      refineUi.materialCount.textContent = `副件: 自动选择20件史诗（不含）以下装备 (可用: ${materials}件)`;
-
+      refineUi.secondaryCount.textContent = `副件: 需要20件史诗（不含）以下装备 (可用: ${materials}件)`;
       refineUi.confirm.disabled = materials < 20;
     });
     refineUi.list.appendChild(btn);
   });
   refineUi.confirm.disabled = true;
+
+  // 初始显示副件装备列表
+  renderRefineSecondaryList();
 }
 
 function calculateRefineSuccessRate(level) {
@@ -1922,6 +1928,51 @@ function countRefineMaterials() {
                    slot.price >= 2000 ? 'uncommon' : 'common';
     return ['common', 'uncommon', 'rare'].includes(rarity) && !hasSpecialEffects(slot.effects);
   }).length;
+}
+
+function renderRefineSecondaryList() {
+  if (!refineUi.secondaryList) return;
+
+  refineUi.secondaryList.innerHTML = '';
+  const materials = lastState?.items?.filter((slot) => {
+    if (!slot) return false;
+    if (!['weapon', 'armor', 'accessory'].includes(slot.type)) return false;
+    if (slot.is_shop_item) return false; // 排除商店装备
+    const rarity = slot.rarity || slot.price >= 30000 ? 'epic' :
+                   slot.price >= 10000 ? 'rare' :
+                   slot.price >= 2000 ? 'uncommon' : 'common';
+    return ['common', 'uncommon', 'rare'].includes(rarity) && !hasSpecialEffects(slot.effects);
+  }) || [];
+
+  if (materials.length === 0) {
+    const empty = document.createElement('div');
+    empty.textContent = '暂无可用材料';
+    empty.style.padding = '8px';
+    empty.style.color = '#888';
+    refineUi.secondaryList.appendChild(empty);
+    return;
+  }
+
+  materials.slice(0, 20).forEach((slot) => {
+    const btn = document.createElement('div');
+    btn.className = 'forge-item';
+    btn.style.fontSize = '12px';
+    btn.style.padding = '6px 8px';
+    applyRarityClass(btn, slot);
+    btn.innerHTML = `
+      <div>${formatItemName(slot)}</div>
+    `;
+    refineUi.secondaryList.appendChild(btn);
+  });
+
+  if (materials.length > 20) {
+    const more = document.createElement('div');
+    more.textContent = `...还有 ${materials.length - 20} 件`;
+    more.style.padding = '4px 8px';
+    more.style.color = '#888';
+    more.style.fontSize = '11px';
+    refineUi.secondaryList.appendChild(more);
+  }
 }
 
 function showRefineModal() {
@@ -1980,10 +2031,10 @@ function updateEffectSelection(selected) {
 
   if (inventoryWithEffect.length > 0) {
     const secondary = inventoryWithEffect[0];
-    effectUi.secondary.textContent = `副件: ${formatItemName(secondary.item)}`;
+    effectUi.secondary.textContent = `副件: ${formatItemName(secondary)}`;
     effectUi.confirm.disabled = false;
     effectUi.confirm.onclick = () => {
-      const command = `effect equip:${selected.slot} ${secondary.item.id}`;
+      const command = `effect equip:${selected.slot} ${secondary.key}`;
       socket.emit('cmd', { text: command });
       effectUi.modal.classList.add('hidden');
     };

@@ -112,10 +112,6 @@ let allSponsorsData = [];
 function showDashboard() {
   loginSection.classList.add('hidden');
   dashboardSection.classList.remove('hidden');
-  // 自动加载装备列表
-  if (itemsList.children.length <= 1 || itemsList.children[0]?.textContent === '加载中...') {
-    loadItems(1, '');
-  }
 }
 
 // 自定义弹窗函数
@@ -4774,6 +4770,13 @@ let itemsCurrentKeyword = '';
 let itemsCurrentItemId = null;
 let mobsList = [];
 let itemDropsCache = [];
+
+// 自动加载装备列表
+if (itemsList) {
+  if (itemsList.children.length <= 1 || itemsList.children[0]?.textContent === '加载中...') {
+    loadItems(1, '');
+  }
+}
 
 async function loadItems(page = 1, keyword = '') {
   itemsCurrentPage = page;

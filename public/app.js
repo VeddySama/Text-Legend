@@ -313,6 +313,7 @@ const refineUi = {
   successRate: document.getElementById('refine-success-rate'),
   protection: document.getElementById('refine-protection'),
   confirm: document.getElementById('refine-confirm'),
+  batch: document.getElementById('refine-batch'),
   close: document.getElementById('refine-close')
 };
 const effectUi = {
@@ -326,6 +327,7 @@ const effectUi = {
   quadrupleRate: document.getElementById('effect-quadruple-rate'),
   quintupleRate: document.getElementById('effect-quintuple-rate'),
   confirm: document.getElementById('effect-confirm'),
+  batch: document.getElementById('effect-batch'),
   close: document.getElementById('effect-close')
 };
 let effectSelection = null;
@@ -1904,6 +1906,7 @@ function renderRefineModal() {
       const materials = countRefineMaterials();
       refineUi.secondaryCount.textContent = `副件: 需要${refineMaterialCount}件史诗（不含）以下装备 (可用: ${materials}件)`;
       refineUi.confirm.disabled = materials < refineMaterialCount;
+      refineUi.batch.disabled = materials < refineMaterialCount;
     });
     refineUi.list.appendChild(btn);
   });
@@ -2058,14 +2061,30 @@ function updateEffectSelection(selected) {
     const secondary = inventoryWithEffect[0];
     effectUi.secondary.textContent = `副件: ${formatItemName(secondary)}`;
     effectUi.confirm.disabled = false;
+    effectUi.batch.disabled = inventoryWithEffect.length < 1;
+
     effectUi.confirm.onclick = () => {
       const command = `effect equip:${selected.slot} ${secondary.key}`;
       socket.emit('cmd', { text: command });
-      effectUi.modal.classList.add('hidden');
+      // 不自动关闭窗口
+    };
+
+    // 一键重置
+    effectUi.batch.onclick = () => {
+      if (!socket || !selected) return;
+      // 自动消耗所有有特效的装备作为副件
+      for (let i = 0; i < inventoryWithEffect.length; i++) {
+        setTimeout(() => {
+          const secondary = inventoryWithEffect[i];
+          const command = `effect equip:${selected.slot} ${secondary.key}`;
+          socket.emit('cmd', { text: command });
+        }, i * 100); // 每次间隔100ms
+      }
     };
   } else {
     effectUi.secondary.textContent = '副件: 无可用';
     effectUi.confirm.disabled = true;
+    effectUi.batch.disabled = true;
   }
 }
 
@@ -5765,7 +5784,26 @@ if (refineUi.confirm) {
       text: `refine ${mainItem}`,
       source: 'ui'
     });
-    refineUi.modal.classList.add('hidden');
+    // 不自动关闭窗口
+  });
+}
+if (refineUi.batch) {
+  refineUi.batch.addEventListener('click', () => {
+    if (!socket || !refineSelection || !refineSelection.slot) return;
+    const mainItem = refineSelection.fromEquip ? `equip:${refineSelection.slot}` : refineSelection.slot;
+    // 一键锻造：自动消耗所有满足条件的装备
+    const materials = countRefineMaterials();
+    const batches = Math.floor(materials / refineMaterialCount);
+    if (batches <= 0) return;
+
+    for (let i = 0; i < batches; i++) {
+      setTimeout(() => {
+        socket.emit('cmd', {
+          text: `refine ${mainItem}`,
+          source: 'ui'
+        });
+      }, i * 100); // 每次间隔100ms
+    }
   });
 }
 if (refineUi.close) {

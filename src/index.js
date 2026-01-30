@@ -78,7 +78,7 @@ import {
   SKILL_MASTERY_LEVELS
 } from './game/skills.js';
 import { MOB_TEMPLATES } from './game/mobs.js';
-import { ITEM_TEMPLATES } from './game/items.js';
+import { ITEM_TEMPLATES, SHOP_STOCKS } from './game/items.js';
 import { WORLD, expandRoomVariants, shrinkRoomVariants } from './game/world.js';
 import { getRoomMobs, getAliveMobs, spawnMobs, removeMob, seedRespawnCache, setRespawnStore, getAllAliveMobs, incrementWorldBossKills, setWorldBossKillCount as setWorldBossKillCountState } from './game/state.js';
 import { calcHitChance, calcDamage, applyDamage, applyPoison, tickStatus, getDefenseMultiplier } from './game/combat.js';
@@ -1969,7 +1969,7 @@ const COMBO_PROC_CHANCE = 0.1;
 const ASSASSINATE_SECONDARY_DAMAGE_RATE = 0.3;
 const SABAK_TAX_RATE = 0.2;
 
-function buildItemView(itemId, effects = null, durability = null, max_durability = null) {
+function buildItemView(itemId, effects = null, durability = null, max_durability = null, refine_level = 0) {
   const item = ITEM_TEMPLATES[itemId] || { id: itemId, name: itemId, type: 'unknown' };
   return {
     id: itemId,
@@ -1989,7 +1989,8 @@ function buildItemView(itemId, effects = null, durability = null, max_durability
     dex: item.dex || 0,
     durability: durability ?? null,
     max_durability: max_durability ?? null,
-    effects: effects || null
+    effects: effects || null,
+    refine_level: refine_level || 0
   };
 }
 
@@ -3727,6 +3728,8 @@ async function buildState(player) {
   const items = player.inventory.map((i) => {
     const item = ITEM_TEMPLATES[i.id] || { id: i.id, name: i.id, type: 'unknown' };
     const effects = i.effects || null;
+    // 检查是否为商店装备
+    const isShopItem = Object.values(SHOP_STOCKS).some(stockList => stockList.includes(i.id));
     return {
       id: i.id,
       key: getItemKey(i),
@@ -3747,7 +3750,9 @@ async function buildState(player) {
       dex: item.dex || 0,
       durability: i.durability ?? null,
       max_durability: i.max_durability ?? null,
-      effects
+      refine_level: i.refine_level || 0,
+      effects,
+      is_shop_item: isShopItem
     };
   });
   const equipment = Object.entries(player.equipment || {})
@@ -3756,6 +3761,7 @@ async function buildState(player) {
       slot,
       durability: equipped.durability ?? null,
       max_durability: equipped.max_durability ?? null,
+      refine_level: equipped.refine_level || 0,
       item: buildItemView(equipped.id, equipped.effects || null)
     }));
   const party = getPartyByMember(player.name, realmId);

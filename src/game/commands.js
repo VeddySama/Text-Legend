@@ -1751,6 +1751,124 @@ export async function handleCommand({ player, players, allCharacters, input, sou
       send(`合成成功：${item.name} 元素攻击+${effects.elementAtk}。`);
       return;
     }
+    case 'refine': {
+      if (source !== 'ui') return;
+      if (!args) return send('要锻造什么装备？');
+      const itemRaw = args.trim();
+
+      // 解析主件装备
+      let mainResolved = null;
+      let mainEquippedSlot = null;
+      if (itemRaw.startsWith('equip:')) {
+        const slotName = itemRaw.slice('equip:'.length).trim();
+        const equipped = player.equipment?.[slotName];
+        if (!equipped || !equipped.id) return send('身上没有该装备。');
+        const item = ITEM_TEMPLATES[equipped.id];
+        if (!item) return send('装备无效。');
+        mainResolved = { slot: equipped, item };
+        mainEquippedSlot = slotName;
+      } else {
+        mainResolved = resolveInventoryItem(player, itemRaw);
+        if (!mainResolved.slot || !mainResolved.item) return send('背包里没有该装备。');
+      }
+
+      const item = mainResolved.item;
+      if (!item.slot || !['weapon', 'armor', 'accessory'].includes(item.type)) {
+        return send('只能锻造装备。');
+      }
+
+      const currentRefineLevel = mainResolved.slot.refine_level || 0;
+      const nextRefineLevel = currentRefineLevel + 1;
+
+      // 计算成功率：第2级50%，每10级降低3%，最低1%
+      const tier = Math.floor((nextRefineLevel - 2) / 10);
+      const baseSuccessRate = Math.max(1, 50 - tier * 3);
+      const successRate = nextRefineLevel === 1 ? 100 : baseSuccessRate;
+
+      // 保段检查：每10级保段
+      const isProtected = currentRefineLevel > 0 && currentRefineLevel % 10 === 0;
+
+      // 收集所有商店销售的装备ID
+      const allShopItems = new Set();
+      Object.values(SHOP_STOCKS).forEach(stockList => {
+        stockList.forEach(itemId => allShopItems.add(itemId));
+      });
+
+      // 收集并消耗20件史诗（不含）以下装备
+      const materials = [];
+      const inventory = Array.isArray(player.inventory) ? player.inventory.slice() : [];
+      for (const slot of inventory) {
+        if (!slot || !slot.id) continue;
+        const matItem = ITEM_TEMPLATES[slot.id];
+        if (!matItem) continue;
+        if (!isEquipmentItem(matItem)) continue;
+        if (allShopItems.has(slot.id)) continue; // 排除商店装备
+        const rarity = rarityByPrice(matItem);
+        if (!isBelowEpic(rarity)) continue; // 只能史诗（不含）以下
+        if (hasSpecialEffects(slot.effects)) continue; // 不能有特效
+        const qty = Math.max(0, Number(slot.qty || 0));
+        if (qty <= 0) continue;
+
+        const takeQty = Math.min(qty, 20 - materials.length);
+        for (let i = 0; i < takeQty; i++) {
+          materials.push({ slot, item: matItem });
+        }
+
+        if (materials.length >= 20) break;
+      }
+
+      if (materials.length < 20) {
+        return send(`需要20件史诗（不含）以下的无特效装备才能锻造，当前只有${materials.length}件。`);
+      }
+
+      // 消耗材料
+      materials.forEach(({ slot }) => {
+        if (slot.qty) {
+          slot.qty -= 1;
+        } else {
+          // 如果没有qty属性，从背包中移除
+          const index = player.inventory.indexOf(slot);
+          if (index > -1) {
+            player.inventory.splice(index, 1);
+          }
+        }
+      });
+      player.inventory = player.inventory.filter((slot) => !slot.qty || slot.qty > 0);
+
+      // 执行锻造
+      const success = Math.random() * 100 < successRate;
+      const newRefineLevel = success ? nextRefineLevel : (isProtected ? currentRefineLevel : Math.max(0, currentRefineLevel - 1));
+
+      // 应用锻造等级
+      if (mainEquippedSlot) {
+        player.equipment[mainEquippedSlot].refine_level = newRefineLevel;
+      } else {
+        mainResolved.slot.refine_level = newRefineLevel;
+      }
+
+      computeDerived(player);
+      player.forceStateRefresh = true;
+
+      if (success) {
+        const bonus = newRefineLevel;
+        send(`锻造成功！${item.name} 提升到锻造+${newRefineLevel}，所有属性+${bonus}。`);
+        // 系统日志
+        if (logLoot) {
+          logLoot(`[refine] ${player.name} 锻造成功 ${item.name} +${newRefineLevel}`);
+        }
+      } else {
+        if (isProtected) {
+          send(`锻造失败，但在保段位，${item.name} 锻造等级保持在+${currentRefineLevel}。`);
+        } else {
+          send(`锻造失败，${item.name} 锻造等级降低到+${newRefineLevel}。`);
+          // 系统日志
+          if (logLoot) {
+            logLoot(`[refine] ${player.name} 锻造失败 ${item.name} +${newRefineLevel}`);
+          }
+        }
+      }
+      return;
+    }
     case 'repair': {
       if (!player.equipment) return send('没有可修理的装备。');
       const slots = Object.keys(player.equipment || {});

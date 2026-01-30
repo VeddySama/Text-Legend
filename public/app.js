@@ -302,6 +302,17 @@ const forgeUi = {
   confirm: document.getElementById('forge-confirm'),
   close: document.getElementById('forge-close')
 };
+const refineUi = {
+  modal: document.getElementById('refine-modal'),
+  list: document.getElementById('refine-main-list'),
+  main: document.getElementById('refine-main-selected'),
+  materialCount: document.getElementById('refine-material-count'),
+  level: document.getElementById('refine-level'),
+  successRate: document.getElementById('refine-success-rate'),
+  protection: document.getElementById('refine-protection'),
+  confirm: document.getElementById('refine-confirm'),
+  close: document.getElementById('refine-close')
+};
 const consignUi = {
   modal: document.getElementById('consign-modal'),
   tabs: Array.from(document.querySelectorAll('.consign-tab')),
@@ -1689,6 +1700,7 @@ function showRepairModal() {
 }
 
 let forgeSelection = null;
+let refineSelection = null;
 
 function listForgeSecondaries(itemId, items) {
   return (items || []).filter((item) =>
@@ -1752,6 +1764,11 @@ function formatForgeMeta(item) {
   return `特效: ${tags.join(' / ')}`;
 }
 
+function hasSpecialEffects(effects) {
+  return effects && Object.keys(effects).length > 0;
+}
+}
+
 function renderForgeModal() {
   if (!forgeUi.list || !forgeUi.secondaryList || !forgeUi.main || !forgeUi.secondary || !forgeUi.confirm) return;
   const equipped = (lastState?.equipment || [])
@@ -1800,6 +1817,99 @@ function showForgeModal() {
   hideItemTooltip();
   renderForgeModal();
   forgeUi.modal.classList.remove('hidden');
+}
+
+function renderRefineModal() {
+  if (!refineUi.list || !refineUi.main || !refineUi.level || !refineUi.successRate) return;
+
+  const allEquipment = [];
+  // 获取已装备的装备
+  if (lastState?.equipment) {
+    Object.entries(lastState.equipment).forEach(([slot, equipped]) => {
+      if (equipped && equipped.item && ['weapon', 'armor', 'accessory'].includes(equipped.item.type)) {
+        allEquipment.push({ ...equipped, slotName: slot, fromEquip: true });
+      }
+    });
+  }
+  // 获取背包中的装备
+  if (lastState?.inventory) {
+    lastState.inventory.forEach((slot) => {
+      if (slot && slot.item && ['weapon', 'armor', 'accessory'].includes(slot.item.type)) {
+        allEquipment.push({ ...slot, fromEquip: false });
+      }
+    });
+  }
+
+  refineUi.list.innerHTML = '';
+  refineSelection = null;
+  refineUi.main.textContent = '主件: 未选择';
+  refineUi.level.textContent = '当前锻造等级: +0';
+  refineUi.successRate.textContent = '成功率: 100%';
+
+  if (!allEquipment.length) {
+    const empty = document.createElement('div');
+    empty.textContent = '背包和身上暂无装备';
+    refineUi.list.appendChild(empty);
+    refineUi.confirm.disabled = true;
+    return;
+  }
+
+  allEquipment.forEach((entry) => {
+    const item = entry.item;
+    const btn = document.createElement('div');
+    btn.className = 'forge-item';
+    applyRarityClass(btn, item);
+    const refineLevel = entry.refine_level || 0;
+    btn.innerHTML = `
+      <div>${formatItemName(item)}</div>
+      <div class="item-detail">锻造: +${refineLevel}</div>
+      <div class="item-detail">${entry.fromEquip ? '(已装备)' : '(背包)'}</div>
+    `;
+    btn.addEventListener('click', () => {
+      refineSelection = { slot: entry.slotName || entry.key, item, refineLevel, fromEquip: entry.fromEquip };
+      refineUi.main.textContent = `主件: ${formatItemName(item)}`;
+      refineUi.level.textContent = `当前锻造等级: +${refineLevel}`;
+      const nextLevel = refineLevel + 1;
+      const successRate = calculateRefineSuccessRate(nextLevel);
+      refineUi.successRate.textContent = `成功率: ${successRate}%`;
+
+      // 计算可用材料数量
+      const materials = countRefineMaterials();
+      refineUi.materialCount.textContent = `副件: 自动选择20件史诗（不含）以下装备 (可用: ${materials}件)`;
+
+      refineUi.confirm.disabled = materials < 20;
+    });
+    refineUi.list.appendChild(btn);
+  });
+  refineUi.confirm.disabled = true;
+}
+
+function calculateRefineSuccessRate(level) {
+  if (level === 1) return 100;
+  // 第2级50%，每10级降低3%，最低1%
+  const tier = Math.floor((level - 2) / 10);
+  const baseRate = 50 - tier * 3;
+  return Math.max(1, baseRate);
+}
+
+function countRefineMaterials() {
+  if (!lastState?.inventory) return 0;
+  return lastState.inventory.filter((slot) => {
+    if (!slot || !slot.item) return false;
+    if (!['weapon', 'armor', 'accessory'].includes(slot.item.type)) return false;
+    if (slot.is_shop_item) return false; // 排除商店装备
+    const rarity = slot.item.rarity || slot.item.price >= 30000 ? 'epic' :
+                   slot.item.price >= 10000 ? 'rare' :
+                   slot.item.price >= 2000 ? 'uncommon' : 'common';
+    return ['common', 'uncommon', 'rare'].includes(rarity) && !hasSpecialEffects(slot.item.effects);
+  }).length;
+}
+
+function showRefineModal() {
+  if (!refineUi.modal) return;
+  hideItemTooltip();
+  renderRefineModal();
+  refineUi.modal.classList.remove('hidden');
 }
 
 let selectedTrainingType = null;
@@ -3596,6 +3706,7 @@ function formatItemName(item) {
   if (item.effects && item.effects.poison) tags.push('\u6bd2');
   if (item.effects && item.effects.healblock) tags.push('\u7981\u7597');
   if (item.effects && item.effects.elementAtk) tags.push(`\u5143\u7d20+${Math.floor(item.effects.elementAtk)}`);
+  if (item.refine_level && item.refine_level > 0) tags.push(`锻造+${item.refine_level}`);
   return tags.length ? `${item.name}\u00b7${tags.join('\u00b7')}` : item.name;
 }
 
@@ -4443,6 +4554,7 @@ function renderState(state) {
     { id: 'shop', label: '\u5546\u5e97' },
     { id: 'repair', label: '\u4FEE\u7406' },
     { id: 'forge', label: '\u88C5\u5907\u5408\u6210' },
+    { id: 'refine', label: '\u88C5\u5907\u953B\u9020' },
     { id: 'consign', label: '\u5BC4\u552E' },
     { id: 'drops', label: '\u5957\u88c5\u6389\u843d' },
     { id: 'switch', label: '\u5207\u6362\u89d2\u8272' },
@@ -4529,6 +4641,10 @@ function renderState(state) {
     }
     if (a.id === 'forge') {
       showForgeModal();
+      return;
+    }
+    if (a.id === 'refine') {
+      showRefineModal();
       return;
     }
     if (a.id === 'drops') {
@@ -5468,6 +5584,23 @@ if (forgeUi.confirm) {
       source: 'ui'
     });
     forgeUi.modal.classList.add('hidden');
+  });
+}
+if (refineUi.confirm) {
+  refineUi.confirm.addEventListener('click', () => {
+    if (!socket || !refineSelection || !refineSelection.slot) return;
+    const mainItem = refineSelection.fromEquip ? `equip:${refineSelection.slot}` : refineSelection.slot;
+    socket.emit('cmd', {
+      text: `refine ${mainItem}`,
+      source: 'ui'
+    });
+    refineUi.modal.classList.add('hidden');
+  });
+}
+if (refineUi.close) {
+  refineUi.close.addEventListener('click', () => {
+    refineUi.modal.classList.add('hidden');
+    hideItemTooltip();
   });
 }
 if (trainingBatchUi.close) {

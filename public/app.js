@@ -1924,9 +1924,9 @@ function countRefineMaterials() {
     if (!slot) return false;
     if (!['weapon', 'armor', 'accessory'].includes(slot.type)) return false;
     if (slot.is_shop_item) return false; // 排除商店装备
-    const rarity = slot.rarity || slot.price >= 30000 ? 'epic' :
+    const rarity = slot.rarity || (slot.price >= 30000 ? 'epic' :
                    slot.price >= 10000 ? 'rare' :
-                   slot.price >= 2000 ? 'uncommon' : 'common';
+                   slot.price >= 2000 ? 'uncommon' : 'common');
     // 只能史诗（不含）以下的无特效装备
     return ['common', 'uncommon', 'rare'].includes(rarity) && !hasSpecialEffects(slot.effects);
   }).length;
@@ -1942,9 +1942,9 @@ function renderRefineSecondaryList() {
     if (!slot) return false;
     if (!['weapon', 'armor', 'accessory'].includes(slot.type)) return false;
     if (slot.is_shop_item) return false; // 排除商店装备
-    const rarity = slot.rarity || slot.price >= 30000 ? 'epic' :
+    const rarity = slot.rarity || (slot.price >= 30000 ? 'epic' :
                    slot.price >= 10000 ? 'rare' :
-                   slot.price >= 2000 ? 'uncommon' : 'common';
+                   slot.price >= 2000 ? 'uncommon' : 'common');
     // 只能史诗（不含）以下的无特效装备
     return ['common', 'uncommon', 'rare'].includes(rarity) && !hasSpecialEffects(slot.effects);
   }) || [];

@@ -14,9 +14,28 @@ import {
 import { addItem, removeItem, equipItem, unequipItem, bagLimit, gainExp, computeDerived, getDurabilityMax, getRepairCost, getItemKey, sameEffects } from './player.js';
 import { CLASSES, expForLevel, getStartPosition, ROOM_VARIANT_COUNT } from './constants.js';
 import { getRoom, getAliveMobs, spawnMobs } from './state.js';
-import { clamp } from './utils.js';
+import { clamp, randInt } from './utils.js';
 import { applyDamage } from './combat.js';
 import { getTrainingPerLevelConfig, getTrainingFruitCoefficient } from './settings.js';
+
+// 特效重置：生成随机特效
+const ALLOWED_EFFECTS = ['combo', 'fury', 'unbreakable', 'defense', 'dodge', 'poison', 'healblock', 'elementAtk'];
+
+function generateRandomEffects(count) {
+  const effects = {};
+  const available = [...ALLOWED_EFFECTS];
+  for (let i = 0; i < count && available.length > 0; i++) {
+    const randomIndex = Math.floor(Math.random() * available.length);
+    const effectName = available[randomIndex];
+    if (effectName === 'elementAtk') {
+      effects[effectName] = { value: randInt(1, 10) };
+    } else {
+      effects[effectName] = true;
+    }
+    available.splice(randomIndex, 1);
+  }
+  return Object.keys(effects).length > 0 ? effects : null;
+}
 
 function getSummons(player) {
   if (!player) return [];
@@ -1865,6 +1884,98 @@ export async function handleCommand({ player, players, allCharacters, input, sou
           if (logLoot) {
             logLoot(`[refine] ${player.name} 锻造失败 ${item.name} +${newRefineLevel}`);
           }
+        }
+      }
+      return;
+    }
+    case 'effect': {
+      if (source !== 'ui') return;
+      if (!args) return send('要重置什么装备的特效？');
+      const parts = args.trim().split(/\s+/);
+      if (parts.length < 2) return send('格式：effect <主件> <副件>');
+
+      const mainRaw = parts[0];
+      const secondaryRaw = parts[1];
+
+      // 解析主件装备（必须是已穿戴的装备）
+      let mainResolved = null;
+      let mainEquippedSlot = null;
+      if (mainRaw.startsWith('equip:')) {
+        const slotName = mainRaw.slice('equip:'.length).trim();
+        const equipped = player.equipment?.[slotName];
+        if (!equipped || !equipped.id) return send('身上没有该装备。');
+        const item = ITEM_TEMPLATES[equipped.id];
+        if (!item) return send('装备无效。');
+        mainResolved = { slot: equipped, item };
+        mainEquippedSlot = slotName;
+      } else {
+        return send('只能给已穿戴的主件装备重置特效。');
+      }
+
+      const mainItem = mainResolved.item;
+
+      // 检查主件是否有特效
+      if (!mainResolved.slot.effects || Object.keys(mainResolved.slot.effects).length === 0) {
+        return send('主件必须要有特效。');
+      }
+
+      // 解析副件装备
+      const secondaryResolved = resolveInventoryItem(player, secondaryRaw);
+      if (!secondaryResolved.slot || !secondaryResolved.item) return send('背包里没有该副件装备。');
+
+      // 检查副件是否有特效
+      if (!secondaryResolved.slot.effects || Object.keys(secondaryResolved.slot.effects).length === 0) {
+        return send('副件必须要有特效。');
+      }
+
+      // 消耗副件装备
+      const secondarySlot = secondaryResolved.slot;
+      if (secondarySlot.qty && secondarySlot.qty > 1) {
+        secondarySlot.qty -= 1;
+      } else {
+        const index = player.inventory.indexOf(secondarySlot);
+        if (index > -1) {
+          player.inventory.splice(index, 1);
+        }
+      }
+      player.inventory = player.inventory.filter((slot) => !slot.qty || slot.qty > 0);
+
+      // 执行特效重置：成功率0.1%，0.01%刷出2条特效
+      const success = Math.random() < 0.001;
+      const doubleEffect = Math.random() < 0.0001;
+
+      let newEffects = null;
+
+      if (success) {
+        if (doubleEffect) {
+          // 0.01%刷出2条特效
+          newEffects = generateRandomEffects(2);
+          send(`特效重置成功！${mainItem.name} 获得2条新特效！`);
+        } else {
+          // 0.1%刷出1条特效
+          newEffects = generateRandomEffects(1);
+          send(`特效重置成功！${mainItem.name} 获得1条新特效。`);
+        }
+      } else {
+        send(`特效重置失败，副件装备已消耗，请再接再厉。`);
+      }
+
+      // 应用新特效
+      if (mainEquippedSlot) {
+        player.equipment[mainEquippedSlot].effects = newEffects;
+      } else {
+        mainResolved.slot.effects = newEffects;
+      }
+
+      computeDerived(player);
+      player.forceStateRefresh = true;
+
+      // 系统日志
+      if (logLoot) {
+        if (success) {
+          logLoot(`[effect] ${player.name} 特效重置成功 ${mainItem.name} ${doubleEffect ? '2条' : '1条'}`);
+        } else {
+          logLoot(`[effect] ${player.name} 特效重置失败 ${mainItem.name}`);
         }
       }
       return;

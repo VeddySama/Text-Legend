@@ -313,6 +313,17 @@ const refineUi = {
   confirm: document.getElementById('refine-confirm'),
   close: document.getElementById('refine-close')
 };
+const effectUi = {
+  modal: document.getElementById('effect-modal'),
+  list: document.getElementById('effect-main-list'),
+  main: document.getElementById('effect-main-selected'),
+  secondary: document.getElementById('effect-secondary-selected'),
+  successRate: document.getElementById('effect-success-rate'),
+  doubleRate: document.getElementById('effect-double-rate'),
+  confirm: document.getElementById('effect-confirm'),
+  close: document.getElementById('effect-close')
+};
+let effectSelection = null;
 const consignUi = {
   modal: document.getElementById('consign-modal'),
   tabs: Array.from(document.querySelectorAll('.consign-tab')),
@@ -1909,6 +1920,65 @@ function showRefineModal() {
   hideItemTooltip();
   renderRefineModal();
   refineUi.modal.classList.remove('hidden');
+}
+
+function renderEffectModal() {
+  if (!effectUi.list) return;
+
+  // 主件列表：只显示已穿戴的装备（必须有特效）
+  const equippedWithEffect = (lastState?.equipment || []).filter(entry => {
+    if (!entry.item || !entry.item.effects) return false;
+    return Object.keys(entry.item.effects).length > 0;
+  });
+
+  renderChips(effectUi.list, equippedWithEffect.map(e => ({ ...e, equipped: true, raw: { id: e.item.id, slot: e.slot } })), (selected) => {
+    effectSelection = selected;
+    updateEffectSelection(selected);
+  });
+
+  // 重置选择状态
+  effectUi.main.textContent = '主件: 未选择';
+  effectUi.secondary.textContent = '副件: 等待匹配';
+  effectUi.confirm.disabled = true;
+}
+
+function updateEffectSelection(selected) {
+  if (!selected) {
+    effectUi.main.textContent = '主件: 未选择';
+    effectUi.secondary.textContent = '副件: 等待匹配';
+    effectUi.confirm.disabled = true;
+    return;
+  }
+
+  effectUi.main.textContent = `主件: ${formatItemName(selected.item)}`;
+
+  // 自动选择副件（背包中带有特效的装备）
+  const inventoryWithEffect = (lastState?.items || []).filter(slot => {
+    if (!slot || !slot.item) return false;
+    if (!slot.item.effects) return false;
+    return Object.keys(slot.item.effects).length > 0;
+  });
+
+  if (inventoryWithEffect.length > 0) {
+    const secondary = inventoryWithEffect[0];
+    effectUi.secondary.textContent = `副件: ${formatItemName(secondary.item)}`;
+    effectUi.confirm.disabled = false;
+    effectUi.confirm.onclick = () => {
+      const command = `effect equip:${selected.slot} ${secondary.item.id}`;
+      socket.emit('cmd', { text: command });
+      effectUi.modal.classList.add('hidden');
+    };
+  } else {
+    effectUi.secondary.textContent = '副件: 无可用';
+    effectUi.confirm.disabled = true;
+  }
+}
+
+function showEffectModal() {
+  if (!effectUi.modal) return;
+  hideItemTooltip();
+  renderEffectModal();
+  effectUi.modal.classList.remove('hidden');
 }
 
 let selectedTrainingType = null;
@@ -4554,6 +4624,7 @@ function renderState(state) {
     { id: 'consign', label: '\u5BC4\u552E' },
     { id: 'forge', label: '\u88C5\u5907\u5408\u6210' },
     { id: 'refine', label: '\u88C5\u5907\u953B\u9020' },
+    { id: 'effect', label: '\u7279\u6548\u91CD\u7F6E' },
     { id: 'drops', label: '\u5957\u88c5\u6389\u843d' },
     { id: 'switch', label: '\u5207\u6362\u89d2\u8272' },
     { id: 'logout', label: '\u9000\u51fa\u6e38\u620f' }
@@ -4643,6 +4714,10 @@ function renderState(state) {
     }
     if (a.id === 'refine') {
       showRefineModal();
+      return;
+    }
+    if (a.id === 'effect') {
+      showEffectModal();
       return;
     }
     if (a.id === 'drops') {
@@ -5598,6 +5673,12 @@ if (refineUi.confirm) {
 if (refineUi.close) {
   refineUi.close.addEventListener('click', () => {
     refineUi.modal.classList.add('hidden');
+    hideItemTooltip();
+  });
+}
+if (effectUi.close) {
+  effectUi.close.addEventListener('click', () => {
+    effectUi.modal.classList.add('hidden');
     hideItemTooltip();
   });
 }

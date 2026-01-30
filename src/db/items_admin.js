@@ -475,6 +475,10 @@ export async function syncItemsToTemplates() {
   dbItems.forEach(dbItem => {
     if (ITEM_TEMPLATES[dbItem.item_id]) {
       // 更新已存在的装备模板
+      ITEM_TEMPLATES[dbItem.item_id].name = dbItem.name;
+      ITEM_TEMPLATES[dbItem.item_id].type = dbItem.type;
+      ITEM_TEMPLATES[dbItem.item_id].slot = dbItem.slot;
+      ITEM_TEMPLATES[dbItem.item_id].rarity = dbItem.rarity;
       ITEM_TEMPLATES[dbItem.item_id].atk = dbItem.atk;
       ITEM_TEMPLATES[dbItem.item_id].mag = dbItem.mag;
       ITEM_TEMPLATES[dbItem.item_id].spirit = dbItem.spirit;

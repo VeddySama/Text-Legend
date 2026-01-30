@@ -3730,11 +3730,13 @@ function buildRoomExits(zoneId, roomId) {
     }
     const destZone = WORLD[destZoneId];
     const destRoom = destZone?.rooms?.[destRoomId];
+    // 只添加目标房间存在的出口,过滤掉无效的变种出口
+    if (!destRoom) return null;
     const label = destRoom
       ? (destZoneId === zoneId ? destRoom.name : `${destZone.name} - ${destRoom.name}`)
       : dest;
     return { dir, label };
-  });
+  }).filter(Boolean);
 
   // 合并带数字后缀的方向，只显示一个入口（暗之BOSS房间除外）
   const filteredExits = [];

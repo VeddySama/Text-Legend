@@ -77,6 +77,8 @@ const effectResetDoubleRateInput = document.getElementById('effect-reset-double-
 const effectResetTripleRateInput = document.getElementById('effect-reset-triple-rate');
 const effectResetQuadrupleRateInput = document.getElementById('effect-reset-quadruple-rate');
 const effectResetQuintupleRateInput = document.getElementById('effect-reset-quintuple-rate');
+const effectDropSingleChanceInput = document.getElementById('effect-drop-single-chance');
+const effectDropDoubleChanceInput = document.getElementById('effect-drop-double-chance');
 const effectResetSaveBtn = document.getElementById('effect-reset-save-btn');
 
 // 世界BOSS相关
@@ -320,6 +322,12 @@ async function loadEffectResetSettings() {
     if (data.quintupleRate !== undefined && effectResetQuintupleRateInput) {
       effectResetQuintupleRateInput.value = data.quintupleRate;
     }
+    if (data.dropSingleChance !== undefined && effectDropSingleChanceInput) {
+      effectDropSingleChanceInput.value = data.dropSingleChance;
+    }
+    if (data.dropDoubleChance !== undefined && effectDropDoubleChanceInput) {
+      effectDropDoubleChanceInput.value = data.dropDoubleChance;
+    }
     effectResetMsg.textContent = '加载成功';
     effectResetMsg.style.color = 'green';
     setTimeout(() => {
@@ -340,6 +348,8 @@ async function saveEffectResetSettings() {
     const tripleRate = effectResetTripleRateInput ? Number(effectResetTripleRateInput.value) : undefined;
     const quadrupleRate = effectResetQuadrupleRateInput ? Number(effectResetQuadrupleRateInput.value) : undefined;
     const quintupleRate = effectResetQuintupleRateInput ? Number(effectResetQuintupleRateInput.value) : undefined;
+    const dropSingleChance = effectDropSingleChanceInput ? Number(effectDropSingleChanceInput.value) : undefined;
+    const dropDoubleChance = effectDropDoubleChanceInput ? Number(effectDropDoubleChanceInput.value) : undefined;
 
     if (successRate !== undefined && (isNaN(successRate) || successRate < 0 || successRate > 100)) {
       effectResetMsg.textContent = '成功率必须在0-100之间';
@@ -366,8 +376,18 @@ async function saveEffectResetSettings() {
       effectResetMsg.style.color = 'red';
       return;
     }
+    if (dropSingleChance !== undefined && (isNaN(dropSingleChance) || dropSingleChance < 0 || dropSingleChance > 100)) {
+      effectResetMsg.textContent = '单特效掉落概率必须在0-100之间';
+      effectResetMsg.style.color = 'red';
+      return;
+    }
+    if (dropDoubleChance !== undefined && (isNaN(dropDoubleChance) || dropDoubleChance < 0 || dropDoubleChance > 100)) {
+      effectResetMsg.textContent = '双特效掉落概率必须在0-100之间';
+      effectResetMsg.style.color = 'red';
+      return;
+    }
 
-    await api('/admin/effect-reset-settings/update', 'POST', { successRate, doubleRate, tripleRate, quadrupleRate, quintupleRate });
+    await api('/admin/effect-reset-settings/update', 'POST', { successRate, doubleRate, tripleRate, quadrupleRate, quintupleRate, dropSingleChance, dropDoubleChance });
     effectResetMsg.textContent = '保存成功，立即生效';
     effectResetMsg.style.color = 'green';
     setTimeout(() => {

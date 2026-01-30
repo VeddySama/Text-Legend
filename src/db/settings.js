@@ -516,3 +516,27 @@ export async function setTrainingFruitDropRate(rate) {
   const normalized = Math.max(0, Math.min(1, Number(rate) || 0.01));
   await setSetting('training_fruit_drop_rate', String(normalized));
 }
+
+// 特效装备掉落配置
+export async function getEffectDropSingleChance() {
+  const value = await getSetting('effect_drop_single_chance', '0.009');
+  const parsed = parseFloat(value);
+  return Number.isFinite(parsed) ? Math.max(0, Math.min(100, parsed)) : 0.009;
+}
+
+export async function setEffectDropSingleChance(rate) {
+  const normalized = Math.max(0, Math.min(100, Number(rate) || 0.009));
+  await setSetting('effect_drop_single_chance', String(normalized));
+}
+
+export async function getEffectDropDoubleChance() {
+  const value = await getSetting('effect_drop_double_chance', '0.001');
+  const parsed = parseFloat(value);
+  return Number.isFinite(parsed) ? Math.max(0, Math.min(100, parsed)) : 0.001;
+}
+
+export async function setEffectDropDoubleChance(rate) {
+  const normalized = Math.max(0, Math.min(100, Number(rate) || 0.001));
+  await setSetting('effect_drop_double_chance', String(normalized));
+}
+

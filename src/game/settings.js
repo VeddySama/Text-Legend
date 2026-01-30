@@ -164,6 +164,10 @@ let refineDecayRate = 3; // 每10级降低的百分比
 let refineMaterialCount = 20; // 所需材料数量
 let refineBonusPerLevel = 1; // 每级锻造加成值
 
+// 特效装备掉落配置（可由后台动态配置）
+let effectDropSingleChance = 0.009; // 单特效掉落概率(%)
+let effectDropDoubleChance = 0.001; // 双特效掉落概率(%)
+
 // 特效重置配置（可由后台动态配置）
 let effectResetSuccessRate = 0.1; // 成功率(%)
 let effectResetDoubleRate = 0.01; // 双特效概率(%)
@@ -332,4 +336,41 @@ export function setEffectResetQuintupleRate(rate) {
 export function getEffectResetQuintupleRate() {
   return effectResetQuintupleRate;
 }
+
+/**
+ * 设置特效装备单特效掉落概率
+ * @param {number} rate - 单特效掉落概率(%)
+ */
+export function setEffectDropSingleChance(rate) {
+  if (typeof rate === 'number' && rate >= 0 && rate <= 100) {
+    effectDropSingleChance = rate;
+  }
+}
+
+/**
+ * 获取特效装备单特效掉落概率
+ * @returns {number} 单特效掉落概率(%)
+ */
+export function getEffectDropSingleChance() {
+  return effectDropSingleChance;
+}
+
+/**
+ * 设置特效装备双特效掉落概率
+ * @param {number} rate - 双特效掉落概率(%)
+ */
+export function setEffectDropDoubleChance(rate) {
+  if (typeof rate === 'number' && rate >= 0 && rate <= 100) {
+    effectDropDoubleChance = rate;
+  }
+}
+
+/**
+ * 获取特效装备双特效掉落概率
+ * @returns {number} 双特效掉落概率(%)
+ */
+export function getEffectDropDoubleChance() {
+  return effectDropDoubleChance;
+}
+
 

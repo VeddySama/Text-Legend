@@ -4883,7 +4883,7 @@ async function loadItemTemplates() {
   if (!res.ok) return;
 
   itemTemplates = res.templates;
-  importedItemIds = res.imported;
+  importedItemIds = new Set(res.imported || []);
 
   renderImportItems();
 }

@@ -1445,7 +1445,7 @@ app.get('/admin/items/templates', async (req, res) => {
     const templates = getItemTemplates();
     const check = await checkImportedItems(templates.map(t => t.item_id));
 
-    res.json({ ok: true, templates, imported: new Set(check.imported) });
+    res.json({ ok: true, templates, imported: check.imported });
   } catch (err) {
     res.status(500).json({ error: '获取装备模板失败: ' + err.message });
   }

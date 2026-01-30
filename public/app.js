@@ -3908,10 +3908,11 @@ function renderState(state) {
       } else {
         state.trade.myItems.forEach((item) => {
           const itemTemplate = lastState?.items?.find(i => i.id === item.id);
+          if (!itemTemplate) return;
           const itemDiv = document.createElement('div');
           itemDiv.className = 'trade-item';
           applyRarityClass(itemDiv, itemTemplate);
-          const name = itemTemplate ? formatItemName({ ...itemTemplate, effects: item.effects }) : item.id;
+          const name = formatItemName({ ...itemTemplate, effects: item.effects });
           itemDiv.textContent = `${name} x${item.qty}`;
           tradeUi.myItems.appendChild(itemDiv);
         });
@@ -3927,10 +3928,11 @@ function renderState(state) {
       } else {
         state.trade.partnerItems.forEach((item) => {
           const itemTemplate = lastState?.items?.find(i => i.id === item.id);
+          if (!itemTemplate) return;
           const itemDiv = document.createElement('div');
           itemDiv.className = 'trade-item';
           applyRarityClass(itemDiv, itemTemplate);
-          const name = itemTemplate ? formatItemName({ ...itemTemplate, effects: item.effects }) : item.id;
+          const name = formatItemName({ ...itemTemplate, effects: item.effects });
           itemDiv.textContent = `${name} x${item.qty}`;
           tradeUi.partnerItems.appendChild(itemDiv);
         });

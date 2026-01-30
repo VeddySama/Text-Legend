@@ -283,6 +283,32 @@ body.dark .trade-gold {
   background: rgba(212, 168, 104, 0.15);
 }
 
+body.dark .trade-title {
+  color: #e8e0d4;
+}
+
+body.dark .trade-offer {
+  color: var(--ink);
+}
+
+body.dark .trade-items {
+  scrollbar-width: thin;
+  scrollbar-color: #4a3a30 #25201c;
+}
+
+body.dark .trade-items::-webkit-scrollbar {
+  width: 6px;
+}
+
+body.dark .trade-items::-webkit-scrollbar-track {
+  background: #25201c;
+}
+
+body.dark .trade-items::-webkit-scrollbar-thumb {
+  background: #4a3a30;
+  border-radius: 3px;
+}
+
 body.dark #bag-page {
   color: #a89888;
 }

@@ -4956,8 +4956,12 @@ function openImportModal() {
 }
 
 async function importSelectedItems() {
+  console.log('=== importSelectedItems called ===');
+
   const checkboxes = document.querySelectorAll('.import-item-checkbox:checked');
   const selectedIds = Array.from(checkboxes).map(cb => cb.dataset.id);
+
+  console.log('Selected IDs:', selectedIds);
 
   if (selectedIds.length === 0) {
     await customAlert('提示', '请选择要导入的装备');
@@ -4967,7 +4971,10 @@ async function importSelectedItems() {
   const confirmed = await customConfirm('确认导入', `确定要导入 ${selectedIds.length} 个装备吗？`);
   if (!confirmed) return;
 
+  console.log('Sending import request to /admin/items/import');
   const res = await api('/admin/items/import', 'POST', { itemIds: selectedIds });
+  console.log('Import response:', res);
+
   if (!res.ok) {
     await customAlert('导入失败', res.error || '导入装备失败');
     return;

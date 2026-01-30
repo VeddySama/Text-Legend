@@ -107,6 +107,10 @@ export async function updateItem(id, data) {
   if (item) {
     const { ITEM_TEMPLATES } = await import('../game/items.js');
     if (ITEM_TEMPLATES[item.item_id]) {
+      ITEM_TEMPLATES[item.item_id].name = item.name;
+      ITEM_TEMPLATES[item.item_id].type = item.type;
+      ITEM_TEMPLATES[item.item_id].slot = item.slot;
+      ITEM_TEMPLATES[item.item_id].rarity = item.rarity;
       ITEM_TEMPLATES[item.item_id].atk = item.atk;
       ITEM_TEMPLATES[item.item_id].mag = item.mag;
       ITEM_TEMPLATES[item.item_id].spirit = item.spirit;
@@ -115,7 +119,6 @@ export async function updateItem(id, data) {
       ITEM_TEMPLATES[item.item_id].dex = item.dex;
       ITEM_TEMPLATES[item.item_id].hp = item.hp;
       ITEM_TEMPLATES[item.item_id].mp = item.mp;
-      ITEM_TEMPLATES[item.item_id].slot = item.slot;
     }
   }
 

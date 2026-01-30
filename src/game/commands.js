@@ -29,8 +29,8 @@ import {
   getEffectResetQuintupleRate
 } from './settings.js';
 
-// 特效重置：生成随机特效
-const ALLOWED_EFFECTS = ['combo', 'fury', 'unbreakable', 'defense', 'dodge', 'poison', 'healblock', 'elementAtk'];
+// 特效重置：生成随机特效（不包含elementAtk，因为元素攻击只能通过装备合成获得）
+const ALLOWED_EFFECTS = ['combo', 'fury', 'unbreakable', 'defense', 'dodge', 'poison', 'healblock'];
 
 function generateRandomEffects(count) {
   const effects = {};
@@ -38,11 +38,7 @@ function generateRandomEffects(count) {
   for (let i = 0; i < count && available.length > 0; i++) {
     const randomIndex = Math.floor(Math.random() * available.length);
     const effectName = available[randomIndex];
-    if (effectName === 'elementAtk') {
-      effects[effectName] = { value: randInt(1, 10) };
-    } else {
-      effects[effectName] = true;
-    }
+    effects[effectName] = true;
     available.splice(randomIndex, 1);
   }
   return Object.keys(effects).length > 0 ? effects : null;
@@ -1759,12 +1755,19 @@ export async function handleCommand({ player, players, allCharacters, input, sou
       const mainElement = Number(effects.elementAtk || 0);
       const secondaryElement = Number((secondaryResolved.slot.effects || {}).elementAtk || 0);
       effects.elementAtk = Math.max(1, Math.floor(mainElement + secondaryElement + 1));
+
+      // 保留主件的锻造等级
+      const mainRefineLevel = mainResolved.slot.refine_level || 0;
+      const secondaryRefineLevel = secondaryResolved.slot.refine_level || 0;
+      const finalRefineLevel = Math.max(mainRefineLevel, secondaryRefineLevel);
+
       if (mainEquippedSlot) {
         player.equipment[mainEquippedSlot] = {
           id: item.id,
           effects,
           durability: mainResolved.slot.durability ?? null,
-          max_durability: mainResolved.slot.max_durability ?? null
+          max_durability: mainResolved.slot.max_durability ?? null,
+          refine_level: finalRefineLevel
         };
       } else {
         addItem(
@@ -1773,7 +1776,8 @@ export async function handleCommand({ player, players, allCharacters, input, sou
           1,
           effects,
           mainResolved.slot.durability ?? null,
-          mainResolved.slot.max_durability ?? null
+          mainResolved.slot.max_durability ?? null,
+          finalRefineLevel
         );
       }
       computeDerived(player);
@@ -1984,10 +1988,18 @@ export async function handleCommand({ player, players, allCharacters, input, sou
       // 保存主件原有特效（失败时保留）
       const originalEffects = mainResolved.slot.effects;
 
+      // 保存原有的元素攻击值(通过装备合成获得)
+      const originalElementAtk = Number(originalEffects?.elementAtk || 0);
+
       let newEffects = null;
 
       if (success) {
         newEffects = generateRandomEffects(effectCount);
+
+        // 如果原有装备有元素攻击,特效重置后继续保留(因为元素攻击只能通过装备合成获得)
+        if (originalElementAtk > 0) {
+          newEffects.elementAtk = originalElementAtk;
+        }
         if (effectCount === 5) {
           send(`特效重置成功！${mainItem.name} 获得5条新特效！`);
           emitAnnouncement(`恭喜玩家 ${player.name} 的 ${mainItem.name} 特效重置成功，获得5条新特效！`, 'announce', null);
@@ -2009,11 +2021,19 @@ export async function handleCommand({ player, players, allCharacters, input, sou
         newEffects = originalEffects;
       }
 
-      // 应用新特效
+      // 应用新特效,保留锻造等级
       if (mainEquippedSlot) {
         player.equipment[mainEquippedSlot].effects = newEffects;
+        // 确保保留锻造等级
+        if (player.equipment[mainEquippedSlot].refine_level == null) {
+          player.equipment[mainEquippedSlot].refine_level = 0;
+        }
       } else {
         mainResolved.slot.effects = newEffects;
+        // 确保保留锻造等级
+        if (mainResolved.slot.refine_level == null) {
+          mainResolved.slot.refine_level = 0;
+        }
       }
 
       computeDerived(player);

@@ -51,10 +51,11 @@ export function getItemKey(slot) {
   const key = effectsKey(slot.effects);
   let baseKey = key ? `${slot.id}#${key}` : slot.id;
   // 装备类型需要包含耐久度信息，避免不同耐久度的装备被合并
-  if (isEquipment && (slot.durability != null || slot.max_durability != null)) {
+  if (isEquipment && (slot.durability != null || slot.max_durability != null || slot.refine_level != null)) {
     const dur = slot.durability ?? 100;
     const maxDur = slot.max_durability ?? 100;
-    baseKey += `@${dur}/${maxDur}`;
+    const refineLevel = slot.refine_level ?? 0;
+    baseKey += `@${dur}/${maxDur}/+${refineLevel}`;
   }
   return baseKey;
 }
@@ -450,24 +451,26 @@ export function bagLimit(player) {
   return maxBagSlots(player.level);
 }
 
-export function addItem(player, itemId, qty = 1, effects = null, durability = null, max_durability = null) {
+export function addItem(player, itemId, qty = 1, effects = null, durability = null, max_durability = null, refine_level = null) {
   if (!player.inventory) player.inventory = [];
   const normalized = normalizeEffects(effects);
   const itemTemplate = ITEM_TEMPLATES[itemId];
   const isEquipment = itemTemplate && itemTemplate.slot;
   
-  // 装备类型根据耐久度分开存储，不堆叠
+  // 装备类型根据耐久度和锻造等级分开存储，不堆叠
   if (isEquipment) {
     const maxDur = 100;
     const finalDur = durability !== null ? durability : maxDur;
     const finalMaxDur = max_durability !== null ? max_durability : maxDur;
+    const finalRefineLevel = refine_level !== null ? refine_level : 0;
     
-    // 尝试找到耐久度完全相同的装备进行堆叠
+    // 尝试找到耐久度和锻造等级完全相同的装备进行堆叠
     const slot = player.inventory.find((i) => 
       i.id === itemId && 
       sameEffects(i.effects, normalized) &&
       i.durability === finalDur &&
-      i.max_durability === finalMaxDur
+      i.max_durability === finalMaxDur &&
+      (i.refine_level ?? 0) === finalRefineLevel
     );
     
     if (slot) {
@@ -478,7 +481,8 @@ export function addItem(player, itemId, qty = 1, effects = null, durability = nu
         qty, 
         effects: normalized,
         durability: finalDur,
-        max_durability: finalMaxDur
+        max_durability: finalMaxDur,
+        refine_level: finalRefineLevel
       });
     }
   } else {
@@ -490,6 +494,7 @@ export function addItem(player, itemId, qty = 1, effects = null, durability = nu
       const item = { id: itemId, qty, effects: normalized };
       if (durability !== null) item.durability = durability;
       if (max_durability !== null) item.max_durability = max_durability;
+      if (refine_level !== null) item.refine_level = refine_level;
       player.inventory.push(item);
     }
   }
@@ -508,18 +513,21 @@ export function normalizeInventory(player) {
     
     let finalDur = slot.durability;
     let finalMaxDur = slot.max_durability;
-    
-    // 只为装备添加默认耐久度
+    let finalRefineLevel = slot.refine_level;
+
+    // 只为装备添加默认耐久度和锻造等级
     if (isEquipment) {
       finalDur = slot.durability !== null ? slot.durability : 100;
       finalMaxDur = slot.max_durability !== null ? slot.max_durability : 100;
+      finalRefineLevel = slot.refine_level !== null ? slot.refine_level : 0;
     }
-    
-    const key = `${id}|${effectsKey(effects)}|${finalDur}|${finalMaxDur}`;
+
+    const key = `${id}|${effectsKey(effects)}|${finalDur}|${finalMaxDur}|${finalRefineLevel}`;
     const cur = merged.get(key) || { id, qty: 0, effects };
     if (isEquipment) {
       cur.durability = finalDur;
       cur.max_durability = finalMaxDur;
+      cur.refine_level = finalRefineLevel;
     }
     cur.qty += qty;
     merged.set(key, cur);
@@ -583,14 +591,15 @@ export function equipItem(player, itemId, effects = null) {
   normalizeEquipment(player);
   const slot = resolveEquipSlot(player, item);
   if (player.equipment[slot]) {
-    addItem(player, player.equipment[slot].id, 1, player.equipment[slot].effects, player.equipment[slot].durability, player.equipment[slot].max_durability);
+    addItem(player, player.equipment[slot].id, 1, player.equipment[slot].effects, player.equipment[slot].durability, player.equipment[slot].max_durability, player.equipment[slot].refine_level);
   }
 
   const maxDur = 100;
   // 保留背包中物品的耐久度，如果没有则初始化为满值
   const itemDur = has.durability != null ? has.durability : maxDur;
   const itemMaxDur = has.max_durability != null ? has.max_durability : maxDur;
-  player.equipment[slot] = { id: itemId, durability: itemDur, max_durability: itemMaxDur, effects: has.effects || null };
+  const itemRefineLevel = has.refine_level != null ? has.refine_level : 0;
+  player.equipment[slot] = { id: itemId, durability: itemDur, max_durability: itemMaxDur, effects: has.effects || null, refine_level: itemRefineLevel };
   removeItem(player, itemId, 1, has.effects);
   computeDerived(player);
   return { ok: true, msg: `\u5DF2\u88C5\u5907${item.name}\u3002` };
@@ -606,7 +615,7 @@ export function unequipItem(player, slot) {
   }
   const current = player.equipment[slot];
   if (!current) return { ok: false, msg: '\u8BE5\u90E8\u4F4D\u6CA1\u6709\u88C5\u5907\u3002' };
-  addItem(player, current.id, 1, current.effects, current.durability, current.max_durability);
+  addItem(player, current.id, 1, current.effects, current.durability, current.max_durability, current.refine_level);
   player.equipment[slot] = null;
   computeDerived(player);
   return { ok: true, msg: `\u5DF2\u5378\u4E0B${ITEM_TEMPLATES[current.id].name}\u3002` };

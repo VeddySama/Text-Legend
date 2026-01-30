@@ -47,7 +47,7 @@ export function getDefenseMultiplier(target) {
 }
 
 export function calcDamage(attacker, defender, power = 1) {
-  const atk = attacker.atk + randInt(0, Math.max(1, attacker.atk / 2));
+  const atk = Math.floor(attacker.atk * randInt(70, 100) / 100);
   let defBonus = 0;
   const buff = defender.status?.buffs?.defBuff;
   const defMultiplier = getDefenseMultiplier(defender);

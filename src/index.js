@@ -1514,7 +1514,7 @@ app.get('/admin/items/search', async (req, res) => {
   const limit = parseInt(req.query.limit) || 20;
 
   try {
-    const result = await searchItems(keyword, page, limit);
+    const result = await searchItemsDb(keyword, page, limit);
     res.json({ ok: true, ...result });
   } catch (err) {
     res.status(500).json({ error: '搜索装备失败: ' + err.message });

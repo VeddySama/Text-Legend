@@ -42,7 +42,10 @@ import {
   addItemDrop as addItemDropDb,
   deleteItemDrop as deleteItemDropDb,
   setItemDrops as setItemDropsDb,
-  searchItems as searchItemsDb
+  searchItems as searchItemsDb,
+  getItemTemplates,
+  checkImportedItems,
+  importItems as importItemsDb
 } from './db/items_admin.js';
 import { runMigrations } from './db/migrate.js';
 import { newCharacter, computeDerived, gainExp, addItem, removeItem, getItemKey, normalizeInventory, normalizeEquipment } from './game/player.js';
@@ -1430,6 +1433,55 @@ app.get('/admin/mobs', async (req, res) => {
     res.json({ ok: true, mobs });
   } catch (err) {
     res.status(500).json({ error: '获取怪物列表失败: ' + err.message });
+  }
+});
+
+// 获取ITEM_TEMPLATES中的装备列表
+app.get('/admin/items/templates', async (req, res) => {
+  const admin = await requireAdmin(req);
+  if (!admin) return res.status(401).json({ error: '无管理员权限。' });
+
+  try {
+    const templates = getItemTemplates();
+    const check = await checkImportedItems(templates.map(t => t.item_id));
+
+    res.json({ ok: true, templates, imported: new Set(check.imported) });
+  } catch (err) {
+    res.status(500).json({ error: '获取装备模板失败: ' + err.message });
+  }
+});
+
+// 检查装备导入状态
+app.get('/admin/items/import/check', async (req, res) => {
+  const admin = await requireAdmin(req);
+  if (!admin) return res.status(401).json({ error: '无管理员权限。' });
+
+  const itemIds = req.query.ids ? req.query.ids.split(',') : [];
+
+  try {
+    const check = await checkImportedItems(itemIds);
+    res.json({ ok: true, ...check });
+  } catch (err) {
+    res.status(500).json({ error: '检查导入状态失败: ' + err.message });
+  }
+});
+
+// 导入装备
+app.post('/admin/items/import', async (req, res) => {
+  const admin = await requireAdmin(req);
+  if (!admin) return res.status(401).json({ error: '无管理员权限。' });
+
+  const { itemIds } = req.body;
+
+  if (!itemIds || !Array.isArray(itemIds) || itemIds.length === 0) {
+    return res.status(400).json({ error: '请选择要导入的装备。' });
+  }
+
+  try {
+    const results = await importItemsDb(itemIds);
+    res.json({ ok: true, results });
+  } catch (err) {
+    res.status(500).json({ error: '导入装备失败: ' + err.message });
   }
 });
 

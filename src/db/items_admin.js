@@ -1,4 +1,6 @@
 import knex from './index.js';
+import { ITEM_TEMPLATES } from '../game/items.js';
+import { MOB_TEMPLATES } from '../game/mobs.js';
 
 /**
  * 获取所有装备列表
@@ -187,4 +189,134 @@ export async function searchItems(keyword, page = 1, limit = 20) {
     .count('* as count');
 
   return { items, total: parseInt(count), page, limit };
+}
+
+/**
+ * 获取所有ITEM_TEMPLATES中的装备
+ */
+export function getItemTemplates() {
+  return Object.entries(ITEM_TEMPLATES)
+    .map(([key, template]) => ({
+      item_id: key,
+      name: template.name,
+      type: template.type,
+      slot: template.slot || null,
+      rarity: template.rarity || 'common',
+      atk: template.atk || 0,
+      def: template.def || 0,
+      mag: template.mag || 0,
+      spirit: template.spirit || 0,
+      hp: template.hp || 0,
+      mp: template.mp || 0,
+      mdef: template.mdef || 0,
+      dex: template.dex || 0,
+      price: template.price || 0,
+      untradable: template.untradable || false,
+      unconsignable: template.unconsignable || false,
+      boss_only: template.bossOnly || false,
+      world_boss_only: template.worldBossOnly || false
+    }))
+    .filter(item => item.type !== 'currency'); // 排除金币
+}
+
+/**
+ * 检查装备是否已导入
+ */
+export async function checkImportedItems(itemIds) {
+  const existingItems = await knex('items')
+    .whereIn('item_id', itemIds)
+    .select('item_id');
+
+  const existingIds = new Set(existingItems.map(item => item.item_id));
+  return {
+    imported: Array.from(existingIds),
+    notImported: itemIds.filter(id => !existingIds.has(id))
+  };
+}
+
+/**
+ * 导入装备（支持单个或批量）
+ */
+export async function importItems(itemIds) {
+  const results = {
+    success: [],
+    skipped: [],
+    failed: []
+  };
+
+  for (const itemId of itemIds) {
+    try {
+      // 检查是否已存在
+      const existing = await getItemByItemId(itemId);
+      if (existing) {
+        results.skipped.push({ itemId, reason: '已存在' });
+        continue;
+      }
+
+      // 从ITEM_TEMPLATES获取装备数据
+      const template = ITEM_TEMPLATES[itemId];
+      if (!template) {
+        results.failed.push({ itemId, reason: '装备不存在于ITEM_TEMPLATES' });
+        continue;
+      }
+
+      // 创建装备
+      const result = await createItem({
+        item_id: itemId,
+        name: template.name,
+        type: template.type,
+        slot: template.slot || null,
+        rarity: template.rarity || 'common',
+        atk: template.atk || 0,
+        def: template.def || 0,
+        mag: template.mag || 0,
+        spirit: template.spirit || 0,
+        hp: template.hp || 0,
+        mp: template.mp || 0,
+        mdef: template.mdef || 0,
+        dex: template.dex || 0,
+        price: template.price || 0,
+        untradable: template.untradable || false,
+        unconsignable: template.unconsignable || false,
+        boss_only: template.bossOnly || false,
+        world_boss_only: template.worldBossOnly || false
+      });
+
+      // 自动导入掉落配置（从MOB_TEMPLATES中查找）
+      for (const [mobId, mob] of Object.entries(MOB_TEMPLATES)) {
+        if (mob.drops) {
+          const drop = mob.drops.find(d => d.id === itemId);
+          if (drop) {
+            await addItemDrop(result.id, mobId, drop.chance);
+          }
+        }
+      }
+
+      results.success.push({ itemId, id: result.id, name: result.name });
+    } catch (err) {
+      results.failed.push({ itemId, reason: err.message });
+    }
+  }
+
+  return results;
+}
+
+/**
+ * 获取装备的所有掉落源（从MOB_TEMPLATES中）
+ */
+export function getItemDropSources(itemId) {
+  const sources = [];
+  for (const [mobId, mob] of Object.entries(MOB_TEMPLATES)) {
+    if (mob.drops) {
+      const drop = mob.drops.find(d => d.id === itemId);
+      if (drop) {
+        sources.push({
+          mob_id: mobId,
+          mob_name: mob.name,
+          drop_chance: drop.chance
+        });
+      }
+    }
+  }
+  return sources;
 }

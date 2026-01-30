@@ -4742,6 +4742,17 @@ const itemsRefreshBtn = document.getElementById('items-refresh-btn');
 const itemsCreateBtn = document.getElementById('items-create-btn');
 const itemsPrevPageBtn = document.getElementById('items-prev-page');
 const itemsNextPageBtn = document.getElementById('items-next-page');
+const itemsImportBtn = document.getElementById('items-import-btn');
+
+const itemsImportModal = document.getElementById('items-import-modal');
+const importItemsList = document.getElementById('import-items-list');
+const importItemsInfo = document.getElementById('import-items-info');
+const importSelectAll = document.getElementById('import-select-all');
+const importItemsCancelBtn = document.getElementById('import-items-cancel');
+const importItemsConfirmBtn = document.getElementById('import-items-confirm');
+
+let itemTemplates = [];
+let importedItemIds = new Set();
 
 const itemEditModal = document.getElementById('item-edit-modal');
 const itemEditTitle = document.getElementById('item-edit-title');
@@ -4865,6 +4876,100 @@ function getRarityName(rarity) {
     supreme: '至尊'
   };
   return rarityNames[rarity] || rarity;
+}
+
+async function loadItemTemplates() {
+  const res = await api('/admin/items/templates', 'GET');
+  if (!res.ok) return;
+
+  itemTemplates = res.templates;
+  importedItemIds = res.imported;
+
+  renderImportItems();
+}
+
+function renderImportItems(keyword = '') {
+  importItemsList.innerHTML = '';
+  const filteredTemplates = keyword
+    ? itemTemplates.filter(t =>
+      t.name.toLowerCase().includes(keyword.toLowerCase()) ||
+      t.item_id.toLowerCase().includes(keyword.toLowerCase())
+    )
+    : itemTemplates;
+
+  filteredTemplates.forEach(template => {
+    const isImported = importedItemIds.has(template.item_id);
+    const tr = document.createElement('tr');
+    tr.style.opacity = isImported ? '0.5' : '1';
+
+    const mainStats = [];
+    if (template.atk > 0) mainStats.push(`攻击${template.atk}`);
+    if (template.mag > 0) mainStats.push(`魔法${template.mag}`);
+    if (template.spirit > 0) mainStats.push(`道术${template.spirit}`);
+    if (template.def > 0) mainStats.push(`防御${template.def}`);
+    if (template.mdef > 0) mainStats.push(`魔御${template.mdef}`);
+    if (template.hp > 0) mainStats.push(`生命${template.hp}`);
+    if (template.mp > 0) mainStats.push(`魔法值${template.mp}`);
+    if (template.dex > 0) mainStats.push(`敏捷${template.dex}`);
+
+    tr.innerHTML = `
+      <td style="text-align: center;">
+        <input type="checkbox" class="import-item-checkbox" data-id="${template.item_id}" ${isImported ? 'disabled' : ''}>
+      </td>
+      <td style="font-size: 12px;">${template.item_id}</td>
+      <td style="font-size: 13px;">${template.name}</td>
+      <td style="font-size: 12px;">${getTypeName(template.type)}</td>
+      <td style="font-size: 12px;">${getRarityName(template.rarity)}</td>
+      <td style="font-size: 12px;">${mainStats.join(', ') || '-'}</td>
+      <td style="font-size: 12px;">${template.price || '-'}</td>
+      <td style="font-size: 12px;">${isImported ? '<span style="color: #999;">已导入</span>' : '<span style="color: #4CAF50;">可导入</span>'}</td>
+    `;
+    importItemsList.appendChild(tr);
+  });
+
+  importItemsInfo.textContent = `共 ${filteredTemplates.length} 个装备模板，已导入 ${importedItemIds.size} 个`;
+}
+
+function openImportModal() {
+  itemsImportModal.classList.remove('hidden');
+  if (itemTemplates.length === 0) {
+    loadItemTemplates();
+  } else {
+    renderImportItems();
+  }
+}
+
+async function importSelectedItems() {
+  const checkboxes = document.querySelectorAll('.import-item-checkbox:checked:not(:disabled)');
+  const selectedIds = Array.from(checkboxes).map(cb => cb.dataset.id);
+
+  if (selectedIds.length === 0) {
+    await customAlert('提示', '请选择要导入的装备');
+    return;
+  }
+
+  const confirmed = await customConfirm('确认导入', `确定要导入 ${selectedIds.length} 个装备吗？`);
+  if (!confirmed) return;
+
+  const res = await api('/admin/items/import', 'POST', { itemIds: selectedIds });
+  if (!res.ok) {
+    await customAlert('导入失败', res.error || '导入装备失败');
+    return;
+  }
+
+  const { results } = res;
+  await customAlert(
+    '导入完成',
+    `成功: ${results.success.length} 个\n跳过: ${results.skipped.length} 个\n失败: ${results.failed.length} 个`
+  );
+
+  // 更新已导入的装备ID集合
+  results.success.forEach(item => {
+    importedItemIds.add(item.itemId);
+  });
+
+  renderImportItems();
+  loadItems(itemsCurrentPage, itemsCurrentKeyword);
 }
 
 function openItemEditModal(item = null) {
@@ -5098,5 +5203,27 @@ if (itemEditSaveBtn) {
 
 if (itemDropAddBtn) {
   itemDropAddBtn.addEventListener('click', addItemDrop);
+}
+
+// 导入装备事件
+if (itemsImportBtn) {
+  itemsImportBtn.addEventListener('click', openImportModal);
+}
+
+if (importItemsCancelBtn) {
+  importItemsCancelBtn.addEventListener('click', () => {
+    itemsImportModal.classList.add('hidden');
+  });
+}
+
+if (importItemsConfirmBtn) {
+  importItemsConfirmBtn.addEventListener('click', importSelectedItems);
+}
+
+if (importSelectAll) {
+  importSelectAll.addEventListener('change', (e) => {
+    const checkboxes = document.querySelectorAll('.import-item-checkbox:not(:disabled)');
+    checkboxes.forEach(cb => cb.checked = e.target.checked);
+  });
 }
 

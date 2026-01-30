@@ -425,6 +425,104 @@ body.theme-dark .block {
   margin-bottom: 10px;
 }
 
+/* 装备编辑器输入框样式 */
+.input-compact {
+  width: 120px;
+  min-width: 120px;
+  padding: 4px 8px;
+  font-size: 12px;
+}
+
+/* 暗黑模式下的输入框 */
+body.theme-dark .input-compact,
+body.theme-dark #item-drop-chance {
+  background: #2d2a24;
+  border-color: #4a4035;
+  color: var(--ink);
+}
+
+body.theme-dark .input-compact:focus,
+body.theme-dark #item-drop-chance:focus {
+  outline: none;
+  border-color: #e08a3e;
+  box-shadow: 0 0 0 2px rgba(224, 138, 62, 0.15);
+}
+
+/* 暗黑模式下的模态框背景 */
+body.theme-dark .modal {
+  background: rgba(0, 0, 0, 0.75);
+}
+
+/* 暗黑模式下的模态框卡片 */
+body.theme-dark .modal-card {
+  background: #221a14;
+  border-color: #3c2b1d;
+}
+
+/* 暗黑模式下的模态框标题 */
+body.theme-dark .modal-title {
+  color: #efe2d2;
+}
+
+/* 暗黑模式下的表格 */
+body.theme-dark table {
+  background: #1f1814;
+  border-color: #3c2b1d;
+}
+
+body.theme-dark thead {
+  background: #2d2a24;
+}
+
+body.theme-dark thead th {
+  color: #efe2d2;
+}
+
+body.theme-dark tbody td {
+  border-color: #3c2b1d;
+  color: #d4c8b8;
+}
+
+/* 暗黑模式下的掉落表格 */
+body.theme-dark #item-drops-table,
+body.theme-dark #import-items-table {
+  background: #1f1814;
+}
+
+/* 暗黑模式下的禁用状态 */
+body.theme-dark .input-compact:disabled {
+  background: #1a1410;
+  border-color: #3c2b1d;
+  color: #6b5d52;
+  cursor: not-allowed;
+}
+
+/* 暗黑模式下的复选框 */
+body.theme-dark input[type="checkbox"] {
+  accent-color: #e08a3e;
+}
+
+/* 暗黑模式下的提示文本 */
+body.theme-dark .modal-body p,
+body.theme-dark .modal-body-text {
+  color: #a89a88;
+}
+
+/* 暗黑模式下的导入对话框 */
+body.theme-dark #import-items-info {
+  color: #a89a88;
+}
+
+body.theme-dark #import-items-table thead th {
+  border-color: #3c2b1d;
+  color: #efe2d2;
+}
+
+body.theme-dark #import-items-table tbody td {
+  border-color: #3c2b1d;
+  color: #d4c8b8;
+}
+
 #prompt-input {
   width: 100%;
   padding: 6px 8px;

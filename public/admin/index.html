@@ -553,6 +553,7 @@
               <button id="items-search-btn" class="btn-small">搜索</button>
               <button id="items-refresh-btn" class="btn-small">刷新列表</button>
               <button id="items-create-btn" class="btn-small" style="background: #2196F3;">+ 新增装备</button>
+              <button id="items-import-btn" class="btn-small" style="background: #4CAF50;">从游戏导入装备</button>
             </div>
             <div class="table-container">
               <table id="items-table">
@@ -658,21 +659,22 @@
     <div class="modal-card" style="max-width: 900px;">
       <div class="modal-title" id="item-edit-title">编辑装备</div>
       <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
+
         <input id="item-edit-id" type="hidden">
 
         <div class="table-container">
           <table style="font-size: 13px;">
             <tbody>
               <tr>
-                <td style="width: 100px;"><strong>装备ID:</strong></td>
-                <td><input id="item-edit-item-id" type="text" style="width: 200px;"></td>
-                <td style="width: 100px;"><strong>装备名称:</strong></td>
-                <td><input id="item-edit-name" type="text" style="width: 200px;"></td>
+                <td style="width: 80px;"><strong>装备ID:</strong></td>
+                <td><input id="item-edit-item-id" type="text" class="input-compact"></td>
+                <td style="width: 80px;"><strong>装备名称:</strong></td>
+                <td><input id="item-edit-name" type="text" class="input-compact"></td>
               </tr>
               <tr>
                 <td><strong>装备类型:</strong></td>
                 <td>
-                  <select id="item-edit-type" style="width: 200px;">
+                  <select id="item-edit-type" class="input-compact">
                     <option value="weapon">武器</option>
                     <option value="armor">胸甲</option>
                     <option value="helmet">头盔</option>
@@ -688,7 +690,7 @@
                 </td>
                 <td><strong>装备槽位:</strong></td>
                 <td>
-                  <select id="item-edit-slot" style="width: 200px;">
+                  <select id="item-edit-slot" class="input-compact">
                     <option value="weapon">武器</option>
                     <option value="chest">胸甲</option>
                     <option value="head">头盔</option>
@@ -705,7 +707,7 @@
               <tr>
                 <td><strong>稀有度:</strong></td>
                 <td>
-                  <select id="item-edit-rarity" style="width: 200px;">
+                  <select id="item-edit-rarity" class="input-compact">
                     <option value="common">普通</option>
                     <option value="uncommon">优秀</option>
                     <option value="rare">稀有</option>
@@ -715,31 +717,31 @@
                   </select>
                 </td>
                 <td><strong>价格:</strong></td>
-                <td><input id="item-edit-price" type="number" min="0" style="width: 200px;"></td>
+                <td><input id="item-edit-price" type="number" min="0" class="input-compact"></td>
               </tr>
               <tr>
                 <td><strong>攻击:</strong></td>
-                <td><input id="item-edit-atk" type="number" min="0" style="width: 200px;"></td>
+                <td><input id="item-edit-atk" type="number" min="0" class="input-compact"></td>
                 <td><strong>魔法:</strong></td>
-                <td><input id="item-edit-mag" type="number" min="0" style="width: 200px;"></td>
+                <td><input id="item-edit-mag" type="number" min="0" class="input-compact"></td>
               </tr>
               <tr>
                 <td><strong>道术:</strong></td>
-                <td><input id="item-edit-spirit" type="number" min="0" style="width: 200px;"></td>
+                <td><input id="item-edit-spirit" type="number" min="0" class="input-compact"></td>
                 <td><strong>生命值:</strong></td>
-                <td><input id="item-edit-hp" type="number" min="0" style="width: 200px;"></td>
+                <td><input id="item-edit-hp" type="number" min="0" class="input-compact"></td>
               </tr>
               <tr>
                 <td><strong>魔法值:</strong></td>
-                <td><input id="item-edit-mp" type="number" min="0" style="width: 200px;"></td>
+                <td><input id="item-edit-mp" type="number" min="0" class="input-compact"></td>
                 <td><strong>防御:</strong></td>
-                <td><input id="item-edit-def" type="number" min="0" style="width: 200px;"></td>
+                <td><input id="item-edit-def" type="number" min="0" class="input-compact"></td>
               </tr>
               <tr>
                 <td><strong>魔御:</strong></td>
-                <td><input id="item-edit-mdef" type="number" min="0" style="width: 200px;"></td>
+                <td><input id="item-edit-mdef" type="number" min="0" class="input-compact"></td>
                 <td><strong>敏捷:</strong></td>
-                <td><input id="item-edit-dex" type="number" min="0" style="width: 200px;"></td>
+                <td><input id="item-edit-dex" type="number" min="0" class="input-compact"></td>
               </tr>
             </tbody>
           </table>
@@ -779,10 +781,10 @@
             </table>
           </div>
           <div style="margin-top: 8px;">
-            <select id="item-drop-mob-select" style="max-width: 200px;">
+            <select id="item-drop-mob-select" class="input-compact" style="max-width: 180px;">
               <option value="">选择怪物</option>
             </select>
-            <input id="item-drop-chance" type="number" min="0" max="1" step="0.0001" placeholder="掉落概率 (0-1)" style="max-width: 120px;">
+            <input id="item-drop-chance" type="number" min="0" max="1" step="0.0001" placeholder="掉落概率 (0-1)" class="input-compact" style="max-width: 100px;">
             <button id="item-drop-add-btn" class="btn-small">添加掉落</button>
           </div>
         </div>
@@ -790,6 +792,47 @@
       <div class="modal-actions">
         <button id="item-edit-cancel" class="btn-small">取消</button>
         <button id="item-edit-save" class="btn-small">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 导入装备对话框 -->
+  <div id="items-import-modal" class="modal hidden">
+    <div class="modal-card" style="max-width: 900px;">
+      <div class="modal-title">从游戏导入装备</div>
+      <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
+        <p class="modal-body-text" style="margin-bottom: 12px; font-size: 13px;">
+          选择要从游戏代码（ITEM_TEMPLATES）中导入的装备。
+          已导入的装备会显示为灰色。
+        </p>
+        <div class="table-container">
+          <table id="import-items-table">
+            <thead>
+              <tr>
+                <th style="width: 40px;"><input type="checkbox" id="import-select-all"></th>
+                <th>装备ID</th>
+                <th>名称</th>
+                <th>类型</th>
+                <th>稀有度</th>
+                <th>主要属性</th>
+                <th>价格</th>
+                <th>状态</th>
+              </tr>
+            </thead>
+            <tbody id="import-items-list">
+              <tr>
+                <td colspan="8" style="text-align: center; color: #999;">加载中...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="row" style="margin-top: 12px;">
+          <div id="import-items-info" style="color: #666;"></div>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button id="import-items-cancel" class="btn-small">取消</button>
+        <button id="import-items-confirm" class="btn-small" style="background: #4CAF50;">导入选中装备</button>
       </div>
     </div>
   </div>

@@ -31,6 +31,19 @@ import {
   createConsignmentHistory
 } from './db/consignment_history.js';
 import { listAllSponsors, addSponsor, updateSponsor, deleteSponsor, getSponsorById, updateSponsorCustomTitle, getSponsorByPlayerName } from './db/sponsors.js';
+import {
+  listItems,
+  getItemById,
+  getItemByItemId,
+  createItem as createItemDb,
+  updateItem as updateItemDb,
+  deleteItem as deleteItemDb,
+  getItemDrops,
+  addItemDrop as addItemDropDb,
+  deleteItemDrop as deleteItemDropDb,
+  setItemDrops as setItemDropsDb,
+  searchItems as searchItemsDb
+} from './db/items_admin.js';
 import { runMigrations } from './db/migrate.js';
 import { newCharacter, computeDerived, gainExp, addItem, removeItem, getItemKey, normalizeInventory, normalizeEquipment } from './game/player.js';
 import { handleCommand, awardKill, summonStats } from './game/commands.js';
@@ -1355,6 +1368,233 @@ app.delete('/admin/sponsors/:id', async (req, res) => {
 app.get('/api/sponsors', async (req, res) => {
   const sponsors = await listAllSponsors();
   res.json({ ok: true, sponsors });
+});
+
+// 更新赞助玩家自定义称号接口
+app.post('/api/sponsors/custom-title', async (req, res) => {
+  const { token, customTitle, characterName } = req.body || {};
+  if (!token) {
+    return res.status(401).json({ error: '未登录。' });
+  }
+  if (!customTitle || typeof customTitle !== 'string') {
+    return res.status(400).json({ error: '缺少参数。' });
+  }
+  if (!characterName || typeof characterName !== 'string') {
+    return res.status(400).json({ error: '缺少角色名称。' });
+  }
+  const trimmedTitle = customTitle.trim();
+  if (trimmedTitle.length > 10) {
+    return res.status(400).json({ error: '称号长度不能超过10个字。' });
+  }
+  // 过滤特殊字符，避免程序异常
+  const invalidChars = /[<>\"'&\\\/\x00-\x1F]/;
+  if (invalidChars.test(trimmedTitle)) {
+    return res.status(400).json({ error: '称号包含非法字符。' });
+  }
+  try {
+    const session = await getSession(token);
+    if (!session) {
+      return res.status(401).json({ error: '会话已过期，请重新登录。' });
+    }
+
+    // 检查是否是赞助玩家
+    const sponsor = await getSponsorByPlayerName(characterName);
+    if (!sponsor) {
+      return res.status(403).json({ error: '您不是赞助玩家，无法设置自定义称号。' });
+    }
+
+    await updateSponsorCustomTitle(characterName, trimmedTitle || '赞助玩家');
+    io.emit('sponsors_updated');
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: '设置称号失败: ' + err.message });
+  }
+});
+
+// ==================== 装备管理接口 ====================
+
+// 获取怪物列表（用于装备掉落配置）
+app.get('/admin/mobs', async (req, res) => {
+  const admin = await requireAdmin(req);
+  if (!admin) return res.status(401).json({ error: '无管理员权限。' });
+
+  try {
+    const mobs = Object.entries(MOB_TEMPLATES).map(([id, mob]) => ({
+      id,
+      name: mob.name,
+      level: mob.level,
+      specialBoss: mob.specialBoss || false,
+      worldBoss: mob.worldBoss || false
+    })).sort((a, b) => a.level - b.level);
+
+    res.json({ ok: true, mobs });
+  } catch (err) {
+    res.status(500).json({ error: '获取怪物列表失败: ' + err.message });
+  }
+});
+
+// 获取装备列表
+app.get('/admin/items', async (req, res) => {
+  const admin = await requireAdmin(req);
+  if (!admin) return res.status(401).json({ error: '无管理员权限。' });
+
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 20;
+
+  try {
+    const result = await listItems(page, limit);
+    res.json({ ok: true, ...result });
+  } catch (err) {
+    res.status(500).json({ error: '获取装备列表失败: ' + err.message });
+  }
+});
+
+// 搜索装备
+app.get('/admin/items/search', async (req, res) => {
+  const admin = await requireAdmin(req);
+  if (!admin) return res.status(401).json({ error: '无管理员权限。' });
+
+  const keyword = req.query.keyword || '';
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 20;
+
+  try {
+    const result = await searchItems(keyword, page, limit);
+    res.json({ ok: true, ...result });
+  } catch (err) {
+    res.status(500).json({ error: '搜索装备失败: ' + err.message });
+  }
+});
+
+// 获取装备详情
+app.get('/admin/items/:id', async (req, res) => {
+  const admin = await requireAdmin(req);
+  if (!admin) return res.status(401).json({ error: '无管理员权限。' });
+
+  const { id } = req.params;
+
+  try {
+    const item = await getItemById(parseInt(id));
+    if (!item) {
+      return res.status(404).json({ error: '装备不存在。' });
+    }
+    const drops = await getItemDrops(item.id);
+    res.json({ ok: true, item, drops });
+  } catch (err) {
+    res.status(500).json({ error: '获取装备详情失败: ' + err.message });
+  }
+});
+
+// 创建装备
+app.post('/admin/items', async (req, res) => {
+  const admin = await requireAdmin(req);
+  if (!admin) return res.status(401).json({ error: '无管理员权限。' });
+
+  const data = req.body;
+
+  if (!data.item_id || !data.name || !data.type) {
+    return res.status(400).json({ error: '缺少必要参数。' });
+  }
+
+  try {
+    const result = await createItemDb(data);
+    res.json({ ok: true, item: result });
+  } catch (err) {
+    res.status(500).json({ error: '创建装备失败: ' + err.message });
+  }
+});
+
+// 更新装备
+app.put('/admin/items/:id', async (req, res) => {
+  const admin = await requireAdmin(req);
+  if (!admin) return res.status(401).json({ error: '无管理员权限。' });
+
+  const { id } = req.params;
+  const data = req.body;
+
+  try {
+    const item = await updateItemDb(parseInt(id), data);
+    if (!item) {
+      return res.status(404).json({ error: '装备不存在。' });
+    }
+    res.json({ ok: true, item });
+  } catch (err) {
+    res.status(500).json({ error: '更新装备失败: ' + err.message });
+  }
+});
+
+// 删除装备
+app.delete('/admin/items/:id', async (req, res) => {
+  const admin = await requireAdmin(req);
+  if (!admin) return res.status(401).json({ error: '无管理员权限。' });
+
+  const { id } = req.params;
+
+  try {
+    await deleteItemDb(parseInt(id));
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: '删除装备失败: ' + err.message });
+  }
+});
+
+// 添加装备掉落配置
+app.post('/admin/items/:id/drops', async (req, res) => {
+  const admin = await requireAdmin(req);
+  if (!admin) return res.status(401).json({ error: '无管理员权限。' });
+
+  const { id } = req.params;
+  const { mobId, dropChance } = req.body;
+
+  if (!mobId || dropChance === undefined || dropChance === null) {
+    return res.status(400).json({ error: '缺少必要参数。' });
+  }
+
+  if (dropChance < 0 || dropChance > 1) {
+    return res.status(400).json({ error: '掉落概率必须在0-1之间。' });
+  }
+
+  try {
+    const drop = await addItemDropDb(parseInt(id), mobId, parseFloat(dropChance));
+    res.json({ ok: true, drop });
+  } catch (err) {
+    res.status(500).json({ error: '添加掉落配置失败: ' + err.message });
+  }
+});
+
+// 批量设置装备掉落配置
+app.put('/admin/items/:id/drops', async (req, res) => {
+  const admin = await requireAdmin(req);
+  if (!admin) return res.status(401).json({ error: '无管理员权限。' });
+
+  const { id } = req.params;
+  const { drops } = req.body;
+
+  if (!drops || !Array.isArray(drops)) {
+    return res.status(400).json({ error: '掉落配置格式错误。' });
+  }
+
+  try {
+    const result = await setItemDropsDb(parseInt(id), drops);
+    res.json({ ok: true, drops: result });
+  } catch (err) {
+    res.status(500).json({ error: '设置掉落配置失败: ' + err.message });
+  }
+});
+
+// 删除装备掉落配置
+app.delete('/admin/items/:itemId/drops/:dropId', async (req, res) => {
+  const admin = await requireAdmin(req);
+  if (!admin) return res.status(401).json({ error: '无管理员权限。' });
+
+  const { dropId } = req.params;
+
+  try {
+    await deleteItemDropDb(parseInt(dropId));
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: '删除掉落配置失败: ' + err.message });
+  }
 });
 
 // 更新赞助玩家自定义称号接口

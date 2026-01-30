@@ -419,6 +419,12 @@ body.theme-dark .block {
   white-space: pre-line;
 }
 
+.modal-body {
+  max-height: 70vh;
+  overflow-y: auto;
+  margin-bottom: 10px;
+}
+
 #prompt-input {
   width: 100%;
   padding: 6px 8px;

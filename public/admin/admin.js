@@ -4731,3 +4731,372 @@ if (adminPwSubmit) {
     }
   });
 }
+
+// ==================== 装备管理 ====================
+
+const itemsList = document.getElementById('items-list');
+const itemsPaginationInfo = document.getElementById('items-pagination-info');
+const itemsSearchInput = document.getElementById('items-search');
+const itemsSearchBtn = document.getElementById('items-search-btn');
+const itemsRefreshBtn = document.getElementById('items-refresh-btn');
+const itemsCreateBtn = document.getElementById('items-create-btn');
+const itemsPrevPageBtn = document.getElementById('items-prev-page');
+const itemsNextPageBtn = document.getElementById('items-next-page');
+
+const itemEditModal = document.getElementById('item-edit-modal');
+const itemEditTitle = document.getElementById('item-edit-title');
+const itemEditSaveBtn = document.getElementById('item-edit-save');
+const itemEditCancelBtn = document.getElementById('item-edit-cancel');
+const itemDropAddBtn = document.getElementById('item-drop-add-btn');
+const itemDropMobSelect = document.getElementById('item-drop-mob-select');
+const itemDropChance = document.getElementById('item-drop-chance');
+const itemDropsList = document.getElementById('item-drops-list');
+
+let itemsCurrentPage = 1;
+let itemsCurrentKeyword = '';
+let itemsCurrentItemId = null;
+let mobsList = [];
+let itemDropsCache = [];
+
+async function loadItems(page = 1, keyword = '') {
+  itemsCurrentPage = page;
+  itemsCurrentKeyword = keyword;
+
+  const url = keyword
+    ? `/admin/items/search?keyword=${encodeURIComponent(keyword)}&page=${page}&limit=20`
+    : `/admin/items?page=${page}&limit=20`;
+
+  const res = await api(url, 'GET');
+  if (!res.ok) return;
+
+  itemsList.innerHTML = '';
+  res.items.forEach(item => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td style="font-size: 12px;">${item.id}</td>
+      <td style="font-size: 13px;">${item.name}</td>
+      <td style="font-size: 12px;">${getTypeName(item.type)}</td>
+      <td style="font-size: 12px;">${item.slot || '-'}</td>
+      <td style="font-size: 12px;">${getRarityName(item.rarity)}</td>
+      <td style="font-size: 12px;">${item.atk}</td>
+      <td style="font-size: 12px;">${item.mag}</td>
+      <td style="font-size: 12px;">${item.spirit}</td>
+      <td style="font-size: 12px;">${item.def}</td>
+      <td style="font-size: 12px;">${item.mdef}</td>
+      <td>
+        <button class="btn-small" onclick="editItem(${item.id})">编辑</button>
+        <button class="btn-small" style="background: #c00;" onclick="deleteItem(${item.id})">删除</button>
+      </td>
+    `;
+    itemsList.appendChild(tr);
+  });
+
+  itemsPaginationInfo.textContent = `第 ${page} 页，共 ${Math.ceil(res.total / res.limit)} 页，总计 ${res.total} 条`;
+}
+
+async function loadMobs() {
+  const res = await api('/admin/mobs', 'GET');
+  if (!res.ok) return;
+
+  mobsList = res.mobs;
+  itemDropMobSelect.innerHTML = '<option value="">选择怪物</option>';
+  mobsList.forEach(mob => {
+    const option = document.createElement('option');
+    option.value = mob.id;
+    option.textContent = `${mob.name} (Lv.${mob.level})${mob.specialBoss ? ' [特殊]' : ''}${mob.worldBoss ? ' [世界]' : ''}`;
+    itemDropMobSelect.appendChild(option);
+  });
+}
+
+async function loadItemDrops(itemId) {
+  const res = await api(`/admin/items/${itemId}`, 'GET');
+  if (!res.ok) return;
+
+  itemDropsCache = res.drops;
+  renderItemDrops();
+}
+
+function renderItemDrops() {
+  itemDropsList.innerHTML = '';
+  if (itemDropsCache.length === 0) {
+    itemDropsList.innerHTML = '<tr><td colspan="3" style="text-align: center; color: #999;">暂无掉落配置</td></tr>';
+    return;
+  }
+
+  itemDropsCache.forEach(drop => {
+    const mob = mobsList.find(m => m.id === drop.mob_id);
+    const mobName = mob ? mob.name : drop.mob_id;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${mobName}</td>
+      <td>${(drop.drop_chance * 100).toFixed(2)}%</td>
+      <td>
+        <button class="btn-small" style="background: #c00;" onclick="deleteItemDrop(${drop.id})">删除</button>
+      </td>
+    `;
+    itemDropsList.appendChild(tr);
+  });
+}
+
+function getTypeName(type) {
+  const typeNames = {
+    weapon: '武器',
+    armor: '胸甲',
+    helmet: '头盔',
+    boots: '鞋子',
+    belt: '腰带',
+    necklace: '项链',
+    ring: '戒指',
+    bracelet: '手镯',
+    consumable: '消耗品',
+    book: '技能书',
+    material: '材料'
+  };
+  return typeNames[type] || type;
+}
+
+function getRarityName(rarity) {
+  const rarityNames = {
+    common: '普通',
+    uncommon: '优秀',
+    rare: '稀有',
+    epic: '史诗',
+    legendary: '传说',
+    supreme: '至尊'
+  };
+  return rarityNames[rarity] || rarity;
+}
+
+function openItemEditModal(item = null) {
+  if (item) {
+    itemEditTitle.textContent = '编辑装备';
+    document.getElementById('item-edit-id').value = item.id;
+    document.getElementById('item-edit-item-id').value = item.item_id;
+    document.getElementById('item-edit-name').value = item.name;
+    document.getElementById('item-edit-type').value = item.type;
+    document.getElementById('item-edit-slot').value = item.slot || 'weapon';
+    document.getElementById('item-edit-rarity').value = item.rarity;
+    document.getElementById('item-edit-price').value = item.price;
+    document.getElementById('item-edit-atk').value = item.atk;
+    document.getElementById('item-edit-mag').value = item.mag;
+    document.getElementById('item-edit-spirit').value = item.spirit;
+    document.getElementById('item-edit-hp').value = item.hp;
+    document.getElementById('item-edit-mp').value = item.mp;
+    document.getElementById('item-edit-def').value = item.def;
+    document.getElementById('item-edit-mdef').value = item.mdef;
+    document.getElementById('item-edit-dex').value = item.dex;
+    document.getElementById('item-edit-untradable').checked = item.untradable;
+    document.getElementById('item-edit-unconsignable').checked = item.unconsignable;
+    document.getElementById('item-edit-boss-only').checked = item.boss_only;
+    document.getElementById('item-edit-world-boss-only').checked = item.world_boss_only;
+    itemsCurrentItemId = item.id;
+    loadItemDrops(item.id);
+  } else {
+    itemEditTitle.textContent = '新增装备';
+    document.getElementById('item-edit-id').value = '';
+    document.getElementById('item-edit-item-id').value = '';
+    document.getElementById('item-edit-name').value = '';
+    document.getElementById('item-edit-type').value = 'weapon';
+    document.getElementById('item-edit-slot').value = 'weapon';
+    document.getElementById('item-edit-rarity').value = 'common';
+    document.getElementById('item-edit-price').value = '0';
+    document.getElementById('item-edit-atk').value = '0';
+    document.getElementById('item-edit-mag').value = '0';
+    document.getElementById('item-edit-spirit').value = '0';
+    document.getElementById('item-edit-hp').value = '0';
+    document.getElementById('item-edit-mp').value = '0';
+    document.getElementById('item-edit-def').value = '0';
+    document.getElementById('item-edit-mdef').value = '0';
+    document.getElementById('item-edit-dex').value = '0';
+    document.getElementById('item-edit-untradable').checked = false;
+    document.getElementById('item-edit-unconsignable').checked = false;
+    document.getElementById('item-edit-boss-only').checked = false;
+    document.getElementById('item-edit-world-boss-only').checked = false;
+    itemsCurrentItemId = null;
+    itemDropsCache = [];
+    renderItemDrops();
+  }
+
+  itemEditModal.classList.remove('hidden');
+}
+
+window.editItem = async function(id) {
+  const res = await api(`/admin/items/${id}`, 'GET');
+  if (!res.ok) {
+    await customAlert('错误', '获取装备信息失败');
+    return;
+  }
+  openItemEditModal(res.item);
+};
+
+window.deleteItem = async function(id) {
+  const confirmed = await customConfirm('确认删除', '确定要删除该装备吗？此操作不可恢复！');
+  if (!confirmed) return;
+
+  const res = await api(`/admin/items/${id}`, 'DELETE');
+  if (!res.ok) {
+    await customAlert('删除失败', res.error || '删除装备失败');
+    return;
+  }
+
+  await customAlert('删除成功', '装备已删除');
+  loadItems(itemsCurrentPage, itemsCurrentKeyword);
+};
+
+window.deleteItemDrop = async function(dropId) {
+  const confirmed = await customConfirm('确认删除', '确定要删除该掉落配置吗？');
+  if (!confirmed) return;
+
+  const res = await api(`/admin/items/${itemsCurrentItemId}/drops/${dropId}`, 'DELETE');
+  if (!res.ok) {
+    await customAlert('删除失败', res.error || '删除掉落配置失败');
+    return;
+  }
+
+  itemDropsCache = itemDropsCache.filter(d => d.id !== dropId);
+  renderItemDrops();
+};
+
+async function saveItem() {
+  const itemId = document.getElementById('item-edit-item-id').value.trim();
+  const name = document.getElementById('item-edit-name').value.trim();
+  const type = document.getElementById('item-edit-type').value;
+  const slot = document.getElementById('item-edit-slot').value;
+  const rarity = document.getElementById('item-edit-rarity').value;
+  const price = parseInt(document.getElementById('item-edit-price').value) || 0;
+  const atk = parseInt(document.getElementById('item-edit-atk').value) || 0;
+  const mag = parseInt(document.getElementById('item-edit-mag').value) || 0;
+  const spirit = parseInt(document.getElementById('item-edit-spirit').value) || 0;
+  const hp = parseInt(document.getElementById('item-edit-hp').value) || 0;
+  const mp = parseInt(document.getElementById('item-edit-mp').value) || 0;
+  const def = parseInt(document.getElementById('item-edit-def').value) || 0;
+  const mdef = parseInt(document.getElementById('item-edit-mdef').value) || 0;
+  const dex = parseInt(document.getElementById('item-edit-dex').value) || 0;
+  const untradable = document.getElementById('item-edit-untradable').checked;
+  const unconsignable = document.getElementById('item-edit-unconsignable').checked;
+  const boss_only = document.getElementById('item-edit-boss-only').checked;
+  const world_boss_only = document.getElementById('item-edit-world-boss-only').checked;
+
+  if (!itemId || !name) {
+    await customAlert('错误', '装备ID和名称不能为空');
+    return;
+  }
+
+  const data = {
+    item_id: itemId,
+    name,
+    type,
+    slot,
+    rarity,
+    price,
+    atk,
+    mag,
+    spirit,
+    hp,
+    mp,
+    def,
+    mdef,
+    dex,
+    untradable,
+    unconsignable,
+    boss_only,
+    world_boss_only
+  };
+
+  let res;
+  if (itemsCurrentItemId) {
+    res = await api(`/admin/items/${itemsCurrentItemId}`, 'PUT', data);
+  } else {
+    res = await api('/admin/items', 'POST', data);
+  }
+
+  if (!res.ok) {
+    await customAlert('保存失败', res.error || '保存装备失败');
+    return;
+  }
+
+  const newItem = res.item;
+  itemsCurrentItemId = newItem.id;
+
+  await customAlert('保存成功', '装备已保存');
+  loadItems(itemsCurrentPage, itemsCurrentKeyword);
+}
+
+async function addItemDrop() {
+  const mobId = itemDropMobSelect.value;
+  const chance = parseFloat(itemDropChance.value);
+
+  if (!mobId) {
+    await customAlert('错误', '请选择怪物');
+    return;
+  }
+
+  if (isNaN(chance) || chance < 0 || chance > 1) {
+    await customAlert('错误', '掉落概率必须在0-1之间');
+    return;
+  }
+
+  const res = await api(`/admin/items/${itemsCurrentItemId}/drops`, 'POST', {
+    mobId,
+    dropChance: chance
+  });
+
+  if (!res.ok) {
+    await customAlert('添加失败', res.error || '添加掉落配置失败');
+    return;
+  }
+
+  itemDropsCache.push(res.drop);
+  renderItemDrops();
+  itemDropMobSelect.value = '';
+  itemDropChance.value = '';
+}
+
+// 装备管理事件
+if (itemsRefreshBtn) {
+  itemsRefreshBtn.addEventListener('click', () => loadItems(itemsCurrentPage, itemsCurrentKeyword));
+}
+
+if (itemsSearchBtn) {
+  itemsSearchBtn.addEventListener('click', () => loadItems(1, itemsSearchInput.value.trim()));
+}
+
+if (itemsSearchInput) {
+  itemsSearchInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') loadItems(1, itemsSearchInput.value.trim());
+  });
+}
+
+if (itemsCreateBtn) {
+  itemsCreateBtn.addEventListener('click', () => {
+    if (mobsList.length === 0) loadMobs();
+    openItemEditModal(null);
+  });
+}
+
+if (itemsPrevPageBtn) {
+  itemsPrevPageBtn.addEventListener('click', () => {
+    if (itemsCurrentPage > 1) loadItems(itemsCurrentPage - 1, itemsCurrentKeyword);
+  });
+}
+
+if (itemsNextPageBtn) {
+  itemsNextPageBtn.addEventListener('click', () => {
+    loadItems(itemsCurrentPage + 1, itemsCurrentKeyword);
+  });
+}
+
+if (itemEditCancelBtn) {
+  itemEditCancelBtn.addEventListener('click', () => {
+    itemEditModal.classList.add('hidden');
+  });
+}
+
+if (itemEditSaveBtn) {
+  itemEditSaveBtn.addEventListener('click', saveItem);
+}
+
+if (itemDropAddBtn) {
+  itemDropAddBtn.addEventListener('click', addItemDrop);
+}
+

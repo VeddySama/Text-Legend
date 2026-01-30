@@ -3744,15 +3744,15 @@ function buildRoomExits(zoneId, roomId) {
     const dir = exit.dir;
     const baseDir = dir.replace(/[0-9]+$/, '');
 
-    // 检查是否是前往暗之BOSS房间的入口
-    const isDarkBossExit = exit.dir.startsWith('southwest');
+    // 检查是否是暗之BOSS房间的入口
+    const isDarkBossRoom = exit.label.includes('暗之BOSS领域');
 
     // 检查是否有数字后缀的变体
     const hasVariants = allExits.some(
       (e) => e.dir !== dir && e.dir.startsWith(baseDir) && /[0-9]+$/.test(e.dir)
     );
 
-    if (isDarkBossExit) {
+    if (isDarkBossRoom) {
       // 暗之BOSS入口不合并，全部显示
       filteredExits.push(exit);
     } else if (hasVariants) {

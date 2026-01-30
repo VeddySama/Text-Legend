@@ -4912,7 +4912,6 @@ function renderImportItems(keyword = '') {
   filteredTemplates.forEach(template => {
     const isImported = importedItemIds.has(template.item_id);
     const tr = document.createElement('tr');
-    tr.style.opacity = isImported ? '0.5' : '1';
 
     const mainStats = [];
     if (template.atk > 0) mainStats.push(`攻击${template.atk}`);
@@ -4926,15 +4925,14 @@ function renderImportItems(keyword = '') {
 
     tr.innerHTML = `
       <td style="text-align: center;">
-        <input type="checkbox" class="import-item-checkbox" data-id="${template.item_id}" ${isImported ? 'disabled' : ''}>
+        <input type="checkbox" class="import-item-checkbox" data-id="${template.item_id}">
       </td>
-      <td style="font-size: 12px;">${template.item_id}</td>
       <td style="font-size: 13px;">${template.name}</td>
       <td style="font-size: 12px;">${getTypeName(template.type)}</td>
       <td style="font-size: 12px;">${getRarityName(template.rarity)}</td>
       <td style="font-size: 12px;">${mainStats.join(', ') || '-'}</td>
       <td style="font-size: 12px;">${template.price || '-'}</td>
-      <td style="font-size: 12px;">${isImported ? '<span style="color: #999;">已导入</span>' : '<span style="color: #4CAF50;">可导入</span>'}</td>
+      <td style="font-size: 12px;">${isImported ? '<span style="color: #2196F3;">已导入（可更新）</span>' : '<span style="color: #4CAF50;">可导入</span>'}</td>
     `;
     importItemsList.appendChild(tr);
   });
@@ -4952,7 +4950,7 @@ function openImportModal() {
 }
 
 async function importSelectedItems() {
-  const checkboxes = document.querySelectorAll('.import-item-checkbox:checked:not(:disabled)');
+  const checkboxes = document.querySelectorAll('.import-item-checkbox:checked');
   const selectedIds = Array.from(checkboxes).map(cb => cb.dataset.id);
 
   if (selectedIds.length === 0) {
@@ -4972,20 +4970,21 @@ async function importSelectedItems() {
   const { results } = res;
 
   // 计算总掉落数
-  const totalDrops = results.success.reduce((sum, item) => sum + (item.dropsCount || 0), 0);
+  const totalDrops = results.success.reduce((sum, item) => sum + (item.dropsCount || 0), 0) +
+                    results.updated.reduce((sum, item) => sum + (item.dropsCount || 0), 0);
 
-  let message = `成功: ${results.success.length} 个\n跳过: ${results.skipped.length} 个\n失败: ${results.failed.length} 个`;
+  let message = `新增: ${results.success.length} 个\n更新: ${results.updated.length} 个\n失败: ${results.failed.length} 个`;
   if (totalDrops > 0) {
-    message += `\n\n共导入 ${totalDrops} 条掉落配置`;
+    message += `\n\n共处理 ${totalDrops} 条掉落配置`;
   }
 
   await customAlert('导入完成', message);
 
-  // 更新已导入的装备ID集合（包括成功导入和跳过的）
+  // 更新已导入的装备ID集合
   results.success.forEach(item => {
     importedItemIds.add(item.itemId);
   });
-  results.skipped.forEach(item => {
+  results.updated.forEach(item => {
     importedItemIds.add(item.itemId);
   });
 

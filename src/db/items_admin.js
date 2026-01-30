@@ -306,19 +306,12 @@ export async function checkImportedItems(itemIds) {
 export async function importItems(itemIds) {
   const results = {
     success: [],
-    skipped: [],
+    updated: [],
     failed: []
   };
 
   for (const itemId of itemIds) {
     try {
-      // 检查是否已存在
-      const existing = await getItemByItemId(itemId);
-      if (existing) {
-        results.skipped.push({ itemId, reason: '已存在' });
-        continue;
-      }
-
       // 从ITEM_TEMPLATES获取装备数据
       const template = ITEM_TEMPLATES[itemId];
       if (!template) {
@@ -326,29 +319,57 @@ export async function importItems(itemIds) {
         continue;
       }
 
-      // 创建装备
-      const result = await createItem({
-        item_id: itemId,
-        name: template.name,
-        type: template.type,
-        slot: template.slot || null,
-        rarity: template.rarity || 'common',
-        atk: template.atk || 0,
-        def: template.def || 0,
-        mag: template.mag || 0,
-        spirit: template.spirit || 0,
-        hp: template.hp || 0,
-        mp: template.mp || 0,
-        mdef: template.mdef || 0,
-        dex: template.dex || 0,
-        price: template.price || 0,
-        untradable: template.untradable || false,
-        unconsignable: template.unconsignable || false,
-        boss_only: template.bossOnly || false,
-        world_boss_only: template.worldBossOnly || false
-      });
+      // 检查是否已存在
+      const existing = await getItemByItemId(itemId);
+      let result;
 
-      // 自动导入掉落配置（从MOB_TEMPLATES中查找）
+      if (existing) {
+        // 已存在，更新装备属性
+        await updateItem(existing.id, {
+          name: template.name,
+          type: template.type,
+          slot: template.slot || null,
+          rarity: template.rarity || 'common',
+          atk: template.atk || 0,
+          def: template.def || 0,
+          mag: template.mag || 0,
+          spirit: template.spirit || 0,
+          hp: template.hp || 0,
+          mp: template.mp || 0,
+          mdef: template.mdef || 0,
+          dex: template.dex || 0,
+          price: template.price || 0,
+          untradable: template.untradable || false,
+          unconsignable: template.unconsignable || false,
+          boss_only: template.bossOnly || false,
+          world_boss_only: template.worldBossOnly || false
+        });
+        result = await getItemByItemId(itemId);
+      } else {
+        // 不存在，创建新装备
+        result = await createItem({
+          item_id: itemId,
+          name: template.name,
+          type: template.type,
+          slot: template.slot || null,
+          rarity: template.rarity || 'common',
+          atk: template.atk || 0,
+          def: template.def || 0,
+          mag: template.mag || 0,
+          spirit: template.spirit || 0,
+          hp: template.hp || 0,
+          mp: template.mp || 0,
+          mdef: template.mdef || 0,
+          dex: template.dex || 0,
+          price: template.price || 0,
+          untradable: template.untradable || false,
+          unconsignable: template.unconsignable || false,
+          boss_only: template.bossOnly || false,
+          world_boss_only: template.worldBossOnly || false
+        });
+      }
+
+      // 自动导入/更新掉落配置（从MOB_TEMPLATES中查找）
       let dropsCount = 0;
       for (const [mobId, mob] of Object.entries(MOB_TEMPLATES)) {
         if (mob.drops) {
@@ -360,7 +381,11 @@ export async function importItems(itemIds) {
         }
       }
 
-      results.success.push({ itemId, id: result.id, name: result.name, dropsCount });
+      if (existing) {
+        results.updated.push({ itemId, id: result.id, name: result.name, dropsCount });
+      } else {
+        results.success.push({ itemId, id: result.id, name: result.name, dropsCount });
+      }
     } catch (err) {
       results.failed.push({ itemId, reason: err.message });
     }

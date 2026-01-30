@@ -1476,14 +1476,19 @@ app.post('/admin/items/import', async (req, res) => {
 
   const { itemIds } = req.body;
 
+  console.log('=== Import items called ===');
+  console.log('itemIds:', itemIds);
+
   if (!itemIds || !Array.isArray(itemIds) || itemIds.length === 0) {
     return res.status(400).json({ error: '请选择要导入的装备。' });
   }
 
   try {
     const results = await importItemsDb(itemIds);
+    console.log('Import results:', results);
     res.json({ ok: true, results });
   } catch (err) {
+    console.error('Import error:', err);
     res.status(500).json({ error: '导入装备失败: ' + err.message });
   }
 });
@@ -1528,14 +1533,19 @@ app.get('/admin/items/:id', async (req, res) => {
 
   const { id } = req.params;
 
+  console.log(`=== Get item details called, id=${id} ===`);
+
   try {
     const item = await getItemById(parseInt(id));
     if (!item) {
       return res.status(404).json({ error: '装备不存在。' });
     }
+    console.log('Item found:', item);
     const drops = await getItemDrops(item.id);
+    console.log('Drops found:', drops);
     res.json({ ok: true, item, drops });
   } catch (err) {
+    console.error('Get item details error:', err);
     res.status(500).json({ error: '获取装备详情失败: ' + err.message });
   }
 });

@@ -6,7 +6,14 @@ import { MOB_TEMPLATES } from '../game/mobs.js';
  * 获取所有装备列表
  */
 export async function listItems(page = 1, limit = 20) {
-  const offset = (page - 1) * limit;
+  const [{ count }] = await knex('items').count('* as count');
+  const total = parseInt(count);
+  const totalPages = Math.ceil(total / limit);
+
+  // 验证页码是否有效
+  const validPage = Math.max(1, Math.min(page, totalPages));
+
+  const offset = (validPage - 1) * limit;
   const items = await knex('items')
     .orderBy('type')
     .orderByRaw("CASE rarity " +
@@ -21,8 +28,7 @@ export async function listItems(page = 1, limit = 20) {
     .limit(limit)
     .offset(offset);
 
-  const [{ count }] = await knex('items').count('* as count');
-  return { items, total: parseInt(count), page, limit };
+  return { items, total, page: validPage, limit };
 }
 
 /**
@@ -95,7 +101,24 @@ export async function updateItem(id, data) {
   updateData.updated_at = knex.fn.now();
 
   await knex('items').where({ id }).update(updateData);
-  return await getItemById(id);
+  
+  // 同步该装备到 ITEM_TEMPLATES
+  const item = await getItemById(id);
+  if (item) {
+    const { ITEM_TEMPLATES } = await import('../game/items.js');
+    if (ITEM_TEMPLATES[item.item_id]) {
+      ITEM_TEMPLATES[item.item_id].atk = item.atk;
+      ITEM_TEMPLATES[item.item_id].mag = item.mag;
+      ITEM_TEMPLATES[item.item_id].spirit = item.spirit;
+      ITEM_TEMPLATES[item.item_id].def = item.def;
+      ITEM_TEMPLATES[item.item_id].mdef = item.mdef;
+      ITEM_TEMPLATES[item.item_id].dex = item.dex;
+      ITEM_TEMPLATES[item.item_id].hp = item.hp;
+      ITEM_TEMPLATES[item.item_id].mp = item.mp;
+    }
+  }
+  
+  return item;
 }
 
 /**
@@ -138,16 +161,29 @@ export async function addItemDrop(itemId, mobId, dropChance) {
     .onConflict(['item_id', 'mob_id'])
     .merge({ drop_chance: drop_chance, updated_at: knex.fn.now() });
 
-  return await knex('item_drops')
+  const drop = await knex('item_drops')
     .where({ item_id: itemId, mob_id: mobId })
     .first();
+
+  // 同步掉落到 MOB_TEMPLATES
+  await syncMobDropFromDb(drop);
+
+  return drop;
 }
 
 /**
  * 删除装备的掉落配置
  */
 export async function deleteItemDrop(dropId) {
+  // 先获取掉落记录
+  const drop = await knex('item_drops').where({ id: dropId }).first();
+  if (!drop) return;
+
+  // 从数据库删除
   await knex('item_drops').where({ id: dropId }).delete();
+
+  // 从 MOB_TEMPLATES 删除
+  await removeMobDropFromDb(drop.item_id, drop.mob_id);
 }
 
 /**
@@ -177,6 +213,9 @@ export async function setItemDrops(itemId, drops) {
     await knex('item_drops').insert(insertData);
   }
 
+  // 同步所有掉落到 MOB_TEMPLATES
+  await syncAllMobDropsForItem(itemId);
+
   return await getItemDrops(itemId);
 }
 
@@ -184,7 +223,19 @@ export async function setItemDrops(itemId, drops) {
  * 搜索装备
  */
 export async function searchItems(keyword, page = 1, limit = 20) {
-  const offset = (page - 1) * limit;
+  const [{ count }] = await knex('items')
+    .where(function() {
+      this.where('name', 'like', `%${keyword}%`)
+          .orWhere('item_id', 'like', `%${keyword}%`);
+    })
+    .count('* as count');
+  const total = parseInt(count);
+  const totalPages = total > 0 ? Math.ceil(total / limit) : 1;
+
+  // 验证页码是否有效
+  const validPage = Math.max(1, Math.min(page, totalPages));
+
+  const offset = (validPage - 1) * limit;
   const items = await knex('items')
     .where(function() {
       this.where('name', 'like', `%${keyword}%`)
@@ -203,14 +254,7 @@ export async function searchItems(keyword, page = 1, limit = 20) {
     .limit(limit)
     .offset(offset);
 
-  const [{ count }] = await knex('items')
-    .where(function() {
-      this.where('name', 'like', `%${keyword}%`)
-          .orWhere('item_id', 'like', `%${keyword}%`);
-    })
-    .count('* as count');
-
-  return { items, total: parseInt(count), page, limit };
+  return { items, total, page: validPage, limit };
 }
 
 /**
@@ -343,4 +387,116 @@ export function getItemDropSources(itemId) {
     }
   }
   return sources;
+}
+
+/**
+ * 批量获取装备属性（用于计算玩家属性）
+ */
+export async function getItemsByItemIds(itemIds) {
+  if (!itemIds || itemIds.length === 0) return [];
+  return await knex('items')
+    .whereIn('item_id', itemIds)
+    .select('item_id', 'atk', 'mag', 'spirit', 'def', 'mdef', 'dex', 'hp', 'mp', 'type');
+}
+
+/**
+ * 同步数据库中的装备属性到 ITEM_TEMPLATES
+ * 用于更新内存中的装备属性
+ */
+export async function syncItemsToTemplates() {
+  const { ITEM_TEMPLATES } = await import('../game/items.js');
+  const dbItems = await knex('items').select('*');
+
+  dbItems.forEach(dbItem => {
+    if (ITEM_TEMPLATES[dbItem.item_id]) {
+      // 更新已存在的装备模板
+      ITEM_TEMPLATES[dbItem.item_id].atk = dbItem.atk;
+      ITEM_TEMPLATES[dbItem.item_id].mag = dbItem.mag;
+      ITEM_TEMPLATES[dbItem.item_id].spirit = dbItem.spirit;
+      ITEM_TEMPLATES[dbItem.item_id].def = dbItem.def;
+      ITEM_TEMPLATES[dbItem.item_id].mdef = dbItem.mdef;
+      ITEM_TEMPLATES[dbItem.item_id].dex = dbItem.dex;
+      ITEM_TEMPLATES[dbItem.item_id].hp = dbItem.hp;
+      ITEM_TEMPLATES[dbItem.item_id].mp = dbItem.mp;
+    }
+  });
+
+  return dbItems.length;
+}
+
+/**
+ * 从数据库同步单个装备的掉落到 MOB_TEMPLATES
+ */
+async function syncMobDropFromDb(drop) {
+  if (!drop) return;
+
+  const { MOB_TEMPLATES } = await import('../game/mobs.js');
+
+  // 首先获取装备的 item_id
+  const item = await knex('items').where({ id: drop.item_id }).first();
+  if (!item) return;
+
+  const mob = MOB_TEMPLATES[drop.mob_id];
+  if (!mob) return;
+
+  // 初始化 drops 数组
+  if (!mob.drops) {
+    mob.drops = [];
+  }
+
+  // 查找是否已存在该掉落
+  const existingDropIndex = mob.drops.findIndex(d => d.id === item.item_id);
+
+  if (existingDropIndex >= 0) {
+    // 更新现有掉落
+    mob.drops[existingDropIndex].chance = parseFloat(drop.drop_chance);
+  } else {
+    // 添加新掉落
+    mob.drops.push({
+      id: item.item_id,
+      chance: parseFloat(drop.drop_chance)
+    });
+  }
+}
+
+/**
+ * 删除怪物在 MOB_TEMPLATES 中的掉落配置
+ */
+async function removeMobDropFromDb(itemId, mobId) {
+  const { MOB_TEMPLATES } = await import('../game/mobs.js');
+
+  const mob = MOB_TEMPLATES[mobId];
+  if (!mob || !mob.drops) return;
+
+  // 获取装备的 item_id
+  const item = await knex('items').where({ id: itemId }).first();
+  if (!item) return;
+
+  // 删除对应的掉落
+  mob.drops = mob.drops.filter(d => d.id !== item.item_id);
+}
+
+/**
+ * 从数据库同步某个装备的所有掉落到 MOB_TEMPLATES
+ */
+async function syncAllMobDropsForItem(itemId) {
+  const drops = await knex('item_drops').where({ item_id: itemId });
+
+  for (const drop of drops) {
+    await syncMobDropFromDb(drop);
+  }
+}
+
+/**
+ * 从数据库同步所有掉落配置到 MOB_TEMPLATES
+ * 服务器启动时调用，确保内存中的掉落配置与数据库一致
+ */
+export async function syncMobDropsToTemplates() {
+  const drops = await knex('item_drops').select('*');
+
+  for (const drop of drops) {
+    await syncMobDropFromDb(drop);
+  }
+
+  return drops.length;
 }

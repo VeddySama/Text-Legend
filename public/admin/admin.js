@@ -4981,9 +4981,13 @@ async function importSelectedItems() {
 
   await customAlert('导入完成', message);
 
-  // 更新已导入的装备ID集合
+  // 更新已导入的装备ID集合（包括成功导入和跳过的）
   results.success.forEach(item => {
     importedItemIds.add(item.itemId);
+  });
+  results.skipped.forEach(item => {
+    importedItemIds.add(item.itemId);
+  });
   });
 
   renderImportItems();

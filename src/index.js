@@ -45,7 +45,8 @@ import {
   searchItems as searchItemsDb,
   getItemTemplates,
   checkImportedItems,
-  importItems as importItemsDb
+  importItems as importItemsDb,
+  getItemsByItemIds
 } from './db/items_admin.js';
 import { runMigrations } from './db/migrate.js';
 import { newCharacter, computeDerived, gainExp, addItem, removeItem, getItemKey, normalizeInventory, normalizeEquipment } from './game/player.js';
@@ -6955,6 +6956,18 @@ async function start() {
   await applyWorldBossSettings();
   await applySpecialBossSettings();
   await refreshRealmCache();
+
+  // 同步数据库中的装备属性到 ITEM_TEMPLATES
+  console.log('Syncing items from database...');
+  const syncedCount = await syncItemsToTemplates();
+  console.log(`Synced ${syncedCount} items from database.`);
+
+  // 同步数据库中的掉落配置到 MOB_TEMPLATES
+  console.log('Syncing mob drops from database...');
+  const { syncMobDropsToTemplates } = await import('./db/items_admin.js');
+  const syncedDrops = await syncMobDropsToTemplates();
+  console.log(`Synced ${syncedDrops} mob drops from database.`);
+
   setRespawnStore({
     set: (realmId, zoneId, roomId, slotIndex, templateId, respawnAt) =>
       upsertMobRespawn(realmId, zoneId, roomId, slotIndex, templateId, respawnAt),

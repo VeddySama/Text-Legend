@@ -1953,6 +1953,9 @@ export async function handleCommand({ player, players, allCharacters, input, sou
       const success = Math.random() * 100 < getEffectResetSuccessRate();
       const doubleEffect = Math.random() * 100 < getEffectResetDoubleRate();
 
+      // 保存主件原有特效（失败时保留）
+      const originalEffects = mainResolved.slot.effects;
+
       let newEffects = null;
 
       if (success) {
@@ -1966,7 +1969,8 @@ export async function handleCommand({ player, players, allCharacters, input, sou
           send(`特效重置成功！${mainItem.name} 获得1条新特效。`);
         }
       } else {
-        send(`特效重置失败，副件装备已消耗，请再接再厉。`);
+        send(`特效重置失败，副件装备已消耗，但主件特效保留。`);
+        newEffects = originalEffects;
       }
 
       // 应用新特效

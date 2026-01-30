@@ -1926,7 +1926,8 @@ function countRefineMaterials() {
     const rarity = slot.rarity || slot.price >= 30000 ? 'epic' :
                    slot.price >= 10000 ? 'rare' :
                    slot.price >= 2000 ? 'uncommon' : 'common';
-    return ['common', 'uncommon', 'rare'].includes(rarity) && !hasSpecialEffects(slot.effects);
+    const isAvailable = ['common', 'uncommon', 'rare'].includes(rarity) && !hasSpecialEffects(slot.effects);
+    return isAvailable;
   }).length;
 }
 
@@ -1934,40 +1935,63 @@ function renderRefineSecondaryList() {
   if (!refineUi.secondaryList) return;
 
   refineUi.secondaryList.innerHTML = '';
-  const materials = lastState?.items?.filter((slot) => {
+
+  // 先显示所有装备，标记哪些可用哪些不可用
+  const allEquip = lastState?.items?.filter((slot) => {
     if (!slot) return false;
-    if (!['weapon', 'armor', 'accessory'].includes(slot.type)) return false;
+    return ['weapon', 'armor', 'accessory'].includes(slot.type);
+  }) || [];
+
+  const materials = allEquip.filter((slot) => {
     if (slot.is_shop_item) return false; // 排除商店装备
     const rarity = slot.rarity || slot.price >= 30000 ? 'epic' :
                    slot.price >= 10000 ? 'rare' :
                    slot.price >= 2000 ? 'uncommon' : 'common';
-    return ['common', 'uncommon', 'rare'].includes(rarity) && !hasSpecialEffects(slot.effects);
-  }) || [];
+    const isAvailable = ['common', 'uncommon', 'rare'].includes(rarity) && !hasSpecialEffects(slot.effects);
+    return isAvailable;
+  });
 
-  if (materials.length === 0) {
+  if (allEquip.length === 0) {
     const empty = document.createElement('div');
-    empty.textContent = '暂无可用材料';
+    empty.textContent = '暂无装备';
     empty.style.padding = '8px';
     empty.style.color = '#888';
     refineUi.secondaryList.appendChild(empty);
     return;
   }
 
-  materials.slice(0, 20).forEach((slot) => {
+  allEquip.slice(0, 20).forEach((slot) => {
     const btn = document.createElement('div');
+    const isShopItem = slot.is_shop_item;
+    const rarity = slot.rarity || slot.price >= 30000 ? 'epic' :
+                   slot.price >= 10000 ? 'rare' :
+                   slot.price >= 2000 ? 'uncommon' : 'common';
+    const hasEffects = hasSpecialEffects(slot.effects);
+    const isAvailable = ['common', 'uncommon', 'rare'].includes(rarity) && !hasEffects && !isShopItem;
+
     btn.className = 'forge-item';
     btn.style.fontSize = '12px';
     btn.style.padding = '6px 8px';
     applyRarityClass(btn, slot);
+
+    if (!isAvailable) {
+      btn.style.opacity = '0.5';
+    }
+
+    let statusText = '';
+    if (isShopItem) statusText = ' [商店]';
+    else if (!['common', 'uncommon', 'rare'].includes(rarity)) statusText = ` [${rarity}]`;
+    else if (hasEffects) statusText = ' [有特效]';
+
     btn.innerHTML = `
-      <div>${formatItemName(slot)}</div>
+      <div>${formatItemName(slot)}${statusText}</div>
     `;
     refineUi.secondaryList.appendChild(btn);
   });
 
-  if (materials.length > 20) {
+  if (allEquip.length > 20) {
     const more = document.createElement('div');
-    more.textContent = `...还有 ${materials.length - 20} 件`;
+    more.textContent = `...还有 ${allEquip.length - 20} 件 (可用: ${materials.length})`;
     more.style.padding = '4px 8px';
     more.style.color = '#888';
     more.style.fontSize = '11px';

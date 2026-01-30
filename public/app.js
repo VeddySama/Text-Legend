@@ -1920,7 +1920,7 @@ function calculateRefineSuccessRate(level) {
 
 function countRefineMaterials() {
   if (!lastState?.items) return 0;
-  return lastState.items.filter((slot) => {
+  const materials = lastState.items.filter((slot) => {
     if (!slot) return false;
     if (!['weapon', 'armor', 'accessory'].includes(slot.type)) return false;
     if (slot.is_shop_item) return false; // 排除商店装备
@@ -1929,7 +1929,9 @@ function countRefineMaterials() {
                    slot.price >= 2000 ? 'uncommon' : 'common');
     // 只能史诗（不含）以下的无特效装备
     return ['common', 'uncommon', 'rare'].includes(rarity) && !hasSpecialEffects(slot.effects);
-  }).length;
+  });
+  // 计算所有符合条件的装备的总数量
+  return materials.reduce((total, slot) => total + (slot.qty || 1), 0);
 }
 
 function renderRefineSecondaryList() {

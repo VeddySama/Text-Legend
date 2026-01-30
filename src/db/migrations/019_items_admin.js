@@ -28,7 +28,7 @@ export async function up(knex) {
   await knex.schema.createTable('item_drops', (t) => {
     t.increments('id').primary();
     t.integer('item_id').notNullable().references('items.id').onDelete('CASCADE');
-    t.integer('mob_id').notNullable(); // 怪物ID (MOB_TEMPLATES中的key)
+    t.string('mob_id', 64).notNullable(); // 怪物ID (MOB_TEMPLATES中的key)
     t.decimal('drop_chance', 5, 4).notNullable().defaultTo(0.0); // 掉落概率 0.0000-1.0000
     t.timestamp('created_at').defaultTo(knex.fn.now());
     t.timestamp('updated_at').defaultTo(knex.fn.now());

@@ -617,9 +617,14 @@ function toggleTheme() {
 
 function initCollapsibleBlocks() {
   const blocks = Array.from(document.querySelectorAll('.block[data-collapsible]'));
+  // 默认折叠所有模块
+  blocks.forEach((block) => {
+    block.classList.add('collapsed');
+  });
   blocks.forEach((block) => {
     const toggle = block.querySelector('.block-toggle');
     if (!toggle) return;
+    toggle.textContent = '展开';
     toggle.addEventListener('click', () => {
       block.classList.toggle('collapsed');
       toggle.textContent = block.classList.contains('collapsed') ? '展开' : '折叠';

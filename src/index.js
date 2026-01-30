@@ -4587,6 +4587,20 @@ io.on('connection', (socket) => {
     const mailId = Number(payload?.mailId || 0);
     const folder = payload?.folder || 'inbox';
     if (!mailId) return socket.emit('mail_delete_result', { ok: false, msg: '邮件ID无效。' });
+
+    // 检查收件箱邮件是否有未领取的附件
+    if (folder === 'inbox') {
+      const mails = await listMail(player.userId, player.realmId || 1);
+      const mail = mails.find(m => m.id === mailId);
+      if (mail) {
+        const hasItems = mail.items_json && JSON.parse(mail.items_json).length > 0;
+        const hasGold = mail.gold && mail.gold > 0;
+        if ((hasItems || hasGold) && !mail.claimed_at) {
+          return socket.emit('mail_delete_result', { ok: false, msg: '该邮件有附件未领取，无法删除。' });
+        }
+      }
+    }
+
     await deleteMail(player.userId, mailId, player.realmId || 1, folder);
     socket.emit('mail_delete_result', { ok: true, msg: '邮件已删除。' });
     if (folder === 'inbox') {

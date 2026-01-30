@@ -1964,8 +1964,9 @@ function renderRefineSecondaryList() {
     btn.style.fontSize = '12px';
     btn.style.padding = '6px 8px';
     applyRarityClass(btn, slot);
+    const qty = slot.qty || 1;
     btn.innerHTML = `
-      <div>${formatItemName(slot)}</div>
+      <div>${formatItemName(slot)} x${qty}</div>
     `;
     refineUi.secondaryList.appendChild(btn);
   });

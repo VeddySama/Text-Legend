@@ -3762,6 +3762,8 @@ const stateThrottleLastSent = new Map();
 const stateThrottleLastExits = new Map();
 const stateThrottleLastRoom = new Map();
 const stateThrottleLastInBoss = new Map();
+// BOSS血量公告状态：Map<mobId, { announced50: boolean, announced30: boolean, announced10: boolean }>
+const bossBloodAnnouncementStatus = new Map();
 
 function getStateThrottleKey(player, socket = null) {
   if (player) {
@@ -4456,15 +4458,24 @@ function applyDamageToMob(mob, dmg, attackerName, realmId = null) {
   let announcedBlood = false;
   if (isSpecialBoss && mob.hp > 0) {
     const hpBeforeDmg = mob.hp;
-    if (!mob.status) mob.status = {};
+
+    // 使用全局Map记录BOSS血量公告状态，避免mob.status被重置导致重复公告
+    if (!bossBloodAnnouncementStatus.has(mob.id)) {
+      bossBloodAnnouncementStatus.set(mob.id, { announced50: false, announced30: false, announced10: false });
+    }
+    const announcementState = bossBloodAnnouncementStatus.get(mob.id);
 
     // 检查是否需要公告50%、30%、10%血量
-    const thresholds = [0.5, 0.3, 0.1];
-    for (const threshold of thresholds) {
-      const key = `announced${threshold * 100}`;
+    const thresholds = [
+      { threshold: 0.5, key: 'announced50' },
+      { threshold: 0.3, key: 'announced30' },
+      { threshold: 0.1, key: 'announced10' }
+    ];
+
+    for (const { threshold, key } of thresholds) {
       const hpPct = hpBeforeDmg / mob.max_hp;
-      if (hpPct <= threshold && !mob.status[key]) {
-        mob.status[key] = true;
+      if (hpPct <= threshold && !announcementState[key]) {
+        announcementState[key] = true;
         emitAnnouncement(
           `${mob.name} 剩余 ${Math.floor(hpPct * 100)}% 血量！`,
           'warn',
@@ -6088,6 +6099,9 @@ function processMobDeath(player, mob, online) {
   if (mob.status) {
     mob.status.processed = true;
   }
+
+  // 清理BOSS血量公告状态
+  bossBloodAnnouncementStatus.delete(mob.id);
 
   const realmId = player?.realmId || 1;
   const damageSnapshot = mob.status?.damageBy ? { ...mob.status.damageBy } : {};

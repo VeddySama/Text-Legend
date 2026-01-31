@@ -751,12 +751,24 @@ function addSponsorBadge(line, playerName) {
   nameBtns.forEach((btn) => {
     if (btn.textContent === `[${playerName}]`) {
       btn.classList.add('sponsor-player-name');
-      // 在名字前添加赞助称号，使用自定义称号或默认称号
-      const customTitle = sponsorCustomTitles.get(playerName) || '赞助玩家';
-      const badge = document.createElement('span');
-      badge.className = 'sponsor-badge';
-      badge.textContent = customTitle;
-      line.insertBefore(badge, btn);
+      
+      // 优先显示赞助称号，然后是排行榜称号
+      let customTitle = sponsorCustomTitles.get(playerName) || '';
+      
+      // 如果没有赞助称号，尝试从当前玩家状态中查找排行榜称号
+      if (!customTitle) {
+        if (lastState && lastState.player && lastState.player.name === playerName && lastState.player.rankTitle) {
+          customTitle = lastState.player.rankTitle;
+        }
+      }
+      
+      // 只有当有称号时才显示
+      if (customTitle) {
+        const badge = document.createElement('span');
+        badge.className = 'sponsor-badge';
+        badge.textContent = customTitle;
+        line.insertBefore(badge, btn);
+      }
     }
   });
 }

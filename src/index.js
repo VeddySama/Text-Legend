@@ -4023,7 +4023,8 @@ async function buildState(player) {
       name: player.name,
       classId: player.classId,
       level: player.level,
-      guildId: player.guild?.id || null
+      guildId: player.guild?.id || null,
+      rankTitle: player.rankTitle || ''
     },
     room: {
       zone: zone?.name || player.position.zone,

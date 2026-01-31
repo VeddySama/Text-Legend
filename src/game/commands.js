@@ -1,4 +1,5 @@
-﻿import { WORLD, NPCS } from './world.js';
+﻿import knex from '../db/index.js';
+import { WORLD, NPCS } from './world.js';
 import { ITEM_TEMPLATES, SHOP_STOCKS } from './items.js';
 import { MOB_TEMPLATES } from './mobs.js';
 import {
@@ -2915,6 +2916,32 @@ export async function handleCommand({ player, players, allCharacters, input, sou
       }).join(' ');
 
       send(`${className}排行榜: ${rankText}`);
+
+      // 为第一名添加排行榜称号
+      if (rankedPlayers.length > 0) {
+        const topPlayer = rankedPlayers[0];
+        const rankTitle = `天下第一${className}`;
+        const currentRealmId = realmId || player.realmId || 1;
+
+        // 更新数据库中的排行榜称号
+        try {
+          await knex('characters')
+            .where({ name: topPlayer.name, realm_id: currentRealmId })
+            .update({ rank_title: rankTitle });
+          console.log(`[Rank] 为 ${topPlayer.name} 设置称号: ${rankTitle}`);
+        } catch (err) {
+          console.error('更新排行榜称号失败:', err);
+        }
+        
+        // 如果在线，通知玩家
+        const topPlayerObj = playersByName(topPlayer.name, currentRealmId);
+        if (topPlayerObj) {
+          topPlayerObj.send(`恭喜！你已成为${className}排行榜第一名，获得称号：${rankTitle}`);
+          // 更新玩家对象的称号
+          topPlayerObj.rankTitle = rankTitle;
+        }
+      }
+      
       return;
     }
     default:

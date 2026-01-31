@@ -2893,9 +2893,9 @@ export async function handleCommand({ player, players, allCharacters, playersByN
           return {
             name: p.name,
             level: p.level,
-            atk: Math.floor(p.atk),
-            mag: Math.floor(p.mag),
-            spirit: Math.floor(p.spirit)
+            atk: Math.floor(p.atk || 0),
+            mag: Math.floor(p.mag || 0),
+            spirit: Math.floor(p.spirit || 0)
           };
         })
         .sort((a, b) => {

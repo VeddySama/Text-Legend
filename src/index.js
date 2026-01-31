@@ -1576,8 +1576,8 @@ async function updateRankTitles() {
     for (const cls of classes) {
       try {
         // 获取该服务器该职业的玩家
-        const allCharacters = await listAllCharacters();
-        const classPlayers = allCharacters.filter(p => p.classId === cls.id && (p.realmId || 1) === realm.id);
+        const allCharacters = await listAllCharacters(realm.id);
+        const classPlayers = allCharacters.filter(p => p.classId === cls.id);
 
         // 计算并排序
         const rankedPlayers = classPlayers

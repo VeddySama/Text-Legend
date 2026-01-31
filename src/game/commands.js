@@ -29,6 +29,7 @@ import {
   getEffectResetQuadrupleRate,
   getEffectResetQuintupleRate
 } from './settings.js';
+import { getRealmById } from '../db/realms.js';
 
 // 特效重置：生成随机特效（不包含elementAtk，因为元素攻击只能通过装备合成获得）
 const ALLOWED_EFFECTS = ['combo', 'fury', 'unbreakable', 'defense', 'dodge', 'poison', 'healblock'];
@@ -2882,7 +2883,7 @@ export async function handleCommand({ player, players, allCharacters, playersByN
         return;
       }
 
-      // 获取所有该职业的玩家（包括离线）
+      // 获取该服务器该职业的玩家（包括离线）
       const allClassPlayers = await allCharacters;
       const rankedPlayers = allClassPlayers
         .filter(p => p.classId === classId)
@@ -2904,8 +2905,12 @@ export async function handleCommand({ player, players, allCharacters, playersByN
         })
         .slice(0, 10);
 
+      // 获取服务器名称
+      const realm = await getRealmById(realmId || 1);
+      const realmName = realm ? realm.name : `区服${realmId || 1}`;
+
       if (rankedPlayers.length === 0) {
-        send(`${className}排行榜: 暂无数据`);
+        send(`【${realmName}】${className}排行榜: 暂无数据`);
         return;
       }
 
@@ -2915,7 +2920,7 @@ export async function handleCommand({ player, players, allCharacters, playersByN
         return `${idx + 1}.${p.name}(${attrValue})`;
       }).join(' ');
 
-      send(`${className}排行榜: ${rankText}`);
+      send(`【${realmName}】${className}排行榜: ${rankText}`);
 
       return;
     }

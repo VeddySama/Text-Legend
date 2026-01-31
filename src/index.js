@@ -1581,6 +1581,7 @@ async function updateRankTitles() {
           computeDerived(p);
           return {
             name: p.name,
+            realmId: p.realmId || 1,
             atk: Math.floor(p.atk || 0),
             mag: Math.floor(p.mag || 0),
             spirit: Math.floor(p.spirit || 0)
@@ -1588,13 +1589,13 @@ async function updateRankTitles() {
         })
         .sort((a, b) => {
           if (cls.id === 'warrior') return b.atk - a.atk;
-          if (cls.id === 'mage') return b.mag - b.mag;
+          if (cls.id === 'mage') return b.mag - a.mag;
           return b.spirit - a.spirit;
         });
 
       // 清除该职业所有玩家的排行榜称号
       await knex('characters')
-        .where({ class_id: cls.id })
+        .where({ class: cls.id })
         .update({ rank_title: null });
 
       // 为第一名设置称号
@@ -1602,8 +1603,27 @@ async function updateRankTitles() {
         const topPlayer = rankedPlayers[0];
         const rankTitle = `天下第一${cls.name}`;
         await knex('characters')
-          .where({ name: topPlayer.name })
+          .where({ name: topPlayer.name, realm_id: topPlayer.realmId })
           .update({ rank_title: rankTitle });
+
+        // 如果第一名在线，通知玩家
+        const topPlayerObj = playersByName(topPlayer.name, topPlayer.realmId);
+        if (topPlayerObj) {
+          topPlayerObj.send(`恭喜！你已成为${cls.name}排行榜第一名，获得称号：${rankTitle}`);
+          topPlayerObj.rankTitle = rankTitle;
+        }
+
+        // 通知该职业其他在线玩家称号被清除
+        for (const p of classPlayers) {
+          if (p.name !== topPlayer.name) {
+            const playerObj = playersByName(p.name, p.realmId || 1);
+            if (playerObj && playerObj.rankTitle) {
+              playerObj.send(`你已不再是${cls.name}排行榜第一名，称号已被收回`);
+              playerObj.rankTitle = null;
+            }
+          }
+        }
+
         console.log(`[Rank] ${cls.name}排行榜第一名: ${topPlayer.name}，称号: ${rankTitle}`);
       } else {
         console.log(`[Rank] ${cls.name}排行榜暂无玩家`);
@@ -5111,6 +5131,10 @@ io.on('connection', (socket) => {
       player,
       players: listOnlinePlayers(player.realmId || 1),
       allCharacters: listAllCharacters(player.realmId || 1),
+      playersByName: (name, realmId) => {
+        const list = Array.from(players.values());
+        return list.find((p) => p.name === name && (!realmId || p.realmId === realmId));
+      },
       input: payload.text || '',
       source: payload.source || '',
       send: (msg) => sendTo(player, msg),

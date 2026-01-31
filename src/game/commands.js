@@ -631,7 +631,7 @@ function partyStatus(party) {
   return `队伍成员: ${party.members.join(', ')}`;
 }
 
-export async function handleCommand({ player, players, allCharacters, input, source, send, partyApi, guildApi, tradeApi, mailApi, consignApi, onMove, logLoot, realmId, emitAnnouncement }) {
+export async function handleCommand({ player, players, allCharacters, playersByName, input, source, send, partyApi, guildApi, tradeApi, mailApi, consignApi, onMove, logLoot, realmId, emitAnnouncement }) {
   const [cmdRaw, ...rest] = input.trim().split(' ');
   const cmd = (cmdRaw || '').toLowerCase();
   const args = rest.join(' ').trim();
@@ -2926,7 +2926,7 @@ export async function handleCommand({ player, players, allCharacters, input, sou
         // 清除该职业所有玩家的排行榜称号
         try {
           await knex('characters')
-            .where({ class_id: classId, realm_id: currentRealmId })
+            .where({ class: classId, realm_id: currentRealmId })
             .update({ rank_title: null });
           console.log(`[Rank] 清除所有${className}的排行榜称号`);
         } catch (err) {
@@ -2944,7 +2944,7 @@ export async function handleCommand({ player, players, allCharacters, input, sou
         }
 
         // 如果第一名在线，通知玩家
-        const topPlayerObj = playersByName(topPlayer.name, currentRealmId);
+        const topPlayerObj = playersByName ? playersByName(topPlayer.name, currentRealmId) : null;
         if (topPlayerObj) {
           topPlayerObj.send(`恭喜！你已成为${className}排行榜第一名，获得称号：${rankTitle}`);
           topPlayerObj.rankTitle = rankTitle;
@@ -2953,7 +2953,7 @@ export async function handleCommand({ player, players, allCharacters, input, sou
         // 通知该职业其他在线玩家称号被清除
         const classNamePlayers = allClassPlayers.filter(p => p.classId === classId && p.name !== topPlayer.name);
         for (const p of classNamePlayers) {
-          const playerObj = playersByName(p.name, currentRealmId);
+          const playerObj = playersByName ? playersByName(p.name, currentRealmId) : null;
           if (playerObj && playerObj.rankTitle) {
             playerObj.send(`你已不再是${className}排行榜第一名，称号已被收回`);
             playerObj.rankTitle = null;

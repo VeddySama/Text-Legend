@@ -1563,73 +1563,78 @@ function scheduleAutoBackup() {
 async function updateRankTitles() {
   console.log('[Rank] 开始自动更新排行榜称号...');
 
+  // 获取所有服务器列表
+  const realms = await listRealms();
   const classes = [
     { id: 'warrior', name: '战士' },
     { id: 'mage', name: '法师' },
     { id: 'taoist', name: '道士' }
   ];
 
-  for (const cls of classes) {
-    try {
-      // 获取所有该职业的玩家
-      const allCharacters = await listAllCharacters();
-      const classPlayers = allCharacters.filter(p => p.classId === cls.id);
+  // 为每个服务器独立计算排行榜
+  for (const realm of realms) {
+    for (const cls of classes) {
+      try {
+        // 获取该服务器该职业的玩家
+        const allCharacters = await listAllCharacters();
+        const classPlayers = allCharacters.filter(p => p.classId === cls.id && (p.realmId || 1) === realm.id);
 
-      // 计算并排序
-      const rankedPlayers = classPlayers
-        .map(p => {
-          computeDerived(p);
-          return {
-            name: p.name,
-            realmId: p.realmId || 1,
-            atk: Math.floor(p.atk || 0),
-            mag: Math.floor(p.mag || 0),
-            spirit: Math.floor(p.spirit || 0)
-          };
-        })
-        .sort((a, b) => {
-          if (cls.id === 'warrior') return b.atk - a.atk;
-          if (cls.id === 'mage') return b.mag - a.mag;
-          return b.spirit - a.spirit;
-        });
+        // 计算并排序
+        const rankedPlayers = classPlayers
+          .map(p => {
+            computeDerived(p);
+            return {
+              name: p.name,
+              realmId: p.realmId || 1,
+              atk: Math.floor(p.atk || 0),
+              mag: Math.floor(p.mag || 0),
+              spirit: Math.floor(p.spirit || 0)
+            };
+          })
+          .sort((a, b) => {
+            if (cls.id === 'warrior') return b.atk - a.atk;
+            if (cls.id === 'mage') return b.mag - a.mag;
+            return b.spirit - a.spirit;
+          });
 
-      // 清除该职业所有玩家的排行榜称号
-      await knex('characters')
-        .where({ class: cls.id })
-        .update({ rank_title: null });
-
-      // 为第一名设置称号
-      if (rankedPlayers.length > 0) {
-        const topPlayer = rankedPlayers[0];
-        const rankTitle = `天下第一${cls.name}`;
+        // 清除该服务器该职业所有玩家的排行榜称号
         await knex('characters')
-          .where({ name: topPlayer.name, realm_id: topPlayer.realmId })
-          .update({ rank_title: rankTitle });
+          .where({ class: cls.id, realm_id: realm.id })
+          .update({ rank_title: null });
 
-        // 如果第一名在线，通知玩家
-        const topPlayerObj = playersByName(topPlayer.name, topPlayer.realmId);
-        if (topPlayerObj) {
-          topPlayerObj.send(`恭喜！你已成为${cls.name}排行榜第一名，获得称号：${rankTitle}`);
-          topPlayerObj.rankTitle = rankTitle;
-        }
+        // 为第一名设置称号
+        if (rankedPlayers.length > 0) {
+          const topPlayer = rankedPlayers[0];
+          const rankTitle = `天下第一${cls.name}`;
+          await knex('characters')
+            .where({ name: topPlayer.name, realm_id: realm.id })
+            .update({ rank_title: rankTitle });
 
-        // 通知该职业其他在线玩家称号被清除
-        for (const p of classPlayers) {
-          if (p.name !== topPlayer.name) {
-            const playerObj = playersByName(p.name, p.realmId || 1);
-            if (playerObj && playerObj.rankTitle) {
-              playerObj.send(`你已不再是${cls.name}排行榜第一名，称号已被收回`);
-              playerObj.rankTitle = null;
+          // 如果第一名在线，通知玩家
+          const topPlayerObj = playersByName(topPlayer.name, realm.id);
+          if (topPlayerObj) {
+            topPlayerObj.send(`恭喜！你已成为${cls.name}排行榜第一名，获得称号：${rankTitle}`);
+            topPlayerObj.rankTitle = rankTitle;
+          }
+
+          // 通知该职业其他在线玩家称号被清除
+          for (const p of classPlayers) {
+            if (p.name !== topPlayer.name) {
+              const playerObj = playersByName(p.name, realm.id);
+              if (playerObj && playerObj.rankTitle) {
+                playerObj.send(`你已不再是${cls.name}排行榜第一名，称号已被收回`);
+                playerObj.rankTitle = null;
+              }
             }
           }
-        }
 
-        console.log(`[Rank] ${cls.name}排行榜第一名: ${topPlayer.name}，称号: ${rankTitle}`);
-      } else {
-        console.log(`[Rank] ${cls.name}排行榜暂无玩家`);
+          console.log(`[Rank] ${realm.name} - ${cls.name}排行榜第一名: ${topPlayer.name}，称号: ${rankTitle}`);
+        } else {
+          console.log(`[Rank] ${realm.name} - ${cls.name}排行榜暂无玩家`);
+        }
+      } catch (err) {
+        console.error(`[Rank] 更新${realm.name} ${cls.name}排行榜失败:`, err);
       }
-    } catch (err) {
-      console.error(`[Rank] 更新${cls.name}排行榜失败:`, err);
     }
   }
 

@@ -1644,6 +1644,7 @@ body.dark .chat-name-btn.sponsor-player-name:hover {
 
 .modal-card {
   width: min(420px, 90vw);
+  max-height: 80vh;
   background: #fff7ea;
   border-radius: 16px;
   border: 1px solid #e7caa6;
@@ -1652,6 +1653,7 @@ body.dark .chat-name-btn.sponsor-player-name:hover {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  overflow-y: auto;
 }
 
 .modal-title {

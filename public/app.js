@@ -3179,6 +3179,13 @@ async function showSponsorModal() {
   sponsorUi.close.addEventListener('click', () => {
     sponsorUi.modal.classList.add('hidden');
   });
+if (sponsorUi.modal) {
+  sponsorUi.modal.addEventListener('click', (e) => {
+    if (e.target === sponsorUi.modal) {
+      sponsorUi.modal.classList.add('hidden');
+    }
+  });
+}
 }
 
 function parseMarkdown(markdown) {
@@ -5649,15 +5656,38 @@ if (tradeUi.cancelBtn) {
     setTradeStatus('\u4ea4\u6613\u5df2\u53d6\u6d88');
   });
 }
+if (tradeUi.modal) {
+  tradeUi.modal.addEventListener('click', (e) => {
+    if (e.target === tradeUi.modal) {
+      tradeUi.modal.classList.add('hidden');
+      setTradeStatus('\u4ea4\u6613\u5df2\u53d6\u6d88');
+    }
+  });
+}
 if (shopUi.close) {
   shopUi.close.addEventListener('click', () => {
     shopUi.modal.classList.add('hidden');
     hideItemTooltip();
   });
 }
+if (shopUi.modal) {
+  shopUi.modal.addEventListener('click', (e) => {
+    if (e.target === shopUi.modal) {
+      shopUi.modal.classList.add('hidden');
+      hideItemTooltip();
+    }
+  });
+}
 if (mailUi.close) {
   mailUi.close.addEventListener('click', () => {
     mailUi.modal.classList.add('hidden');
+  });
+}
+if (mailUi.modal) {
+  mailUi.modal.addEventListener('click', (e) => {
+    if (e.target === mailUi.modal) {
+      mailUi.modal.classList.add('hidden');
+    }
   });
 }
 if (mailUi.refresh) {
@@ -5766,6 +5796,14 @@ if (forgeUi.close) {
     hideItemTooltip();
   });
 }
+if (forgeUi.modal) {
+  forgeUi.modal.addEventListener('click', (e) => {
+    if (e.target === forgeUi.modal) {
+      forgeUi.modal.classList.add('hidden');
+      hideItemTooltip();
+    }
+  });
+}
 if (forgeUi.confirm) {
   forgeUi.confirm.addEventListener('click', () => {
     if (!socket || !forgeSelection || !forgeSelection.mainSlot || !forgeSelection.secondaryKey) return;
@@ -5816,6 +5854,14 @@ if (effectUi.close) {
   effectUi.close.addEventListener('click', () => {
     effectUi.modal.classList.add('hidden');
     hideItemTooltip();
+  });
+}
+if (effectUi.modal) {
+  effectUi.modal.addEventListener('click', (e) => {
+    if (e.target === effectUi.modal) {
+      effectUi.modal.classList.add('hidden');
+      hideItemTooltip();
+    }
   });
 }
 if (trainingBatchUi.close) {
@@ -5947,6 +5993,13 @@ if (rankTabs && rankTabs.length) {
 if (document.getElementById('rank-close')) {
   document.getElementById('rank-close').addEventListener('click', () => {
     document.getElementById('rank-modal').classList.add('hidden');
+  });
+}
+if (document.getElementById('rank-modal')) {
+  document.getElementById('rank-modal').addEventListener('click', (e) => {
+    if (e.target === document.getElementById('rank-modal')) {
+      document.getElementById('rank-modal').classList.add('hidden');
+    }
   });
 }
   if (bagUi.tabs && bagUi.tabs.length) {

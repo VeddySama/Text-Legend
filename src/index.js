@@ -38,6 +38,8 @@ import {
   setRefineDecayRate,
   setRefineMaterialCount,
   getRefineMaterialCount,
+  getRefineDecayRate,
+  getRefineBonusPerLevel,
   setRefineBonusPerLevel,
   setEffectResetSuccessRate,
   getEffectResetSuccessRate,
@@ -4097,6 +4099,12 @@ async function buildState(player) {
     state_throttle_interval_sec: stateThrottleIntervalSec,
     state_throttle_override_server_allowed: overrideServerAllowed,
     refine_material_count: refineMaterialCount,
+    refine_config: {
+      base_success_rate: getRefineBaseSuccessRate(),
+      decay_rate: getRefineDecayRate(),
+      material_count: refineMaterialCount,
+      bonus_per_level: getRefineBonusPerLevel()
+    },
     effect_reset_config: {
       success_rate: effectResetSuccessRate,
       double_rate: effectResetDoubleRate,

@@ -1936,10 +1936,15 @@ function renderRefineModal() {
 
 function calculateRefineSuccessRate(level) {
   if (level === 1) return 100;
-  // 第2级50%，每10级降低3%，最低1%
+
+  // 使用服务器传递的配置，如果没有则使用默认值
+  const baseSuccessRate = lastState?.refine_config?.base_success_rate || 50;
+  const decayRate = lastState?.refine_config?.decay_rate || 3;
+
+  // 计算成功率：基础成功率 - 阶数 * 衰减率
   const tier = Math.floor((level - 2) / 10);
-  const baseRate = 50 - tier * 3;
-  return Math.max(1, baseRate);
+  const successRate = baseSuccessRate - tier * decayRate;
+  return Math.max(1, Math.round(successRate));
 }
 
 function countRefineMaterials() {

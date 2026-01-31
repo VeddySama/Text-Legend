@@ -9,6 +9,7 @@ import crypto from 'node:crypto';
 import cron from 'node-cron';
 
 import config from './config.js';
+import { validatePlayerName } from './game/validator.js';
 import knex from './db/index.js';
 import { createUser, verifyUser, createSession, getSession, getUserByName, setAdminFlag, verifyUserPassword, updateUserPassword, clearUserSessions, clearAllSessions } from './db/users.js';
 import { listCharacters, loadCharacter, saveCharacter, findCharacterByName, findCharacterByNameInRealm, listAllCharacters } from './db/characters.js';

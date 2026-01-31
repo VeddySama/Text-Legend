@@ -2917,50 +2917,76 @@ export async function handleCommand({ player, players, allCharacters, playersByN
 
       send(`${className}排行榜: ${rankText}`);
 
-      // 处理排行榜称号：清除该职业所有玩家的称号，只给第一名添加
-      if (rankedPlayers.length > 0) {
-        const topPlayer = rankedPlayers[0];
-        const rankTitle = `天下第一${className}`;
-        const currentRealmId = realmId || player.realmId || 1;
+      return;
+    }
+    case 'update_rank': {
+      // 手动更新排行榜称号（仅管理员或测试用）
+      // 不对外开放，只用于调试
+      const currentRealmId = realmId || player.realmId || 1;
 
-        // 清除该职业所有玩家的排行榜称号
+      const classes = [
+        { id: 'warrior', name: '战士' },
+        { id: 'mage', name: '法师' },
+        { id: 'taoist', name: '道士' }
+      ];
+
+      for (const cls of classes) {
         try {
+          const allClassPlayers = allCharacters.filter(p => p.classId === cls.id);
+
+          const rankedPlayers = allClassPlayers
+            .map(p => {
+              computeDerived(p);
+              return {
+                name: p.name,
+                atk: Math.floor(p.atk || 0),
+                mag: Math.floor(p.mag || 0),
+                spirit: Math.floor(p.spirit || 0)
+              };
+            })
+            .sort((a, b) => {
+              if (cls.id === 'warrior') return b.atk - a.atk;
+              if (cls.id === 'mage') return b.mag - a.mag;
+              return b.spirit - a.spirit;
+            });
+
+          // 清除该职业所有玩家的排行榜称号
           await knex('characters')
-            .where({ class: classId, realm_id: currentRealmId })
+            .where({ class: cls.id, realm_id: currentRealmId })
             .update({ rank_title: null });
-          console.log(`[Rank] 清除所有${className}的排行榜称号`);
-        } catch (err) {
-          console.error('清除排行榜称号失败:', err);
-        }
 
-        // 为第一名设置称号
-        try {
-          await knex('characters')
-            .where({ name: topPlayer.name, realm_id: currentRealmId })
-            .update({ rank_title: rankTitle });
-          console.log(`[Rank] 为 ${topPlayer.name} 设置称号: ${rankTitle}`);
-        } catch (err) {
-          console.error('更新排行榜称号失败:', err);
-        }
+          // 为第一名设置称号
+          if (rankedPlayers.length > 0) {
+            const topPlayer = rankedPlayers[0];
+            const rankTitle = `天下第一${cls.name}`;
+            await knex('characters')
+              .where({ name: topPlayer.name, realm_id: currentRealmId })
+              .update({ rank_title: rankTitle });
 
-        // 如果第一名在线，通知玩家
-        const topPlayerObj = playersByName ? playersByName(topPlayer.name, currentRealmId) : null;
-        if (topPlayerObj) {
-          topPlayerObj.send(`恭喜！你已成为${className}排行榜第一名，获得称号：${rankTitle}`);
-          topPlayerObj.rankTitle = rankTitle;
-        }
+            // 如果第一名在线，通知玩家
+            const topPlayerObj = playersByName ? playersByName(topPlayer.name, currentRealmId) : null;
+            if (topPlayerObj) {
+              topPlayerObj.send(`恭喜！你已成为${cls.name}排行榜第一名，获得称号：${rankTitle}`);
+              topPlayerObj.rankTitle = rankTitle;
+            }
 
-        // 通知该职业其他在线玩家称号被清除
-        const classNamePlayers = allClassPlayers.filter(p => p.classId === classId && p.name !== topPlayer.name);
-        for (const p of classNamePlayers) {
-          const playerObj = playersByName ? playersByName(p.name, currentRealmId) : null;
-          if (playerObj && playerObj.rankTitle) {
-            playerObj.send(`你已不再是${className}排行榜第一名，称号已被收回`);
-            playerObj.rankTitle = null;
+            // 通知该职业其他在线玩家称号被清除
+            for (const p of allClassPlayers) {
+              if (p.name !== topPlayer.name) {
+                const playerObj = playersByName ? playersByName(p.name, currentRealmId) : null;
+                if (playerObj && playerObj.rankTitle) {
+                  playerObj.send(`你已不再是${cls.name}排行榜第一名，称号已被收回`);
+                  playerObj.rankTitle = null;
+                }
+              }
+            }
           }
+        } catch (err) {
+          console.error(`[Rank] 更新${cls.name}排行榜失败:`, err);
         }
       }
-      
+
+      send('排行榜称号已更新');
       return;
     }
     default:

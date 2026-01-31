@@ -1642,6 +1642,11 @@ function setupRankUpdate() {
     await updateRankTitles();
   });
   console.log('[Rank] 已设置每日0点自动更新排行榜称号');
+
+  // 服务器启动时立即执行一次
+  updateRankTitles().catch(err => {
+    console.error('[Rank] 服务器启动时更新排行榜失败:', err);
+  });
 }
 
 app.get('/admin/backup', async (req, res) => {

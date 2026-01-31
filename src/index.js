@@ -4451,17 +4451,18 @@ function applyDamageToMob(mob, dmg, attackerName, realmId = null) {
   }
 
   recordMobDamage(mob, attackerName, dmg);
-  applyDamage(mob, dmg);
 
-  // 特殊BOSS血量百分比公告
+  // 特殊BOSS血量百分比公告（在应用伤害前计算）
+  let announcedBlood = false;
   if (isSpecialBoss && mob.hp > 0) {
-    const hpPct = mob.hp / mob.max_hp;
+    const hpBeforeDmg = mob.hp;
     if (!mob.status) mob.status = {};
 
     // 检查是否需要公告50%、30%、10%血量
     const thresholds = [0.5, 0.3, 0.1];
     for (const threshold of thresholds) {
       const key = `announced${threshold * 100}`;
+      const hpPct = hpBeforeDmg / mob.max_hp;
       if (hpPct <= threshold && !mob.status[key]) {
         mob.status[key] = true;
         emitAnnouncement(
@@ -4470,9 +4471,12 @@ function applyDamageToMob(mob, dmg, attackerName, realmId = null) {
           null,
           realmId
         );
+        announcedBlood = true;
       }
     }
   }
+
+  applyDamage(mob, dmg);
 
   return { damageTaken: true, actualDamage: dmg };
 }

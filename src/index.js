@@ -4424,8 +4424,8 @@ function applyDamageToMob(mob, dmg, attackerName, realmId = null) {
       return { damageTaken: false };
     }
 
-    // 世界BOSS受到攻击时10%几率触发无敌效果（持续10秒）
-    if (isWorldBoss && Math.random() <= 0.1) {
+    // 世界BOSS受到攻击时1%几率触发无敌效果（持续10秒）
+    if (isWorldBoss && Math.random() <= 0.01) {
       if (!mob.status) mob.status = {};
       mob.status.invincible = now + 10000;
 

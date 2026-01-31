@@ -2885,7 +2885,6 @@ export async function handleCommand({ player, players, allCharacters, playersByN
 
       // 获取该服务器该职业的玩家（包括离线）
       const allClassPlayers = await allCharacters;
-      console.log(`[Rank Command] 总玩家数: ${allClassPlayers.length}, ${classId}职业玩家数: ${allClassPlayers.filter(p => p.classId === classId).length}`);
       const rankedPlayers = allClassPlayers
         .filter(p => p.classId === classId)
         .map(p => {
@@ -2906,19 +2905,8 @@ export async function handleCommand({ player, players, allCharacters, playersByN
         })
         .slice(0, 10);
 
-      // 调试日志：输出前5名
-      if (rankedPlayers.length > 0) {
-        const attrName = classId === 'warrior' ? 'atk' : classId === 'mage' ? 'mag' : 'spirit';
-        const top5 = rankedPlayers.slice(0, 5);
-        console.log(`[Rank Command] ${className}排行榜前5名:`, top5.map(p => `${p.name}(${p[attrName]})`).join(', '));
-      }
-
-      // 获取服务器名称
-      const realm = await getRealmById(realmId || 1);
-      const realmName = realm ? realm.name : `区服${realmId || 1}`;
-
       if (rankedPlayers.length === 0) {
-        send(`【${realmName}】${className}排行榜: 暂无数据`);
+        send(`${className}排行榜: 暂无数据`);
         return;
       }
 
@@ -2928,7 +2916,7 @@ export async function handleCommand({ player, players, allCharacters, playersByN
         return `${idx + 1}.${p.name}(${attrValue})`;
       }).join(' ');
 
-      send(`【${realmName}】${className}排行榜: ${rankText}`);
+      send(`${className}排行榜: ${rankText}`);
 
       return;
     }

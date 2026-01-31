@@ -1729,7 +1729,8 @@ function listForgeSecondaries(itemId, items) {
   return (items || []).filter((item) =>
     item.id === itemId &&
     ['legendary', 'supreme'].includes(item.rarity) &&
-    (item.qty || 0) > 0
+    (item.qty || 0) > 0 &&
+    !(item.effects && item.effects.elementAtk) // 排除带元素属性的物品
   );
 }
 
@@ -1748,7 +1749,7 @@ function renderForgeSecondaryList(itemId) {
   const candidates = listForgeSecondaries(itemId, lastState?.items || []);
   if (!candidates.length) {
     const empty = document.createElement('div');
-    empty.textContent = '背包没有同名传说及以上装备';
+    empty.textContent = '背包没有符合条件的副件（传说及以上、不带元素属性）';
     forgeUi.secondaryList.appendChild(empty);
     return;
   }

@@ -106,6 +106,40 @@ function getWebglFingerprint() {
   }
 }
 
+function getAudioFingerprint() {
+  try {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return '';
+    const ctx = new AudioContext();
+    const oscillator = ctx.createOscillator();
+    const compressor = ctx.createDynamicsCompressor();
+    const analyser = ctx.createAnalyser();
+    oscillator.type = 'triangle';
+    oscillator.frequency.value = 10000;
+    compressor.threshold.value = -50;
+    compressor.knee.value = 40;
+    compressor.ratio.value = 12;
+    compressor.attack.value = 0;
+    compressor.release.value = 0.25;
+    oscillator.connect(compressor);
+    compressor.connect(analyser);
+    analyser.connect(ctx.destination);
+    oscillator.start(0);
+    const data = new Float32Array(analyser.fftSize);
+    analyser.getFloatTimeDomainData(data);
+    oscillator.stop();
+    ctx.close();
+    let hash = 0;
+    for (let i = 0; i < data.length; i += 1) {
+      hash = ((hash << 5) - hash) + Math.floor(data[i] * 1000);
+      hash |= 0;
+    }
+    return String(hash);
+  } catch {
+    return '';
+  }
+}
+
 function computeDeviceFingerprint() {
   if (deviceFingerprint) return deviceFingerprint;
   const parts = [
@@ -121,7 +155,8 @@ function computeDeviceFingerprint() {
     navigator.hardwareConcurrency || 0,
     navigator.deviceMemory || 0,
     getCanvasFingerprint(),
-    getWebglFingerprint()
+    getWebglFingerprint(),
+    getAudioFingerprint()
   ];
   deviceFingerprint = hashString(parts.join('|'));
   return deviceFingerprint;

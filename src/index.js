@@ -6417,9 +6417,10 @@ function processMobDeath(player, mob, online) {
       });
     }
 
-    const legendaryClassAwarded = new Set();
-    const supremeClassAwarded = new Set();
-    dropTargets.forEach(({ player: owner, damageRatio, rank, classRank }) => {
+  const legendaryClassAwarded = new Set();
+  const supremeClassAwarded = new Set();
+  const lootOwnersToSave = new Set();
+  dropTargets.forEach(({ player: owner, damageRatio, rank, classRank }) => {
       const drops = dropLoot(template, 1);
       if (!drops.length) return;
       if (!isSpecialBoss && party && partyMembersForLoot.length > 0) {
@@ -6436,6 +6437,7 @@ function processMobDeath(player, mob, online) {
           if (isEquipmentItem(item) && hasSpecialEffects(effects)) {
             emitAnnouncement(`${target.name} 获得特效装备 ${formatItemLabel(id, effects)}！`, 'announce', null, realmId);
           }
+          if (target?.userId) lootOwnersToSave.add(target);
         });
       } else if (isSpecialBoss) {
         const actualDrops = [];
@@ -6501,6 +6503,7 @@ function processMobDeath(player, mob, online) {
           logLoot(`[loot][special] ${owner.name} <- ${entry.id} (${template.id})`);
           actualDrops.push(entry);
           itemCount++;
+          if (owner?.userId) lootOwnersToSave.add(owner);
           if (item) {
             const rarity = rarityByPrice(item);
             if (rarity === 'legendary') {
@@ -6529,6 +6532,7 @@ function processMobDeath(player, mob, online) {
         drops.forEach((entry) => {
           addItem(owner, entry.id, 1, entry.effects);
           logLoot(`[loot][solo] ${owner.name} <- ${entry.id} (${template.id})`);
+          if (owner?.userId) lootOwnersToSave.add(owner);
         });
         owner.send(`掉落: ${drops.map((entry) => formatItemLabel(entry.id, entry.effects)).join(', ')}`);
         drops.forEach((entry) => {
@@ -6545,6 +6549,12 @@ function processMobDeath(player, mob, online) {
         });
       }
     });
+
+  if (lootOwnersToSave.size > 0) {
+    await Promise.all(
+      Array.from(lootOwnersToSave).map((p) => savePlayer(p).catch(() => {}))
+    );
+  }
 }
 
 function updateSpecialBossStatsBasedOnPlayers() {

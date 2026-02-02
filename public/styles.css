@@ -1313,6 +1313,7 @@ button:hover {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  min-height: 0;
 }
 
 .battle-column-title {
@@ -1325,6 +1326,15 @@ button:hover {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  flex: 1;
+  overflow-y: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.battle-list::-webkit-scrollbar {
+  width: 0;
+  height: 0;
 }
 
 .battle-card {

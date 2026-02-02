@@ -4615,29 +4615,32 @@ function renderState(state) {
   const battlePlayers = [];
   if (state.player && state.stats) {
     battlePlayers.push({
-      id: state.player.name,
-      label: `${state.player.name} Lv${state.player.level} ${classNames[state.player.classId] || state.player.classId}`,
-      raw: state.player,
-      dataAttrs: {
-        playerName: state.player.name,
-        playerNameNorm: normalizeBattleName(state.player.name)
-      }
+      type: 'player',
+      name: state.player.name,
+      meta: `Lv${state.player.level} ${classNames[state.player.classId] || state.player.classId}`,
+      hp: state.stats.hp,
+      maxHp: state.stats.max_hp
     });
   }
   (state.players || [])
     .filter((p) => p.name && (!state.player || p.name !== state.player.name))
     .forEach((p) => {
       battlePlayers.push({
-        id: p.name,
-        label: `${p.name} Lv${p.level} ${classNames[p.classId] || p.classId}`,
-        raw: p,
-        dataAttrs: {
-          playerName: p.name,
-          playerNameNorm: normalizeBattleName(p.name)
-        }
+        type: 'player',
+        name: p.name,
+        meta: `Lv${p.level} ${classNames[p.classId] || p.classId}`,
+        hp: p.hp || 0,
+        maxHp: p.max_hp || 0
       });
     });
-  renderChips(battleUi.players, battlePlayers, (p) => showPlayerModal(p.raw));
+  renderBattleList(battleUi.players, battlePlayers, (p) => {
+    if (!p || !p.name) return;
+    const target = (state.players || []).find((other) => other.name === p.name) ||
+      (state.player && state.player.name === p.name ? state.player : null);
+    if (target) {
+      showPlayerModal(target);
+    }
+  });
 
   const mobs = (state.mobs || []).map((m) => ({ id: m.id, label: `${m.name}(${m.hp})`, raw: m }));
   renderChips(ui.mobs, mobs, (m) => {
@@ -4646,20 +4649,22 @@ function renderState(state) {
   }, selectedMob ? selectedMob.id : null);
 
   const battleMobs = (state.mobs || []).map((m) => ({
+    type: 'mob',
     id: m.id,
-    label: `${m.name} (${Math.max(0, Math.floor(m.hp))}/${Math.max(0, Math.floor(m.max_hp || 0))})`,
-    raw: m,
-    dataAttrs: {
-      mobId: m.id,
-      mobName: m.name,
-      mobNameNorm: normalizeBattleName(m.name),
-      mobHp: Math.max(0, Math.floor(m.hp))
-    }
+    name: m.name,
+    meta: `HP ${Math.max(0, Math.floor(m.hp))}/${Math.max(0, Math.floor(m.max_hp || 0))}`,
+    hp: m.hp || 0,
+    maxHp: m.max_hp || 0
   }));
-  renderChips(battleUi.mobs, battleMobs, (m) => {
-    selectedMob = m.raw;
-    socket.emit('cmd', { text: `attack ${m.raw.name}` });
-  }, selectedMob ? selectedMob.id : null);
+  renderBattleList(battleUi.mobs, battleMobs, (m) => {
+    if (!m || !m.name) return;
+    const mob = (state.mobs || []).find((entry) => entry.name === m.name && entry.id === m.id) ||
+      (state.mobs || []).find((entry) => entry.name === m.name);
+    if (mob && socket) {
+      selectedMob = mob;
+      socket.emit('cmd', { text: `attack ${mob.name}` });
+    }
+  });
 
   const skills = (state.skills || []).map((s) => ({
     id: s.id,
@@ -5404,7 +5409,7 @@ function renderCharacters(chars) {
   });
 }
 
-function renderBattleList(container, entries) {
+function renderBattleList(container, entries, onClick) {
   if (!container) return;
   container.innerHTML = '';
   if (!entries.length) {
@@ -5417,6 +5422,10 @@ function renderBattleList(container, entries) {
   entries.forEach((entry) => {
     const card = document.createElement('div');
     card.className = 'battle-card';
+    if (typeof onClick === 'function') {
+      card.classList.add('battle-card-clickable');
+      card.addEventListener('click', () => onClick(entry));
+    }
     if (entry.type === 'mob' && entry.name) {
       card.dataset.mobName = entry.name;
       card.dataset.mobNameNorm = normalizeBattleName(entry.name);

@@ -1340,6 +1340,17 @@ button:hover {
   overflow: visible;
 }
 
+.battle-card-clickable {
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.12s ease, border-color 0.12s ease;
+}
+
+.battle-card-clickable:hover {
+  transform: translateY(-1px);
+  border-color: rgba(232, 160, 88, 0.7);
+  box-shadow: 0 4px 14px rgba(20, 12, 6, 0.35);
+}
+
 .battle-card-header {
   display: flex;
   justify-content: space-between;
@@ -4268,6 +4279,7 @@ body.dark .changeclass-options .chip:disabled {
   line-height: 1.2;
   min-width: 0;
 }
+
 
 .chip:disabled {
   opacity: 0.6;

@@ -1273,6 +1273,10 @@ button:hover {
   display: none;
 }
 
+.log-wrap.collapsed .battle-panel {
+  display: none;
+}
+
 .log-wrap.collapsed {
   min-height: auto;
 }
@@ -1295,6 +1299,125 @@ button:hover {
   max-height: 420px;
   overflow-y: auto;
   font-family: var(--font-mono);
+}
+
+.battle-panel {
+  display: grid;
+  grid-template-columns: 1fr 2fr 1fr;
+  gap: 14px;
+  padding: 14px;
+  background: #0d0b08;
+}
+
+.battle-column {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.battle-column-title {
+  color: #e8d9c4;
+  font-size: 0.85rem;
+  letter-spacing: 0.4px;
+}
+
+.battle-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.battle-card {
+  background: #1b120a;
+  border: 1px solid rgba(232, 160, 88, 0.35);
+  border-radius: 12px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-shadow: inset 0 0 0 1px rgba(255, 224, 190, 0.08);
+}
+
+.battle-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.85rem;
+  color: #f3e6d2;
+  gap: 8px;
+}
+
+.battle-card-name {
+  font-weight: 600;
+}
+
+.battle-card-meta {
+  font-size: 0.75rem;
+  color: #c8b8a8;
+  white-space: nowrap;
+}
+
+.hp-bar {
+  height: 8px;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.hp-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #d9412b, #f08a3a);
+  width: 0%;
+  transition: width 0.2s ease;
+}
+
+.battle-center {
+  position: relative;
+  min-height: 360px;
+}
+
+.battle-log {
+  max-height: 420px;
+  min-height: 360px;
+}
+
+.damage-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.damage-float {
+  position: absolute;
+  font-weight: 700;
+  color: #ff6b5a;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+  animation: float-up 1.2s ease forwards;
+  font-size: 1.1rem;
+}
+
+@keyframes float-up {
+  0% { transform: translateY(0); opacity: 1; }
+  100% { transform: translateY(-28px); opacity: 0; }
+}
+
+body.dark .battle-panel {
+  background: #0d0b08;
+}
+
+body.dark .battle-card {
+  background: #1a120b;
+  border-color: rgba(232, 160, 88, 0.4);
+}
+
+body.dark .battle-card-meta {
+  color: #b8a898;
+}
+
+body.dark .battle-column-title {
+  color: #e8d9c4;
 }
 
 .chat-wrap {

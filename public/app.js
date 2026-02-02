@@ -294,6 +294,11 @@ const ui = {
   actions: document.getElementById('actions-list'),
   changePasswordButtons: Array.from(document.querySelectorAll('[data-action="change-password"]'))
 };
+const battleUi = {
+  players: document.getElementById('battle-players'),
+  mobs: document.getElementById('battle-mobs'),
+  damageLayer: document.getElementById('battle-damage-layer')
+};
 const dropsUi = {
   modal: document.getElementById('drops-modal'),
   tabs: document.querySelectorAll('.drops-tab'),
@@ -994,6 +999,12 @@ function appendLine(payload) {
   const isDamageLine = /你释放了|对.*造成.*点伤害|受到.*点伤害|闪避了.*的攻击|躲过了.*的攻击|溅射到|造成.*点伤害|中了毒|中毒伤害|毒特效|恢复.*点生命|施放.*恢复|暴击|连击触发|破防攻击|破防效果|无敌状态|无敌效果|减伤效果|禁疗影响|禁疗效果|免疫了所有伤害|处于无敌|施放.*护盾|震退了怪物|施放.*，震退|施放.*，造成范围伤害|攻击落空|被麻痹戒指定身|被麻痹|无法行动/.test(text);
   if (!showDamage && isDamageLine) {
     return;
+  }
+  if (showDamage && isDamageLine) {
+    const dmgMatch = text.match(/(\d+)\s*点伤害/);
+    if (dmgMatch) {
+      spawnDamageFloat(dmgMatch[1]);
+    }
   }
 
   // 过滤经验和金币信息
@@ -2906,7 +2917,7 @@ function handleItemAction(item) {
   }
 }
 
-  function renderChips(container, items, onClick, activeId) {
+function renderChips(container, items, onClick, activeId) {
   container.innerHTML = '';
   items.forEach((item) => {
     const btn = document.createElement('div');
@@ -4549,11 +4560,40 @@ function renderState(state) {
     });
   renderChips(ui.players, players, (p) => showPlayerModal(p.raw));
 
+  const battlePlayers = [];
+  if (state.player && state.stats) {
+    battlePlayers.push({
+      name: state.player.name,
+      meta: `Lv${state.player.level} ${classNames[state.player.classId] || state.player.classId}`,
+      hp: state.stats.hp,
+      maxHp: state.stats.max_hp
+    });
+  }
+  (state.players || [])
+    .filter((p) => p.name && (!state.player || p.name !== state.player.name))
+    .forEach((p) => {
+      battlePlayers.push({
+        name: p.name,
+        meta: `Lv${p.level} ${classNames[p.classId] || p.classId}`,
+        hp: p.hp || 0,
+        maxHp: p.max_hp || 0
+      });
+    });
+  renderBattleList(battleUi.players, battlePlayers);
+
   const mobs = (state.mobs || []).map((m) => ({ id: m.id, label: `${m.name}(${m.hp})`, raw: m }));
   renderChips(ui.mobs, mobs, (m) => {
     selectedMob = m.raw;
     socket.emit('cmd', { text: `attack ${m.raw.name}` });
   }, selectedMob ? selectedMob.id : null);
+
+  const battleMobs = (state.mobs || []).map((m) => ({
+    name: m.name,
+    meta: `HP ${Math.max(0, Math.floor(m.hp))}/${Math.max(0, Math.floor(m.max_hp || 0))}`,
+    hp: m.hp || 0,
+    maxHp: m.max_hp || 0
+  }));
+  renderBattleList(battleUi.mobs, battleMobs);
 
   const skills = (state.skills || []).map((s) => ({
     id: s.id,
@@ -5292,6 +5332,58 @@ function renderCharacters(chars) {
     card.appendChild(actions);
     characterList.appendChild(card);
   });
+}
+
+function renderBattleList(container, entries) {
+  if (!container) return;
+  container.innerHTML = '';
+  if (!entries.length) {
+    const empty = document.createElement('div');
+    empty.className = 'battle-card';
+    empty.textContent = '暂无目标';
+    container.appendChild(empty);
+    return;
+  }
+  entries.forEach((entry) => {
+    const card = document.createElement('div');
+    card.className = 'battle-card';
+    const header = document.createElement('div');
+    header.className = 'battle-card-header';
+    const name = document.createElement('div');
+    name.className = 'battle-card-name';
+    name.textContent = entry.name || '-';
+    const meta = document.createElement('div');
+    meta.className = 'battle-card-meta';
+    meta.textContent = entry.meta || '';
+    header.appendChild(name);
+    header.appendChild(meta);
+    const bar = document.createElement('div');
+    bar.className = 'hp-bar';
+    const fill = document.createElement('div');
+    fill.className = 'hp-bar-fill';
+    const pct = entry.maxHp ? Math.max(0, Math.min(100, (entry.hp / entry.maxHp) * 100)) : 0;
+    fill.style.width = `${pct}%`;
+    bar.appendChild(fill);
+    card.appendChild(header);
+    card.appendChild(bar);
+    container.appendChild(card);
+  });
+}
+
+function spawnDamageFloat(amount) {
+  if (!battleUi.damageLayer || !amount) return;
+  const el = document.createElement('div');
+  el.className = 'damage-float';
+  el.textContent = `-${amount}`;
+  const rect = battleUi.damageLayer.getBoundingClientRect();
+  const x = Math.max(12, Math.min(rect.width - 48, Math.random() * rect.width));
+  const y = Math.max(20, Math.min(rect.height - 40, rect.height * 0.4 + Math.random() * rect.height * 0.2));
+  el.style.left = `${x}px`;
+  el.style.top = `${y}px`;
+  battleUi.damageLayer.appendChild(el);
+  setTimeout(() => {
+    el.remove();
+  }, 1200);
 }
 
 async function createCharacter() {

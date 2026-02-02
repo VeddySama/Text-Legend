@@ -4007,8 +4007,11 @@ function getRoomCommonState(zoneId, roomId, realmId = 1) {
       name: p.name,
       classId: p.classId,
       level: p.level,
+      hp: Math.floor(p.hp || 0),
+      max_hp: Math.floor(p.max_hp || 0),
       guild: p.guild?.name || null,
-      guildId: p.guild?.id || null
+      guildId: p.guild?.id || null,
+      pk: p.pk || 0
     }));
 
   const data = {
@@ -4069,6 +4072,8 @@ async function buildState(player) {
         name: p.name,
         classId: p.classId,
         level: p.level,
+        hp: Math.floor(p.hp || 0),
+        max_hp: Math.floor(p.max_hp || 0),
         guild: p.guild?.name || null,
         guildId: p.guild?.id || null,
         pk: p.pk || 0

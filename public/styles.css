@@ -3675,13 +3675,15 @@ body.dark .rank-item {
   margin-top: 8px;
   margin-bottom: 4px;
   font-size: 0.8rem;
-  color: #e8d9c4;
+  color: #8f4a12;
   letter-spacing: 0.3px;
+  font-weight: 600;
 }
 
 .rank-empty {
-  color: #b8a898;
-  font-size: 0.8rem;
+  color: #8a6a48;
+  font-size: 0.85rem;
+  font-weight: 500;
   padding: 2px 0 6px;
 }
 

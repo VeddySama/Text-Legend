@@ -304,6 +304,16 @@ const battleUi = {
   mobs: document.getElementById('battle-mobs'),
   damageLayer: document.getElementById('battle-damage-layer')
 };
+
+const SKILL_NAME_OVERRIDES = {
+  earth_spike: '彻地钉',
+  thunderstorm: '雷霆万钧'
+};
+
+function getSkillDisplayName(skill) {
+  if (!skill) return '';
+  return SKILL_NAME_OVERRIDES[skill.id] || skill.name || '';
+}
 const dropsUi = {
   modal: document.getElementById('drops-modal'),
   tabs: document.querySelectorAll('.drops-tab'),
@@ -4715,7 +4725,7 @@ function renderState(state) {
 
   const skills = (state.skills || []).map((s) => ({
     id: s.id,
-    label: s.level ? `${s.name} Lv${s.level}` : s.name,
+    label: s.level ? `${getSkillDisplayName(s)} Lv${s.level}` : getSkillDisplayName(s),
     raw: s,
     exp: s.exp || 0,
     expNext: s.expNext || 100

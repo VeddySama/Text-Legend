@@ -4901,6 +4901,10 @@ const MOB_SUMMON_POOL = Object.values(SKILLS)
   .filter((skill) => skill && MOB_SUMMON_SKILLS.has(skill.id));
 const MOB_SKILL_CHANCE = 0.2;
 const MOB_SUMMON_CHANCE = 0.04;
+const SKILL_NAME_OVERRIDES = {
+  earth_spike: '彻地钉',
+  thunderstorm: '雷霆万钧'
+};
 
 function getMobSkillLevel(mob) {
   const level = Math.max(1, Number(mob?.level || 1));
@@ -4923,6 +4927,11 @@ function pickMobSkill(mob) {
   if (!skill) return null;
   mob.status.nextSkillAt = now + (skill.type === 'summon' ? 10000 : 3000);
   return skill;
+}
+
+function getSkillDisplayName(skill) {
+  if (!skill) return '';
+  return SKILL_NAME_OVERRIDES[skill.id] || skill.name || '';
 }
 
 function removeSummonedMobsByOwner(ownerMob, realmId, zoneId, roomId) {
@@ -7456,7 +7465,7 @@ async function combatTick() {
     if (mobSkill && mobSkill.type === 'summon') {
       const summoned = tryMobSummon(mob, mobSkill, realmId, mobZoneId, mobRoomId);
       if (summoned) {
-        sendToRoom(realmId, mobZoneId, mobRoomId, `${mob.name} 施放 ${mobSkill.name}，召唤了 ${summoned.name}！`);
+        sendToRoom(realmId, mobZoneId, mobRoomId, `${mob.name} 施放 ${getSkillDisplayName(mobSkill)}，召唤了 ${summoned.name}！`);
         sendRoomState(mobZoneId, mobRoomId, realmId);
         skipMobAttack = true;
       }
@@ -7479,7 +7488,7 @@ async function combatTick() {
       if (mobSkill) {
         const mobSkillLevel = getMobSkillLevel(mob);
         const mobSkillPower = scaledSkillPower(mobSkill, mobSkillLevel);
-        sendToRoom(realmId, mobZoneId, mobRoomId, `${mob.name} 释放了 ${mobSkill.name}！`);
+        sendToRoom(realmId, mobZoneId, mobRoomId, `${mob.name} 释放了 ${getSkillDisplayName(mobSkill)}！`);
         if (mobSkill.type === 'attack' || mobSkill.type === 'cleave') {
           dmg = calcDamage(mob, mobTarget, mobSkillPower);
         } else if (mobSkill.type === 'spell') {

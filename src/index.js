@@ -3984,7 +3984,6 @@ function getRoomCommonState(zoneId, roomId, realmId = 1) {
 
   let bossRank = [];
   let bossClassRank = null;
-  let bossClassRank = null;
   let bossNextRespawn = null;
   const deadSpecialBosses = deadBosses.filter((m) => {
     const tpl = MOB_TEMPLATES[m.templateId];

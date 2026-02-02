@@ -1012,7 +1012,7 @@ function appendLine(payload) {
           spawnDamageFloatOnMob(targetName, dmgMatch[1]);
         }
       } else {
-        spawnDamageFloat(dmgMatch[1]);
+        spawnDamageFloat(dmgMatch[1], 'mob');
       }
     }
   }
@@ -5389,10 +5389,10 @@ function renderBattleList(container, entries) {
   });
 }
 
-function spawnDamageFloat(amount) {
+function spawnDamageFloat(amount, kind = 'mob') {
   if (!battleUi.damageLayer || !amount) return;
   const el = document.createElement('div');
-  el.className = 'damage-float';
+  el.className = `damage-float damage-${kind}`;
   el.textContent = `-${amount}`;
   const rect = battleUi.damageLayer.getBoundingClientRect();
   const x = Math.max(12, Math.min(rect.width - 48, Math.random() * rect.width));
@@ -5409,13 +5409,13 @@ function spawnDamageFloatOnMob(mobName, amount) {
   if (!battleUi.damageLayer || !mobName || !amount) return;
   const card = battleUi.mobs?.querySelector(`[data-mob-name="${CSS.escape(mobName)}"]`);
   if (!card) {
-    spawnDamageFloat(amount);
+    spawnDamageFloat(amount, 'mob');
     return;
   }
   const layerRect = battleUi.damageLayer.getBoundingClientRect();
   const cardRect = card.getBoundingClientRect();
   const el = document.createElement('div');
-  el.className = 'damage-float';
+  el.className = 'damage-float damage-mob';
   el.textContent = `-${amount}`;
   const x = Math.max(0, cardRect.left - layerRect.left + cardRect.width * 0.6);
   const y = Math.max(0, cardRect.top - layerRect.top + 6);
@@ -5431,13 +5431,13 @@ function spawnDamageFloatOnPlayer(playerName, amount) {
   if (!battleUi.damageLayer || !playerName || !amount) return;
   const card = battleUi.players?.querySelector(`[data-player-name="${CSS.escape(playerName)}"]`);
   if (!card) {
-    spawnDamageFloat(amount);
+    spawnDamageFloat(amount, 'player');
     return;
   }
   const layerRect = battleUi.damageLayer.getBoundingClientRect();
   const cardRect = card.getBoundingClientRect();
   const el = document.createElement('div');
-  el.className = 'damage-float';
+  el.className = 'damage-float damage-player';
   el.textContent = `-${amount}`;
   const x = Math.max(0, cardRect.left - layerRect.left + cardRect.width * 0.6);
   const y = Math.max(0, cardRect.top - layerRect.top + 6);

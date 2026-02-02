@@ -3950,6 +3950,10 @@ body.dark .sabak-empty {
   margin-top: 10px;
 }
 
+.changeclass-options .chip {
+  color: #000;
+}
+
 .changeclass-options .chip.selected {
   background: #c56b2a;
   color: #fff7ea;
@@ -3958,7 +3962,8 @@ body.dark .sabak-empty {
 }
 
 .changeclass-options .chip:disabled {
-  color: #7f6a55;
+  color: #4d3b2c;
+  opacity: 0.8;
 }
 
 body.dark .changeclass-options .chip {

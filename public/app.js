@@ -1003,8 +1003,9 @@ function appendLine(payload) {
     const healMatch = text.match(/(\d+)\s*点生命/);
     const targetMatch = text.match(/对\s*([^\s]+)\s*(造成|施放|释放|附加)/);
     const directTargetMatch = text.match(/^([^\s]+)\s*(恢复|受到|中毒|暴击|施放|触发)/);
+    const splashMatch = text.match(/溅射到\s*([^\s]+)/);
     const mentionsSelf = text.startsWith('你') || text.includes('对你') || text.includes('你受到') || text.includes('你恢复');
-    const rawTarget = targetMatch?.[1] || directTargetMatch?.[1] || (mentionsSelf ? '你' : null);
+    const rawTarget = targetMatch?.[1] || splashMatch?.[1] || directTargetMatch?.[1] || (mentionsSelf ? '你' : null);
     const targetName = rawTarget === '你' ? selfName : rawTarget;
     const targetIsPlayer = rawTarget === '你' || mentionsSelf;
 
@@ -5397,6 +5398,7 @@ function renderBattleList(container, entries) {
     card.className = 'battle-card';
     if (entry.type === 'mob' && entry.name) {
       card.dataset.mobName = entry.name;
+      card.dataset.mobNameNorm = normalizeBattleName(entry.name);
       if (entry.id != null) card.dataset.mobId = String(entry.id);
       if (entry.hp != null) card.dataset.mobHp = String(entry.hp);
     }
@@ -5426,6 +5428,12 @@ function renderBattleList(container, entries) {
   });
 }
 
+function normalizeBattleName(name) {
+  return String(name || '')
+    .replace(/\s+/g, '')
+    .replace(/[()（）\[\]【】]/g, '');
+}
+
 function spawnDamageFloat(amount, kind = 'mob', label = null) {
   if (!battleUi.damageLayer || (!amount && !label)) return;
   const el = document.createElement('div');
@@ -5443,15 +5451,20 @@ function spawnDamageFloat(amount, kind = 'mob', label = null) {
 }
 
 function pickMobCardByName(mobName) {
-  const cards = battleUi.mobs?.querySelectorAll(`[data-mob-name="${CSS.escape(mobName)}"]`);
+  if (!battleUi.mobs) return null;
+  const direct = battleUi.mobs.querySelector(`[data-mob-name="${CSS.escape(mobName)}"]`);
+  if (direct) return direct;
+  const norm = normalizeBattleName(mobName);
+  const cards = battleUi.mobs.querySelectorAll('[data-mob-name-norm]');
   if (!cards || !cards.length) return null;
-  let best = cards[0];
-  let bestHp = Number(best.dataset.mobHp ?? Infinity);
+  let best = null;
+  let bestHp = Infinity;
   cards.forEach((card) => {
+    if (card.dataset.mobNameNorm !== norm) return;
     const hp = Number(card.dataset.mobHp ?? Infinity);
-    if (!Number.isNaN(hp) && hp < bestHp) {
-      bestHp = hp;
+    if (!best || (!Number.isNaN(hp) && hp < bestHp)) {
       best = card;
+      bestHp = hp;
     }
   });
   return best;

@@ -3950,15 +3950,33 @@ body.dark .sabak-empty {
   margin-top: 10px;
 }
 
+.changeclass-options .chip.selected {
+  background: #c56b2a;
+  color: #fff7ea;
+  border-color: #b35a1a;
+  box-shadow: 0 0 0 2px rgba(197, 107, 42, 0.2);
+}
+
+.changeclass-options .chip:disabled {
+  color: #7f6a55;
+}
+
 body.dark .changeclass-options .chip {
   background: #3a3028;
   color: #e0d0c0;
   border-color: #4a3a30;
 }
 
+body.dark .changeclass-options .chip.selected {
+  background: #a86028;
+  color: #fff7ea;
+  border-color: #c27a3d;
+  box-shadow: 0 0 0 2px rgba(168, 96, 40, 0.35);
+}
+
 body.dark .changeclass-options .chip:disabled {
   background: #2a2420;
-  color: #8f7f6f;
+  color: #b8a898;
   border-color: #3a2f28;
   opacity: 0.75;
 }

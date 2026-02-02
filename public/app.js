@@ -1769,6 +1769,7 @@ function showChangeClassModal(currentClassId) {
       btn.dataset.label = btn.textContent.trim();
     }
     btn.classList.remove('active');
+    btn.classList.remove('selected');
     btn.disabled = false;
     btn.textContent = btn.dataset.label;
     if (currentClassId && btn.dataset.class === currentClassId) {
@@ -5924,7 +5925,7 @@ if (changeClassUi.options && changeClassUi.options.length) {
     btn.addEventListener('click', () => {
       if (btn.disabled) return;
       changeClassSelection = btn.dataset.class || null;
-      changeClassUi.options.forEach((node) => node.classList.toggle('active', node === btn));
+      changeClassUi.options.forEach((node) => node.classList.toggle('selected', node === btn));
       if (changeClassUi.confirm) {
         changeClassUi.confirm.disabled = !changeClassSelection;
       }

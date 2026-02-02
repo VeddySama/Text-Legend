@@ -1037,10 +1037,11 @@ function appendLine(payload) {
     }
 
     if (targetName) {
+      const selectedMobId = selectedMob && targetName === selectedMob.name ? selectedMob.id : null;
       if (targetIsPlayer) {
         spawnDamageFloatOnPlayer(targetName, amount, kind, label);
       } else {
-        spawnDamageFloatOnMob(targetName, amount, kind, label);
+        spawnDamageFloatOnMob(targetName, amount, kind, label, selectedMobId);
       }
     } else {
       spawnDamageFloat(amount, kind, label);
@@ -4634,6 +4635,7 @@ function renderState(state) {
 
   const battleMobs = (state.mobs || []).map((m) => ({
     type: 'mob',
+    id: m.id,
     name: m.name,
     meta: `HP ${Math.max(0, Math.floor(m.hp))}/${Math.max(0, Math.floor(m.max_hp || 0))}`,
     hp: m.hp || 0,
@@ -5395,6 +5397,8 @@ function renderBattleList(container, entries) {
     card.className = 'battle-card';
     if (entry.type === 'mob' && entry.name) {
       card.dataset.mobName = entry.name;
+      if (entry.id != null) card.dataset.mobId = String(entry.id);
+      if (entry.hp != null) card.dataset.mobHp = String(entry.hp);
     }
     if (entry.type === 'player' && entry.name) {
       card.dataset.playerName = entry.name;
@@ -5438,9 +5442,42 @@ function spawnDamageFloat(amount, kind = 'mob', label = null) {
   }, 1200);
 }
 
-function spawnDamageFloatOnMob(mobName, amount, kind = 'mob', label = null) {
+function pickMobCardByName(mobName) {
+  const cards = battleUi.mobs?.querySelectorAll(`[data-mob-name="${CSS.escape(mobName)}"]`);
+  if (!cards || !cards.length) return null;
+  let best = cards[0];
+  let bestHp = Number(best.dataset.mobHp ?? Infinity);
+  cards.forEach((card) => {
+    const hp = Number(card.dataset.mobHp ?? Infinity);
+    if (!Number.isNaN(hp) && hp < bestHp) {
+      bestHp = hp;
+      best = card;
+    }
+  });
+  return best;
+}
+
+function positionFloatInCard(card, el) {
+  const bar = card.querySelector('.hp-bar');
+  if (!bar) return;
+  const barRect = bar.getBoundingClientRect();
+  const cardRect = card.getBoundingClientRect();
+  const left = Math.max(6, Math.min(cardRect.width - 40, barRect.left - cardRect.left + barRect.width * 0.7));
+  const top = Math.max(-4, barRect.top - cardRect.top - 12);
+  el.style.left = `${left}px`;
+  el.style.top = `${top}px`;
+  el.style.right = 'auto';
+}
+
+function spawnDamageFloatOnMob(mobName, amount, kind = 'mob', label = null, mobId = null) {
   if (!battleUi.damageLayer || !mobName || (!amount && !label)) return;
-  const card = battleUi.mobs?.querySelector(`[data-mob-name="${CSS.escape(mobName)}"]`);
+  let card = null;
+  if (mobId != null) {
+    card = battleUi.mobs?.querySelector(`[data-mob-id="${CSS.escape(String(mobId))}"]`);
+  }
+  if (!card) {
+    card = pickMobCardByName(mobName);
+  }
   if (!card) {
     spawnDamageFloat(amount, kind, label);
     return;
@@ -5449,6 +5486,7 @@ function spawnDamageFloatOnMob(mobName, amount, kind = 'mob', label = null) {
   el.className = `damage-float damage-${kind} in-card`;
   el.textContent = label || `-${amount}`;
   card.appendChild(el);
+  positionFloatInCard(card, el);
   setTimeout(() => {
     el.remove();
   }, 2000);
@@ -5465,6 +5503,7 @@ function spawnDamageFloatOnPlayer(playerName, amount, kind = 'player', label = n
   el.className = `damage-float damage-${kind} in-card`;
   el.textContent = label || `-${amount}`;
   card.appendChild(el);
+  positionFloatInCard(card, el);
   setTimeout(() => {
     el.remove();
   }, 2000);

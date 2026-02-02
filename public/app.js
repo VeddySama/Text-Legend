@@ -26,6 +26,10 @@ let bossRespawnTimerEl = null;
 let trainingConfig = null; // 修炼配置
 let deviceId = null;
 let deviceFingerprint = null;
+const localHpCache = {
+  players: new Map(),
+  mobs: new Map()
+};
 
 function getOrCreateDeviceId() {
   if (deviceId) return deviceId;
@@ -1038,6 +1042,24 @@ function appendLine(payload) {
       label = `-${amount}`;
     }
 
+    if (amount && targetName) {
+      if (targetIsPlayer) {
+        const updated = applyLocalDamage('players', targetName, Number(amount));
+        if (updated) {
+          const card = battleUi.players?.querySelector(`[data-player-name="${CSS.escape(targetName)}"]`);
+          updateBattleCardHp(card, updated.hp, updated.maxHp, false);
+        }
+      } else {
+        const updated = applyLocalDamage('mobs', targetName, Number(amount));
+        if (updated) {
+          const card = pickMobCardByName(targetName);
+          updateBattleCardHp(card, updated.hp, updated.maxHp, true);
+          if (card) {
+            card.dataset.mobHp = String(updated.hp);
+          }
+        }
+      }
+    }
     if (targetName) {
       const selectedMobId = selectedMob && targetName === selectedMob.name ? selectedMob.id : null;
       if (targetIsPlayer) {
@@ -4621,6 +4643,7 @@ function renderState(state) {
       hp: state.stats.hp,
       maxHp: state.stats.max_hp
     });
+    setLocalHpCache('players', state.player.name, state.stats.hp, state.stats.max_hp);
   }
   (state.players || [])
     .filter((p) => p.name && (!state.player || p.name !== state.player.name))
@@ -4632,6 +4655,7 @@ function renderState(state) {
         hp: p.hp || 0,
         maxHp: p.max_hp || 0
       });
+      setLocalHpCache('players', p.name, p.hp || 0, p.max_hp || 0);
     });
   renderBattleList(battleUi.players, battlePlayers, (p) => {
     if (!p || !p.name) return;
@@ -4656,6 +4680,9 @@ function renderState(state) {
     hp: m.hp || 0,
     maxHp: m.max_hp || 0
   }));
+  (state.mobs || []).forEach((m) => {
+    setLocalHpCache('mobs', m.name, m.hp || 0, m.max_hp || 0);
+  });
   renderBattleList(battleUi.mobs, battleMobs, (m) => {
     if (!m || !m.name) return;
     const mob = (state.mobs || []).find((entry) => entry.name === m.name && entry.id === m.id) ||
@@ -5501,6 +5528,39 @@ function normalizeBattleName(name) {
   return String(name || '')
     .replace(/\s+/g, '')
     .replace(/[()（）\[\]【】]/g, '');
+}
+
+function setLocalHpCache(type, name, hp, maxHp) {
+  if (!name || !localHpCache[type]) return;
+  localHpCache[type].set(name, {
+    hp: Math.max(0, Math.floor(hp || 0)),
+    maxHp: Math.max(1, Math.floor(maxHp || 1))
+  });
+}
+
+function applyLocalDamage(type, name, amount) {
+  if (!name || !amount || !localHpCache[type]) return null;
+  const cached = localHpCache[type].get(name);
+  if (!cached) return null;
+  const nextHp = Math.max(0, cached.hp - amount);
+  cached.hp = nextHp;
+  localHpCache[type].set(name, cached);
+  return cached;
+}
+
+function updateBattleCardHp(card, hp, maxHp, isMob) {
+  if (!card) return;
+  const fill = card.querySelector('.hp-bar-fill');
+  if (fill && maxHp) {
+    const pct = Math.max(0, Math.min(100, (hp / maxHp) * 100));
+    fill.style.width = `${pct}%`;
+  }
+  if (isMob) {
+    const meta = card.querySelector('.battle-card-meta');
+    if (meta) {
+      meta.textContent = `HP ${Math.max(0, Math.floor(hp))}/${Math.max(1, Math.floor(maxHp))}`;
+    }
+  }
 }
 
 function spawnDamageFloat(amount, kind = 'mob', label = null) {

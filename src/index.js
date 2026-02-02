@@ -5748,17 +5748,17 @@ io.on('connection', (socket) => {
       player.send('今天已经有行会报名了，每天只能有一个行会申请攻城。');
       return;
     }
-    if (player.gold < 5000000) {
-      player.send('报名需要500万金币。');
+    if (player.gold < 1000000) {
+      player.send('报名需要100万金币。');
       return;
     }
-    player.gold -= 5000000;
+    player.gold -= 1000000;
     try {
         await registerSabak(player.guild.id, player.realmId || 1);
-      player.send('已报名沙巴克攻城，支付500万金币。');
+      player.send('已报名沙巴克攻城，支付100万金币。');
     } catch {
       player.send('该行会已经报名。');
-      player.gold += 5000000;
+      player.gold += 1000000;
     }
   });
 
@@ -6406,10 +6406,10 @@ function processMobDeath(player, mob, online) {
         if (forcedItem) {
           const forcedRarity = rarityByPrice(forcedItem);
           if (['legendary', 'supreme'].includes(forcedRarity)) {
-            emitAnnouncement(`${topPlayer.name} 获得${cls.name}伤害第一奖励 ${formatItemLabel(forcedId, forcedEffects)}！`, forcedRarity, null, realmId);
+            emitAnnouncement(`${topPlayer.name}（${cls.name}）获得伤害第一奖励 ${formatItemLabel(forcedId, forcedEffects)}！`, forcedRarity, null, realmId);
           }
           if (isEquipmentItem(forcedItem) && hasSpecialEffects(forcedEffects)) {
-            emitAnnouncement(`${topPlayer.name} 获得特效装备 ${formatItemLabel(forcedId, forcedEffects)}！`, 'announce', null, realmId);
+            emitAnnouncement(`${topPlayer.name}（${cls.name}）获得特效装备 ${formatItemLabel(forcedId, forcedEffects)}！`, 'announce', null, realmId);
           }
         }
         rewardState.add(cls.id);

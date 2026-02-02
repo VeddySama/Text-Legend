@@ -1007,7 +1007,7 @@ function appendLine(payload) {
     const mentionsSelf = text.startsWith('你') || text.includes('对你') || text.includes('你受到') || text.includes('你恢复');
     const rawTarget = targetMatch?.[1] || splashMatch?.[1] || directTargetMatch?.[1] || (mentionsSelf ? '你' : null);
     const targetName = rawTarget === '你' ? selfName : rawTarget;
-    const targetIsPlayer = rawTarget === '你' || mentionsSelf;
+    const targetIsPlayer = rawTarget === '你' || (!rawTarget && mentionsSelf);
 
     let kind = targetIsPlayer ? 'player' : 'mob';
     let label = null;

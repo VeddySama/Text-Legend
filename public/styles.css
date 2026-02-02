@@ -1426,9 +1426,52 @@ button:hover {
     0 2px 12px rgba(0, 0, 0, 0.85);
 }
 
+.damage-float.damage-heal {
+  color: #6ff0a6;
+  text-shadow:
+    0 0 6px rgba(120, 255, 190, 0.95),
+    0 0 14px rgba(90, 220, 160, 0.9),
+    0 2px 12px rgba(0, 0, 0, 0.85);
+}
+
+.damage-float.damage-poison {
+  color: #b678ff;
+  text-shadow:
+    0 0 6px rgba(180, 120, 255, 0.95),
+    0 0 14px rgba(150, 90, 230, 0.9),
+    0 2px 12px rgba(0, 0, 0, 0.85);
+}
+
+.damage-float.damage-crit {
+  color: #ffca3a;
+  font-size: 1.6rem;
+  letter-spacing: 0.02em;
+  animation: float-up-crit 2.2s ease forwards;
+  text-shadow:
+    0 0 8px rgba(255, 230, 140, 0.98),
+    0 0 18px rgba(255, 200, 90, 0.95),
+    0 0 26px rgba(255, 160, 60, 0.85),
+    0 2px 14px rgba(0, 0, 0, 0.9);
+  -webkit-text-stroke: 1px rgba(0, 0, 0, 0.75);
+}
+
+.damage-float.damage-shield {
+  color: #5ad4ff;
+  text-shadow:
+    0 0 6px rgba(110, 210, 255, 0.95),
+    0 0 14px rgba(80, 170, 230, 0.9),
+    0 2px 12px rgba(0, 0, 0, 0.85);
+}
+
 @keyframes float-up {
   0% { transform: translateY(0); opacity: 1; }
   100% { transform: translateY(-40px); opacity: 0; }
+}
+
+@keyframes float-up-crit {
+  0% { transform: translateY(0) scale(1); opacity: 1; }
+  18% { transform: translateY(-10px) scale(1.18); opacity: 1; }
+  100% { transform: translateY(-48px) scale(1.05); opacity: 0; }
 }
 
 body.dark .battle-panel {

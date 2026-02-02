@@ -997,24 +997,57 @@ function appendLine(payload) {
 
   // 过滤伤害和战斗信息
   const isDamageLine = /你释放了|对.*造成.*点伤害|受到.*点伤害|闪避了.*的攻击|躲过了.*的攻击|溅射到|造成.*点伤害|中了毒|中毒伤害|毒特效|恢复.*点生命|施放.*恢复|暴击|连击触发|破防攻击|破防效果|无敌状态|无敌效果|减伤效果|禁疗影响|禁疗效果|免疫了所有伤害|处于无敌|施放.*护盾|震退了怪物|施放.*，震退|施放.*，造成范围伤害|攻击落空|被麻痹戒指定身|被麻痹|无法行动/.test(text);
+  if (isDamageLine) {
+    const selfName = activeChar || lastState?.player?.name || '你';
+    const dmgMatch = text.match(/(\d+)\s*点伤害/);
+    const healMatch = text.match(/(\d+)\s*点生命/);
+    const targetMatch = text.match(/对\s*([^\s]+)\s*(造成|施放|释放|附加)/);
+    const directTargetMatch = text.match(/^([^\s]+)\s*(恢复|受到|中毒|暴击|施放|触发)/);
+    const mentionsSelf = text.startsWith('你') || text.includes('对你') || text.includes('你受到') || text.includes('你恢复');
+    const rawTarget = targetMatch?.[1] || directTargetMatch?.[1] || (mentionsSelf ? '你' : null);
+    const targetName = rawTarget === '你' ? selfName : rawTarget;
+    const targetIsPlayer = rawTarget === '你' || mentionsSelf;
+
+    let kind = targetIsPlayer ? 'player' : 'mob';
+    let label = null;
+    let amount = dmgMatch?.[1] || null;
+
+    const isHealLine = /恢复.*点生命|施放.*恢复|恢复了.*生命/.test(text);
+    const isPoisonLine = /中毒伤害|中了毒|中毒/.test(text);
+    const isShieldLine = /护盾/.test(text);
+    const isCritLine = /暴击/.test(text);
+
+    if (isHealLine) {
+      kind = 'heal';
+      amount = healMatch?.[1] || null;
+      label = amount ? `+${amount}` : '恢复';
+    } else if (isPoisonLine) {
+      kind = 'poison';
+      label = amount ? `-${amount}` : '中毒';
+    } else if (isShieldLine) {
+      kind = 'shield';
+      const shieldMatch = text.match(/(\d+)\s*点/);
+      amount = shieldMatch?.[1] || null;
+      label = amount ? `护盾 ${amount}` : '护盾';
+    } else if (isCritLine) {
+      kind = 'crit';
+      label = amount ? `暴击! ${amount}` : '暴击!';
+    } else if (amount) {
+      label = `-${amount}`;
+    }
+
+    if (targetName) {
+      if (targetIsPlayer) {
+        spawnDamageFloatOnPlayer(targetName, amount, kind, label);
+      } else {
+        spawnDamageFloatOnMob(targetName, amount, kind, label);
+      }
+    } else {
+      spawnDamageFloat(amount, kind, label);
+    }
+  }
   if (!showDamage && isDamageLine) {
     return;
-  }
-  if (showDamage && isDamageLine) {
-    const dmgMatch = text.match(/(\d+)\s*点伤害/);
-    const targetMatch = text.match(/对\s*([^\s]+)\s*造成/);
-    if (dmgMatch) {
-      if (targetMatch && targetMatch[1]) {
-        const targetName = targetMatch[1] === '你' ? (activeChar || lastState?.player?.name || '你') : targetMatch[1];
-        if (targetMatch[1] === '你') {
-          spawnDamageFloatOnPlayer(targetName, dmgMatch[1]);
-        } else {
-          spawnDamageFloatOnMob(targetName, dmgMatch[1]);
-        }
-      } else {
-        spawnDamageFloat(dmgMatch[1], 'mob');
-      }
-    }
   }
 
   // 过滤经验和金币信息
@@ -5389,11 +5422,11 @@ function renderBattleList(container, entries) {
   });
 }
 
-function spawnDamageFloat(amount, kind = 'mob') {
-  if (!battleUi.damageLayer || !amount) return;
+function spawnDamageFloat(amount, kind = 'mob', label = null) {
+  if (!battleUi.damageLayer || (!amount && !label)) return;
   const el = document.createElement('div');
   el.className = `damage-float damage-${kind}`;
-  el.textContent = `-${amount}`;
+  el.textContent = label || `-${amount}`;
   const rect = battleUi.damageLayer.getBoundingClientRect();
   const x = Math.max(12, Math.min(rect.width - 48, Math.random() * rect.width));
   const y = Math.max(20, Math.min(rect.height - 40, rect.height * 0.4 + Math.random() * rect.height * 0.2));
@@ -5405,32 +5438,32 @@ function spawnDamageFloat(amount, kind = 'mob') {
   }, 1200);
 }
 
-function spawnDamageFloatOnMob(mobName, amount) {
-  if (!battleUi.damageLayer || !mobName || !amount) return;
+function spawnDamageFloatOnMob(mobName, amount, kind = 'mob', label = null) {
+  if (!battleUi.damageLayer || !mobName || (!amount && !label)) return;
   const card = battleUi.mobs?.querySelector(`[data-mob-name="${CSS.escape(mobName)}"]`);
   if (!card) {
-    spawnDamageFloat(amount, 'mob');
+    spawnDamageFloat(amount, kind, label);
     return;
   }
   const el = document.createElement('div');
-  el.className = 'damage-float damage-mob in-card';
-  el.textContent = `-${amount}`;
+  el.className = `damage-float damage-${kind} in-card`;
+  el.textContent = label || `-${amount}`;
   card.appendChild(el);
   setTimeout(() => {
     el.remove();
   }, 2000);
 }
 
-function spawnDamageFloatOnPlayer(playerName, amount) {
-  if (!battleUi.damageLayer || !playerName || !amount) return;
+function spawnDamageFloatOnPlayer(playerName, amount, kind = 'player', label = null) {
+  if (!battleUi.damageLayer || !playerName || (!amount && !label)) return;
   const card = battleUi.players?.querySelector(`[data-player-name="${CSS.escape(playerName)}"]`);
   if (!card) {
-    spawnDamageFloat(amount, 'player');
+    spawnDamageFloat(amount, kind, label);
     return;
   }
   const el = document.createElement('div');
-  el.className = 'damage-float damage-player in-card';
-  el.textContent = `-${amount}`;
+  el.className = `damage-float damage-${kind} in-card`;
+  el.textContent = label || `-${amount}`;
   card.appendChild(el);
   setTimeout(() => {
     el.remove();

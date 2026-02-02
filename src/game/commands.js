@@ -927,7 +927,7 @@ export async function handleCommand({ player, players, allCharacters, playersByN
         send('你已经是该职业。');
         return;
       }
-      const fee = 1000000000;
+      const fee = 1000000;
       if (player.gold < fee) {
         send(`金币不足。转职需要 ${fee} 金币。`);
         return;

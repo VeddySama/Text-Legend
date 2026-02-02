@@ -6327,7 +6327,7 @@ function processMobDeath(player, mob, online) {
             const forcedItem = ITEM_TEMPLATES[forcedId];
             if (forcedItem) {
               const forcedRarity = rarityByPrice(forcedItem);
-              if (['epic', 'legendary', 'supreme'].includes(forcedRarity)) {
+              if (['legendary', 'supreme'].includes(forcedRarity)) {
                 emitAnnouncement(`${topPlayer.name} 获得世界BOSS伤害第一奖励 ${formatItemLabel(forcedId, forcedEffects)}！`, forcedRarity, null, realmId);
               }
               if (isEquipmentItem(forcedItem) && hasSpecialEffects(forcedEffects)) {
@@ -6351,7 +6351,7 @@ function processMobDeath(player, mob, online) {
           if (!item) return;
           logLoot(`[loot][party] ${target.name} <- ${id} (${template.id})`);
           const rarity = rarityByPrice(item);
-          if (['epic', 'legendary', 'supreme'].includes(rarity)) {
+          if (['legendary', 'supreme'].includes(rarity)) {
             const text = `${target.name} 击败 ${template.name} 获得${RARITY_LABELS[rarity] || '稀有'}装备 ${formatItemLabel(id, effects)}！`;
             emitAnnouncement(formatLegendaryAnnouncement(text, rarity), rarity, null, realmId);
           }
@@ -6423,7 +6423,7 @@ function processMobDeath(player, mob, online) {
           }
           if (!item) return;
           const rarity = rarityByPrice(item);
-          if (['epic', 'legendary', 'supreme'].includes(rarity)) {
+          if (['legendary', 'supreme'].includes(rarity)) {
             const text = `${owner.name} 击败 ${template.name} 获得${RARITY_LABELS[rarity] || '稀有'}装备 ${formatItemLabel(entry.id, entry.effects)}！`;
             emitAnnouncement(formatLegendaryAnnouncement(text, rarity), rarity, null, realmId);
           }
@@ -6447,7 +6447,7 @@ function processMobDeath(player, mob, online) {
           const item = ITEM_TEMPLATES[entry.id];
           if (!item) return;
           const rarity = rarityByPrice(item);
-          if (['epic', 'legendary', 'supreme'].includes(rarity)) {
+          if (['legendary', 'supreme'].includes(rarity)) {
             const text = `${owner.name} 击败 ${template.name} 获得${RARITY_LABELS[rarity] || '稀有'}装备 ${formatItemLabel(entry.id, entry.effects)}！`;
             emitAnnouncement(formatLegendaryAnnouncement(text, rarity), rarity, null, realmId);
           }

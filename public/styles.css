@@ -3950,6 +3950,19 @@ body.dark .sabak-empty {
   margin-top: 10px;
 }
 
+body.dark .changeclass-options .chip {
+  background: #3a3028;
+  color: #e0d0c0;
+  border-color: #4a3a30;
+}
+
+body.dark .changeclass-options .chip:disabled {
+  background: #2a2420;
+  color: #8f7f6f;
+  border-color: #3a2f28;
+  opacity: 0.75;
+}
+
 .chip {
   border-radius: 999px;
   border: 1px solid rgba(118, 70, 22, 0.25);

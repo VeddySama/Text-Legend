@@ -2697,7 +2697,8 @@ function parseStats(line) {
     ui.classLevel.textContent = text.replace('职业:', '').trim();
   }
   if (text.startsWith('等级:')) {
-    ui.classLevel.textContent = `${ui.classLevel.textContent} | ${text.replace('等级:', '').trim()}`;
+    const levelText = text.replace('等级:', '').replace(/\([^)]*EXP\)/i, '').trim();
+    ui.classLevel.textContent = `${ui.classLevel.textContent} | ${levelText}`;
     const match = text.match(/\((\d+)\/(\d+)\s+EXP\)/);
     if (match) {
       setBar(ui.exp, Number(match[1]), Number(match[2]));

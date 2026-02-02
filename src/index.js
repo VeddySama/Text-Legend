@@ -5095,15 +5095,35 @@ function tryAutoPotion(player) {
   }
 }
 
+function sanitizePayload(payload, allowedKeys, eventName) {
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+    return { clean: {}, extraKeys: [] };
+  }
+  const clean = {};
+  allowedKeys.forEach((key) => {
+    if (Object.prototype.hasOwnProperty.call(payload, key)) {
+      clean[key] = payload[key];
+    }
+  });
+  const extraKeys = Object.keys(payload).filter((key) => !allowedKeys.includes(key));
+  if (extraKeys.length && eventName) {
+    console.warn(`[socket][${eventName}] ignored extra keys: ${extraKeys.join(', ')}`);
+  }
+  return { clean, extraKeys };
+}
+
 io.on('connection', (socket) => {
   socket.on('state_throttle_override', (payload) => {
-    socket.data.stateThrottleOverride = payload?.enabled === true;
+    const { clean } = sanitizePayload(payload, ['enabled'], 'state_throttle_override');
+    socket.data.stateThrottleOverride = clean.enabled === true;
     const player = players.get(socket.id);
     if (player) {
       player.stateThrottleOverride = socket.data.stateThrottleOverride;
     }
   });
-  socket.on('auth', async ({ token, name, realmId: rawRealmId, deviceId, deviceFingerprint }) => {
+  socket.on('auth', async (payload) => {
+    const { clean } = sanitizePayload(payload, ['token', 'name', 'realmId', 'deviceId', 'deviceFingerprint'], 'auth');
+    const { token, name, realmId: rawRealmId, deviceId, deviceFingerprint } = clean;
     const session = await getSession(token);
     if (!session) {
       socket.emit('auth_error', { error: '登录已过期。' });
@@ -5265,6 +5285,9 @@ io.on('connection', (socket) => {
   socket.on('cmd', async (payload) => {
     const player = players.get(socket.id);
     if (!player) return;
+    const { clean } = sanitizePayload(payload, ['text', 'source'], 'cmd');
+    const inputText = typeof clean.text === 'string' ? clean.text : '';
+    const inputSource = typeof clean.source === 'string' ? clean.source : '';
     const prevZone = player.position.zone;
     const prevRoom = player.position.room;
     await handleCommand({
@@ -5275,8 +5298,8 @@ io.on('connection', (socket) => {
         const list = Array.from(players.values());
         return list.find((p) => p.name === name && (!realmId || p.realmId === realmId));
       },
-      input: payload.text || '',
-      source: payload.source || '',
+      input: inputText,
+      source: inputSource,
       send: (msg) => sendTo(player, msg),
       realmId: player.realmId || 1,
       emitAnnouncement: (text, color, location) => emitAnnouncement(text, color, location, player.realmId || 1),
@@ -5372,11 +5395,12 @@ io.on('connection', (socket) => {
   socket.on('mail_send', async (payload) => {
     const player = players.get(socket.id);
     if (!player) return;
-    const toName = String(payload?.toName || '').trim();
-    const title = String(payload?.title || '').trim();
-    const body = String(payload?.body || '').trim();
-    const itemsPayload = Array.isArray(payload?.items) ? payload.items : [];
-    const gold = Math.max(0, Number(payload?.gold || 0));
+    const { clean } = sanitizePayload(payload, ['toName', 'title', 'body', 'items', 'gold'], 'mail_send');
+    const toName = String(clean?.toName || '').trim();
+    const title = String(clean?.title || '').trim();
+    const body = String(clean?.body || '').trim();
+    const itemsPayload = Array.isArray(clean?.items) ? clean.items : [];
+    const gold = Math.max(0, Number(clean?.gold || 0));
     if (!toName) return socket.emit('mail_send_result', { ok: false, msg: '请输入收件人。' });
     if (!title) return socket.emit('mail_send_result', { ok: false, msg: '请输入邮件标题。' });
     if (!body) return socket.emit('mail_send_result', { ok: false, msg: '请输入邮件内容。' });
@@ -5447,7 +5471,8 @@ io.on('connection', (socket) => {
   socket.on('mail_claim', async (payload) => {
     const player = players.get(socket.id);
     if (!player) return;
-    const mailId = Number(payload?.mailId || 0);
+    const { clean } = sanitizePayload(payload, ['mailId'], 'mail_claim');
+    const mailId = Number(clean?.mailId || 0);
     if (!mailId) return socket.emit('mail_claim_result', { ok: false, msg: '邮件ID无效。' });
     const mails = await listMail(player.userId, player.realmId || 1);
     const mail = mails.find((m) => m.id === mailId);
@@ -5478,7 +5503,8 @@ io.on('connection', (socket) => {
   socket.on('mail_read', async (payload) => {
     const player = players.get(socket.id);
     if (!player) return;
-    const mailId = Number(payload?.mailId || 0);
+    const { clean } = sanitizePayload(payload, ['mailId'], 'mail_read');
+    const mailId = Number(clean?.mailId || 0);
     if (!mailId) return;
     await markMailRead(player.userId, mailId, player.realmId || 1);
     const mails = await listMail(player.userId, player.realmId || 1);
@@ -5488,6 +5514,7 @@ io.on('connection', (socket) => {
   socket.on('mail_list_sent', async (payload) => {
     const player = players.get(socket.id);
     if (!player) return;
+    sanitizePayload(payload, [], 'mail_list_sent');
     const mails = await listSentMail(player.userId, player.realmId || 1);
     socket.emit('mail_list', { ok: true, mails: mails.map(buildMailPayload), folder: 'sent' });
   });
@@ -5495,8 +5522,9 @@ io.on('connection', (socket) => {
   socket.on('mail_delete', async (payload) => {
     const player = players.get(socket.id);
     if (!player) return;
-    const mailId = Number(payload?.mailId || 0);
-    const folder = payload?.folder || 'inbox';
+    const { clean } = sanitizePayload(payload, ['mailId', 'folder'], 'mail_delete');
+    const mailId = Number(clean?.mailId || 0);
+    const folder = clean?.folder || 'inbox';
     if (!mailId) return socket.emit('mail_delete_result', { ok: false, msg: '邮件ID无效。' });
 
     // 检查收件箱邮件是否有未领取的附件
@@ -5554,7 +5582,8 @@ io.on('connection', (socket) => {
   socket.on('guild_apply', async (payload) => {
     const player = players.get(socket.id);
     if (!player) return;
-    if (!payload || !payload.guildId) return socket.emit('guild_apply_result', { ok: false, msg: '参数错误' });
+    const { clean } = sanitizePayload(payload, ['guildId'], 'guild_apply');
+    if (!clean || !clean.guildId) return socket.emit('guild_apply_result', { ok: false, msg: '参数错误' });
 
     if (player.guild) {
       return socket.emit('guild_apply_result', { ok: false, msg: '你已经有行会了' });
@@ -5566,16 +5595,16 @@ io.on('connection', (socket) => {
       return socket.emit('guild_apply_result', { ok: false, msg: '你已经申请了行会，请等待处理' });
     }
 
-    const guild = await getGuildById(payload.guildId);
+    const guild = await getGuildById(clean.guildId);
     if (!guild || String(guild.realm_id) !== String(player.realmId || 1)) {
       return socket.emit('guild_apply_result', { ok: false, msg: '行会不存在' });
     }
 
-    await applyToGuild(payload.guildId, player.userId, player.name, player.realmId || 1);
+    await applyToGuild(clean.guildId, player.userId, player.name, player.realmId || 1);
     socket.emit('guild_apply_result', { ok: true, msg: `已申请加入行会 ${guild.name}` });
 
     // 通知在线的会长和副会长
-    const members = await listGuildMembers(payload.guildId, player.realmId || 1);
+    const members = await listGuildMembers(clean.guildId, player.realmId || 1);
     members.forEach((m) => {
       if (m.role === 'leader' || m.role === 'vice_leader') {
         const onlineMember = players.get(socketIds.get(m.char_name));
@@ -5604,7 +5633,8 @@ io.on('connection', (socket) => {
   socket.on('guild_approve', async (payload) => {
     const player = players.get(socket.id);
     if (!player || !player.guild) return;
-    if (!payload || !payload.charName) return socket.emit('guild_approve_result', { ok: false, msg: '参数错误' });
+    const { clean } = sanitizePayload(payload, ['charName'], 'guild_approve');
+    if (!clean || !clean.charName) return socket.emit('guild_approve_result', { ok: false, msg: '参数错误' });
 
     const isLeaderOrVice = await isGuildLeaderOrVice(player.guild.id, player.userId, player.name);
     if (!isLeaderOrVice) {
@@ -5612,16 +5642,16 @@ io.on('connection', (socket) => {
     }
 
     const applications = await listGuildApplications(player.guild.id, player.realmId || 1);
-    const targetApp = applications.find((a) => a.char_name === payload.charName);
+    const targetApp = applications.find((a) => a.char_name === clean.charName);
     if (!targetApp) {
       return socket.emit('guild_approve_result', { ok: false, msg: '该玩家没有申请加入你的行会' });
     }
 
     try {
-      await approveGuildApplication(player.guild.id, targetApp.user_id, payload.charName, player.realmId || 1);
-      socket.emit('guild_approve_result', { ok: true, msg: `已批准 ${payload.charName} 加入行会` });
+      await approveGuildApplication(player.guild.id, targetApp.user_id, clean.charName, player.realmId || 1);
+      socket.emit('guild_approve_result', { ok: true, msg: `已批准 ${clean.charName} 加入行会` });
 
-      const onlineTarget = players.get(socketIds.get(payload.charName));
+      const onlineTarget = players.get(socketIds.get(clean.charName));
       if (onlineTarget) {
         onlineTarget.guild = { id: player.guild.id, name: player.guild.name, role: 'member' };
         onlineTarget.send(`你的申请已被批准，已加入行会 ${player.guild.name}`);
@@ -5639,7 +5669,8 @@ io.on('connection', (socket) => {
   socket.on('guild_reject', async (payload) => {
     const player = players.get(socket.id);
     if (!player || !player.guild) return;
-    if (!payload || !payload.charName) return socket.emit('guild_reject_result', { ok: false, msg: '参数错误' });
+    const { clean } = sanitizePayload(payload, ['charName'], 'guild_reject');
+    if (!clean || !clean.charName) return socket.emit('guild_reject_result', { ok: false, msg: '参数错误' });
 
     const isLeaderOrVice = await isGuildLeaderOrVice(player.guild.id, player.userId, player.name);
     if (!isLeaderOrVice) {
@@ -5647,15 +5678,15 @@ io.on('connection', (socket) => {
     }
 
     const applications = await listGuildApplications(player.guild.id, player.realmId || 1);
-    const targetApp = applications.find((a) => a.char_name === payload.charName);
+    const targetApp = applications.find((a) => a.char_name === clean.charName);
     if (!targetApp) {
       return socket.emit('guild_reject_result', { ok: false, msg: '该玩家没有申请加入你的行会' });
     }
 
     await removeGuildApplication(player.guild.id, targetApp.user_id, player.realmId || 1);
-    socket.emit('guild_reject_result', { ok: true, msg: `已拒绝 ${payload.charName} 的申请` });
+    socket.emit('guild_reject_result', { ok: true, msg: `已拒绝 ${clean.charName} 的申请` });
 
-    const onlineTarget = players.get(socketIds.get(payload.charName));
+    const onlineTarget = players.get(socketIds.get(clean.charName));
     if (onlineTarget) {
       onlineTarget.send('你的加入行会申请已被拒绝');
     }
@@ -5703,9 +5734,10 @@ io.on('connection', (socket) => {
     });
   });
 
-  socket.on('sabak_register_confirm', async () => {
+  socket.on('sabak_register_confirm', async (payload) => {
     const player = players.get(socket.id);
     if (!player) return;
+    sanitizePayload(payload, [], 'sabak_register_confirm');
 
     if (!player.guild) {
       player.send('你不在行会中。');

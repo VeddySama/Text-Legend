@@ -3951,7 +3951,7 @@ body.dark .sabak-empty {
 }
 
 .changeclass-options .chip {
-  color: #000;
+  color: var(--ink);
 }
 
 .changeclass-options .chip.selected {

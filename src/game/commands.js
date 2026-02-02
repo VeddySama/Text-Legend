@@ -946,6 +946,10 @@ export async function handleCommand({ player, players, allCharacters, playersByN
       if (!player.flags) player.flags = {};
       delete player.flags.skillMastery;
       player.flags.autoSkillId = null;
+      player.summons = [];
+      player.summon = null;
+      delete player.flags.savedSummons;
+      delete player.flags.savedSummon;
       computeDerived(player);
       send(`转职成功：已变更为${className}，技能已重置为初始技能。`);
       return;

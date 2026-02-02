@@ -24,6 +24,67 @@ let bossRespawnTimer = null;
 let bossRespawnTarget = null;
 let bossRespawnTimerEl = null;
 let trainingConfig = null; // 修炼配置
+let deviceId = null;
+let deviceFingerprint = null;
+
+function getOrCreateDeviceId() {
+  if (deviceId) return deviceId;
+  const storageKey = 'deviceId';
+  try {
+    const saved = localStorage.getItem(storageKey);
+    if (saved) {
+      deviceId = saved;
+      return deviceId;
+    }
+  } catch {
+    // ignore storage errors
+  }
+  let raw = '';
+  try {
+    const buf = new Uint8Array(16);
+    if (crypto && crypto.getRandomValues) {
+      crypto.getRandomValues(buf);
+      raw = Array.from(buf).map((b) => b.toString(16).padStart(2, '0')).join('');
+    }
+  } catch {
+    // ignore crypto errors
+  }
+  if (!raw) {
+    raw = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`;
+  }
+  deviceId = raw;
+  try {
+    localStorage.setItem(storageKey, deviceId);
+  } catch {
+    // ignore storage errors
+  }
+  return deviceId;
+}
+
+function hashString(input) {
+  let hash = 5381;
+  for (let i = 0; i < input.length; i += 1) {
+    hash = ((hash << 5) + hash) ^ input.charCodeAt(i);
+  }
+  return (hash >>> 0).toString(16);
+}
+
+function computeDeviceFingerprint() {
+  if (deviceFingerprint) return deviceFingerprint;
+  const parts = [
+    getOrCreateDeviceId(),
+    navigator.userAgent || '',
+    navigator.platform || '',
+    navigator.language || '',
+    Intl.DateTimeFormat().resolvedOptions().timeZone || '',
+    screen.width || 0,
+    screen.height || 0,
+    screen.colorDepth || 0,
+    window.devicePixelRatio || 1
+  ];
+  deviceFingerprint = hashString(parts.join('|'));
+  return deviceFingerprint;
+}
 
 async function loadTrainingConfig() {
   try {
@@ -5243,7 +5304,13 @@ function enterGame(name) {
   socket.on('connect', async () => {
     // 登录时已经确保realmList是最新的，这里不需要重新加载
     // await ensureRealmsLoaded();
-    socket.emit('auth', { token, name, realmId: currentRealmId });
+    socket.emit('auth', {
+      token,
+      name,
+      realmId: currentRealmId,
+      deviceId: getOrCreateDeviceId(),
+      deviceFingerprint: computeDeviceFingerprint()
+    });
     socket.emit('cmd', { text: 'stats' });
     if (stateThrottleOverrideServerAllowed) {
       socket.emit('state_throttle_override', { enabled: stateThrottleOverride });

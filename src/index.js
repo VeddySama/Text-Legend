@@ -2220,6 +2220,7 @@ const sabakConfig = {
   durationMinutes: 30,
   siegeMinutes: 30
 };
+const deviceOnlineMap = new Map();
 
 function listOnlinePlayers(realmId = null) {
   const list = Array.from(players.values());
@@ -5072,10 +5073,25 @@ io.on('connection', (socket) => {
       player.stateThrottleOverride = socket.data.stateThrottleOverride;
     }
   });
-  socket.on('auth', async ({ token, name, realmId: rawRealmId }) => {
+  socket.on('auth', async ({ token, name, realmId: rawRealmId, deviceId, deviceFingerprint }) => {
     const session = await getSession(token);
     if (!session) {
       socket.emit('auth_error', { error: '登录已过期。' });
+      socket.disconnect();
+      return;
+    }
+
+    const deviceKey = String(deviceId || '').trim() && String(deviceFingerprint || '').trim()
+      ? `${String(deviceId).trim()}:${String(deviceFingerprint).trim()}`
+      : String(deviceId || deviceFingerprint || '').trim();
+    if (!deviceKey) {
+      socket.emit('auth_error', { error: '设备指纹缺失。' });
+      socket.disconnect();
+      return;
+    }
+    const existingDeviceSocketId = deviceOnlineMap.get(deviceKey);
+    if (existingDeviceSocketId && existingDeviceSocketId !== socket.id) {
+      socket.emit('auth_error', { error: '该设备已在线。' });
       socket.disconnect();
       return;
     }
@@ -5128,6 +5144,7 @@ io.on('connection', (socket) => {
     loaded.userId = session.user_id;
     loaded.realmId = realmInfo.realmId;
     loaded.socket = socket;
+    loaded.deviceKey = deviceKey;
     loaded.send = (msg) => sendTo(loaded, msg);
     loaded.combat = null;
     loaded.guild = null;
@@ -5138,6 +5155,7 @@ io.on('connection', (socket) => {
     if (loaded.rankTitle) {
       onlinePlayerRankTitles.set(loaded.name, loaded.rankTitle);
     }
+    deviceOnlineMap.set(deviceKey, socket.id);
     const throttleKey = getStateThrottleKey(loaded, socket);
     if (throttleKey) {
       stateThrottleLastSent.delete(throttleKey);
@@ -5738,6 +5756,9 @@ io.on('connection', (socket) => {
       }
       // 从在线玩家称号Map中移除
       onlinePlayerRankTitles.delete(player.name);
+      if (player.deviceKey && deviceOnlineMap.get(player.deviceKey) === socket.id) {
+        deviceOnlineMap.delete(player.deviceKey);
+      }
       players.delete(socket.id);
     }
   });

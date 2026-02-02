@@ -12,7 +12,7 @@ import config from './config.js';
 import { validatePlayerName } from './game/validator.js';
 import knex from './db/index.js';
 import { createUser, verifyUser, createSession, getSession, getUserByName, setAdminFlag, verifyUserPassword, updateUserPassword, clearUserSessions, clearAllSessions } from './db/users.js';
-import { listCharacters, loadCharacter, saveCharacter, findCharacterByName, findCharacterByNameInRealm, listAllCharacters } from './db/characters.js';
+import { listCharacters, loadCharacter, saveCharacter, findCharacterByName, findCharacterByNameInRealm, listAllCharacters, deleteCharacter } from './db/characters.js';
 import { addGuildMember, createGuild, getGuildByName, getGuildByNameInRealm, getGuildMember, getSabakOwner, isGuildLeader, isGuildLeaderOrVice, setGuildMemberRole, listGuildMembers, listSabakRegistrations, registerSabak, removeGuildMember, leaveGuild, setSabakOwner, clearSabakRegistrations, transferGuildLeader, ensureSabakState, applyToGuild, listGuildApplications, removeGuildApplication, approveGuildApplication, getApplicationByUser, listAllGuilds } from './db/guilds.js';
 import { createAdminSession, listUsers, verifyAdminSession, deleteUser } from './db/admin.js';
 import { sendMail, listMail, listSentMail, markMailRead, markMailClaimed, deleteMail } from './db/mail.js';
@@ -329,6 +329,51 @@ app.get('/api/characters', async (req, res) => {
   }
   const chars = await listCharacters(session.user_id, realmInfo.realmId);
   res.json({ ok: true, characters: chars, realmId: realmInfo.realmId });
+});
+
+app.post('/api/character/delete', async (req, res) => {
+  const { token, name, realmId: rawRealmId } = req.body || {};
+  const session = await getSession(token);
+  if (!session) return res.status(401).json({ error: '登录已过期。' });
+  let realmInfo = await resolveRealmId(rawRealmId);
+  if (realmInfo.error) {
+    const realms = await listRealms();
+    if (Array.isArray(realms) && realms.length > 0) {
+      realmInfo = { realmId: realms[0].id };
+    } else {
+      return res.status(400).json({ error: realmInfo.error });
+    }
+  }
+  if (!name) return res.status(400).json({ error: '角色名不能为空。' });
+  const nameResult = validatePlayerName(name);
+  if (!nameResult.ok) {
+    return res.status(400).json({ error: nameResult.error });
+  }
+  const isOnline = Array.from(players.values()).some(
+    (p) => p && p.name === nameResult.value && p.userId === session.user_id && (p.realmId || 1) === realmInfo.realmId
+  );
+  if (isOnline) {
+    return res.status(400).json({ error: '角色在线中，无法删除。' });
+  }
+  const member = await getGuildMember(session.user_id, nameResult.value, realmInfo.realmId);
+  if (member && member.role === 'leader') {
+    return res.status(400).json({ error: '会长不能删除角色，请先转让会长。' });
+  }
+  if (member) {
+    await leaveGuild(session.user_id, nameResult.value, realmInfo.realmId);
+  }
+  const application = await getApplicationByUser(session.user_id, realmInfo.realmId);
+  if (application && application.guild_id && application.char_name === nameResult.value) {
+    await removeGuildApplication(application.guild_id, session.user_id, realmInfo.realmId);
+  }
+  await knex('consignments').where({ seller_name: nameResult.value, realm_id: realmInfo.realmId }).del();
+  await knex('consignment_history').where({ seller_name: nameResult.value, realm_id: realmInfo.realmId }).del();
+  await knex('mails')
+    .where({ to_name: nameResult.value, realm_id: realmInfo.realmId })
+    .orWhere({ from_name: nameResult.value, realm_id: realmInfo.realmId })
+    .del();
+  await deleteCharacter(session.user_id, nameResult.value, realmInfo.realmId);
+  res.json({ ok: true });
 });
 
 app.get('/api/mail', async (req, res) => {
@@ -6136,16 +6181,16 @@ function processMobDeath(player, mob, online) {
   const mobRoomId = mob.roomId || player.position.room;
   const isPlayerInMobRoom = (target) =>
     Boolean(target && target.position && target.position.zone === mobZoneId && target.position.room === mobRoomId);
-  removeMob(player.position.zone, player.position.room, mob.id, realmId);
+  removeMob(mobZoneId, mobRoomId, mob.id, realmId);
   gainSummonExp(player);
   const exp = template.exp;
   const gold = randInt(template.gold[0], template.gold[1]);
 
   const party = getPartyByMember(player.name, realmId);
   // 检查队伍成员是否都在同一个房间
-  const allPartyInSameRoom = party ? partyMembersInSameRoom(party, online, player.position.zone, player.position.room) : false;
+  const allPartyInSameRoom = party ? partyMembersInSameRoom(party, online, mobZoneId, mobRoomId) : false;
   // 物品分配：只有队友都在同一个房间才能分掉落的物品
-  let partyMembersForLoot = allPartyInSameRoom ? partyMembersInRoom(party, online, player.position.zone, player.position.room) : [];
+  let partyMembersForLoot = allPartyInSameRoom ? partyMembersInRoom(party, online, mobZoneId, mobRoomId) : [];
   // 经验金币分配使用全图在线的队友
   let partyMembersForReward = party ? partyMembersOnline(party, online) : [];
   // 计算加成使用队伍总人数（包括离线的）

@@ -599,6 +599,7 @@
       { id: 'ring_revival', chance: 0.015 },
       { id: 'ring_break', chance: 0.015 },
       { id: 'ring_recall', chance: 0.008 },
+      { id: 'scroll_recall', chance: 0.06 },
       { id: 'book_mage_ice', chance: 0.05 },
       { id: 'book_war_earth_spike', chance: 0.03 },
       { id: 'book_mage_thunderstorm', chance: 0.03 },

@@ -973,6 +973,16 @@ button:hover {
   min-width: 180px;
 }
 
+.char-card-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.char-card-actions button {
+  min-width: 72px;
+}
+
 .divider {
   margin: 18px 0;
   height: 1px;
@@ -3933,6 +3943,13 @@ body.dark .sabak-empty {
   gap: 8px;
 }
 
+.changeclass-options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+
 .chip {
   border-radius: 999px;
   border: 1px solid rgba(118, 70, 22, 0.25);
@@ -3946,6 +3963,11 @@ body.dark .sabak-empty {
   justify-content: center;
   line-height: 1.2;
   min-width: 0;
+}
+
+.chip:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 #players-list .chip {

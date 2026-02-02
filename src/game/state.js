@@ -168,6 +168,8 @@ export function spawnMobs(zoneId, roomId, realmId = 1) {
             id: `${templateId}-${Date.now()}-${randInt(100, 999)}`,
             templateId,
             slotIndex: index,
+            zoneId,
+            roomId,
             name: tpl.name,
             level: tpl.level,
             hp: 0,
@@ -194,6 +196,8 @@ export function spawnMobs(zoneId, roomId, realmId = 1) {
           id: `${templateId}-${Date.now()}-${randInt(100, 999)}`,
           templateId,
           slotIndex: index,
+          zoneId,
+          roomId,
           name: tpl.name,
           level: tpl.level,
           hp: Math.max(1, Math.min(cached.currentHp, scaled.hp)),
@@ -222,6 +226,8 @@ export function spawnMobs(zoneId, roomId, realmId = 1) {
         id: `${templateId}-${Date.now()}-${randInt(100, 999)}`,
         templateId,
         slotIndex: index,
+        zoneId,
+        roomId,
         name: tpl.name,
         level: tpl.level,
         hp: scaled.hp,
@@ -237,9 +243,13 @@ export function spawnMobs(zoneId, roomId, realmId = 1) {
       mobList.push(mob);
       return;
     }
+    if (!mob.zoneId) mob.zoneId = zoneId;
+    if (!mob.roomId) mob.roomId = roomId;
     if (mob.hp <= 0 && mob.respawnAt && now >= mob.respawnAt) {
       mob.id = `${templateId}-${Date.now()}-${randInt(100, 999)}`;
       mob.templateId = templateId;
+      mob.zoneId = zoneId;
+      mob.roomId = roomId;
       mob.name = tpl.name;
       mob.level = tpl.level;
       mob.hp = scaled.hp;

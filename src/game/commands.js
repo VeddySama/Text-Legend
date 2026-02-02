@@ -4,6 +4,7 @@ import { ITEM_TEMPLATES, SHOP_STOCKS } from './items.js';
 import { MOB_TEMPLATES } from './mobs.js';
 import {
   BOOK_SKILLS,
+  DEFAULT_SKILLS,
   getSkill,
   getLearnedSkills,
   getSkillLevel,
@@ -902,6 +903,51 @@ export async function handleCommand({ player, players, allCharacters, playersByN
     }
     case 'stats': {
       send(formatStats(player, partyApi));
+      return;
+    }
+    case 'changeclass': {
+      const raw = (args || '').trim();
+      if (!raw) {
+        send('请选择要转职的职业。');
+        return;
+      }
+      let classId = '';
+      let className = '';
+      if (raw === 'warrior' || raw === '战士') {
+        classId = 'warrior';
+        className = '战士';
+      } else if (raw === 'mage' || raw === '法师') {
+        classId = 'mage';
+        className = '法师';
+      } else if (raw === 'taoist' || raw === '道士') {
+        classId = 'taoist';
+        className = '道士';
+      } else {
+        return;
+      }
+      if (player.classId === classId) {
+        send('你已经是该职业。');
+        return;
+      }
+      const fee = 1000000000;
+      if (player.gold < fee) {
+        send(`金币不足。转职需要 ${fee} 金币。`);
+        return;
+      }
+      const hasScroll = validatePlayerHasItem(player, 'scroll_recall', 1);
+      if (!hasScroll.ok) {
+        send('转职需要转职令牌。');
+        return;
+      }
+      player.gold -= fee;
+      removeItem(player, 'scroll_recall', 1);
+      player.classId = classId;
+      player.skills = [DEFAULT_SKILLS[classId]].filter(Boolean);
+      if (!player.flags) player.flags = {};
+      delete player.flags.skillMastery;
+      player.flags.autoSkillId = null;
+      computeDerived(player);
+      send(`转职成功：已变更为${className}，技能已重置为初始技能。`);
       return;
     }
     case 'observe':

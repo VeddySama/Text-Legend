@@ -129,3 +129,7 @@ export async function saveCharacter(userId, player, realmId = 1) {
   const [id] = await knex('characters').insert(data);
   return id;
 }
+
+export async function deleteCharacter(userId, name, realmId = 1) {
+  return knex('characters').where({ user_id: userId, name, realm_id: realmId }).del();
+}

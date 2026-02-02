@@ -13,7 +13,7 @@
   snow_frost: { id: 'snow_frost', name: '万年雪霜', type: 'consumable', hp: 600, mp: 600, price: 50000 },
   scroll_return: { id: 'scroll_return', name: '回城卷', type: 'consumable', teleport: { zone: 'bq_town', room: 'gate' }, price: 200 },
   scroll_random: { id: 'scroll_random', name: '随机卷', type: 'consumable', teleport: { zone: 'bq_plains', room: 'plains' }, price: 220 },
-  scroll_recall: { id: 'scroll_recall', name: '召唤卷', type: 'consumable', price: 380 },
+  scroll_recall: { id: 'scroll_recall', name: '转职令牌', type: 'consumable', price: 380, worldBossOnly: true },
 
   training_fruit: { id: 'training_fruit', name: '修炼果', type: 'consumable', price: 1800, untradable: true, unconsignable: true },
   woma_horn: { id: 'woma_horn', name: '沃玛号角', type: 'material', price: 3000 },

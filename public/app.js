@@ -294,6 +294,12 @@ const repairUi = {
   all: document.getElementById('repair-all'),
   close: document.getElementById('repair-close')
 };
+const changeClassUi = {
+  modal: document.getElementById('changeclass-modal'),
+  options: Array.from(document.querySelectorAll('.changeclass-option')),
+  confirm: document.getElementById('changeclass-confirm'),
+  close: document.getElementById('changeclass-close')
+};
 const forgeUi = {
   modal: document.getElementById('forge-modal'),
   list: document.getElementById('forge-main-list'),
@@ -331,6 +337,7 @@ const effectUi = {
   close: document.getElementById('effect-close')
 };
 let effectSelection = null;
+let changeClassSelection = null;
 const consignUi = {
   modal: document.getElementById('consign-modal'),
   tabs: Array.from(document.querySelectorAll('.consign-tab')),
@@ -1205,10 +1212,14 @@ function promptModal({ title, text, placeholder, value, extra, allowEmpty, type 
       if (e.key === 'Enter') onOk();
       if (e.key === 'Escape') onCancel();
     };
+    const onBackdrop = (e) => {
+      if (e.target === promptUi.modal) onCancel();
+    };
     const cleanup = () => {
       promptUi.ok.removeEventListener('click', onOk);
       promptUi.cancel.removeEventListener('click', onCancel);
       promptUi.input.removeEventListener('keydown', onKey);
+      promptUi.modal.removeEventListener('click', onBackdrop);
       promptUi.modal.classList.add('hidden');
       promptUi.input.type = prevType || 'text';
       if (promptUi.label) {
@@ -1258,6 +1269,7 @@ function promptModal({ title, text, placeholder, value, extra, allowEmpty, type 
     promptUi.ok.addEventListener('click', onOk);
     promptUi.cancel.addEventListener('click', onCancel);
     promptUi.input.addEventListener('keydown', onKey);
+    promptUi.modal.addEventListener('click', onBackdrop);
     promptUi.modal.classList.remove('hidden');
     setTimeout(() => promptUi.input.focus(), 0);
   });
@@ -1370,10 +1382,14 @@ function confirmModal({ title, text }) {
       if (e.key === 'Enter') onOk();
       if (e.key === 'Escape') onCancel();
     };
+    const onBackdrop = (e) => {
+      if (e.target === promptUi.modal) onCancel();
+    };
     const cleanup = () => {
       promptUi.ok.removeEventListener('click', onOk);
       promptUi.cancel.removeEventListener('click', onCancel);
       promptUi.modal.removeEventListener('keydown', onKey);
+      promptUi.modal.removeEventListener('click', onBackdrop);
       promptUi.modal.classList.add('hidden');
       promptUi.input.classList.remove('hidden');
       if (promptUi.label) {
@@ -1410,6 +1426,7 @@ function confirmModal({ title, text }) {
     promptUi.ok.addEventListener('click', onOk);
     promptUi.cancel.addEventListener('click', onCancel);
     promptUi.modal.addEventListener('keydown', onKey);
+    promptUi.modal.addEventListener('click', onBackdrop);
     promptUi.modal.classList.remove('hidden');
   });
 }
@@ -1739,6 +1756,28 @@ function showRepairModal() {
   hideItemTooltip();
   renderRepairList(lastState ? lastState.equipment : []);
   repairUi.modal.classList.remove('hidden');
+}
+
+function showChangeClassModal(currentClassId) {
+  if (!changeClassUi.modal) return;
+  changeClassSelection = null;
+  if (changeClassUi.confirm) {
+    changeClassUi.confirm.disabled = true;
+  }
+  changeClassUi.options.forEach((btn) => {
+    if (!btn.dataset.label) {
+      btn.dataset.label = btn.textContent.trim();
+    }
+    btn.classList.remove('active');
+    btn.disabled = false;
+    btn.textContent = btn.dataset.label;
+    if (currentClassId && btn.dataset.class === currentClassId) {
+      btn.classList.add('active');
+      btn.disabled = true;
+      btn.textContent = `${btn.dataset.label}（当前职业）`;
+    }
+  });
+  changeClassUi.modal.classList.remove('hidden');
 }
 
 let forgeSelection = null;
@@ -4783,6 +4822,7 @@ function renderState(state) {
     { id: 'shop', label: '\u5546\u5e97' },
     { id: 'repair', label: '\u4FEE\u7406' },
     { id: 'consign', label: '\u5BC4\u552E' },
+    { id: 'changeclass', label: '\u8f6c\u804c' },
     { id: 'forge', label: '\u88C5\u5907\u5408\u6210' },
     { id: 'refine', label: '\u88C5\u5907\u953B\u9020' },
     { id: 'effect', label: '\u7279\u6548\u91CD\u7F6E' },
@@ -4867,6 +4907,10 @@ function renderState(state) {
     }
     if (a.id === 'repair') {
       showRepairModal();
+      return;
+    }
+    if (a.id === 'changeclass') {
+      showChangeClassModal(state.player ? state.player.classId : null);
       return;
     }
     if (a.id === 'forge') {
@@ -5075,8 +5119,38 @@ function renderCharacters(chars) {
     const btn = document.createElement('button');
     btn.textContent = '进入';
     btn.addEventListener('click', () => enterGame(c.name));
-    card.appendChild(document.createElement('div'));
-    card.appendChild(btn);
+    const deleteBtn = document.createElement('button');
+    deleteBtn.textContent = '删除';
+    deleteBtn.addEventListener('click', async () => {
+      if (!token) return;
+      const confirmed = await confirmModal({
+        title: '删除角色',
+        text: `确认删除角色「${c.name}」？此操作不可恢复。`
+      });
+      if (!confirmed) return;
+      try {
+        await apiPost('/api/character/delete', { token, name: c.name, realmId: currentRealmId });
+        const username = localStorage.getItem('rememberedUser');
+        const charsKey = getUserStorageKey('savedCharacters', username, currentRealmId);
+        let saved = [];
+        try {
+          saved = JSON.parse(localStorage.getItem(charsKey) || '[]');
+        } catch {
+          saved = [];
+        }
+        saved = Array.isArray(saved) ? saved.filter((item) => item.name !== c.name) : [];
+        localStorage.setItem(charsKey, JSON.stringify(saved));
+        await refreshCharactersForRealm();
+        showToast('角色已删除');
+      } catch (err) {
+        showToast(err.message || '删除失败');
+      }
+    });
+    const actions = document.createElement('div');
+    actions.className = 'char-card-actions';
+    actions.appendChild(btn);
+    actions.appendChild(deleteBtn);
+    card.appendChild(actions);
     characterList.appendChild(card);
   });
 }
@@ -5200,6 +5274,9 @@ function enterGame(name) {
   socket.on('output', (payload) => {
     console.log('Received output:', payload);
     appendLine(payload);
+    if (payload && payload.text && payload.text.startsWith('转职成功')) {
+      showToast(payload.text);
+    }
     if (!isStateThrottleActive()) {
       parseStats(payload.text);
     }
@@ -5825,6 +5902,44 @@ if (repairUi.close) {
   repairUi.close.addEventListener('click', () => {
     repairUi.modal.classList.add('hidden');
     hideItemTooltip();
+  });
+}
+if (changeClassUi.close) {
+  changeClassUi.close.addEventListener('click', () => {
+    changeClassUi.modal.classList.add('hidden');
+    changeClassSelection = null;
+  });
+}
+if (changeClassUi.modal) {
+  changeClassUi.modal.addEventListener('click', (e) => {
+    if (e.target === changeClassUi.modal) {
+      changeClassUi.modal.classList.add('hidden');
+      changeClassSelection = null;
+    }
+  });
+}
+if (changeClassUi.options && changeClassUi.options.length) {
+  changeClassUi.options.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      if (btn.disabled) return;
+      changeClassSelection = btn.dataset.class || null;
+      changeClassUi.options.forEach((node) => node.classList.toggle('active', node === btn));
+      if (changeClassUi.confirm) {
+        changeClassUi.confirm.disabled = !changeClassSelection;
+      }
+    });
+  });
+}
+if (changeClassUi.confirm) {
+  changeClassUi.confirm.addEventListener('click', () => {
+    if (!socket) return;
+    if (!changeClassSelection) {
+      showToast('请选择职业');
+      return;
+    }
+    socket.emit('cmd', { text: `changeclass ${changeClassSelection}`, source: 'ui' });
+    changeClassUi.modal.classList.add('hidden');
+    changeClassSelection = null;
   });
 }
 if (forgeUi.close) {

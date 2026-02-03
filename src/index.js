@@ -3788,9 +3788,12 @@ function clearNegativeStatuses(target) {
   delete target.status.poisonsBySource;
   if (target.status.debuffs) {
     const healBlock = target.status.debuffs.healBlock;
+    const armorBreak = target.status.debuffs.armorBreak;
     delete target.status.debuffs;
-    if (healBlock) {
-      target.status.debuffs = { healBlock };
+    if (healBlock || armorBreak) {
+      target.status.debuffs = {};
+      if (healBlock) target.status.debuffs.healBlock = healBlock;
+      if (armorBreak) target.status.debuffs.armorBreak = armorBreak;
     }
   }
 }
@@ -7527,7 +7530,7 @@ async function combatTick() {
         player.send(`吸血戒指生效，恢复 ${heal} 点生命。`);
       }
       // 破防戒指：攻击时10%几率使目标防御魔御降低20%，持续2秒
-      if (!mobImmuneToDebuffs && hasSpecialRingEquipped(player, 'ring_break') && Math.random() <= 0.1) {
+      if (hasSpecialRingEquipped(player, 'ring_break') && Math.random() <= 0.1) {
         if (!mob.status) mob.status = {};
         if (!mob.status.debuffs) mob.status.debuffs = {};
         mob.status.debuffs.armorBreak = { expiresAt: Date.now() + 2000, defMultiplier: 0.8 };

@@ -245,7 +245,6 @@ function getTrainingPerLevel(attr) {
 })();
 
 // 主题和日志折叠
-let isDarkMode = localStorage.getItem('darkMode') === 'true';
 let isLogCollapsed = localStorage.getItem('logCollapsed') === 'true';
 let isBattleCollapsed = localStorage.getItem('battleCollapsed') === 'true';
 let showDamage = localStorage.getItem('showDamage') !== 'false';
@@ -6976,31 +6975,6 @@ if (ui.party) {
   ui.party.addEventListener('click', () => {
     if (!socket) return;
     renderPartyModal();
-  });
-}
-
-// 主题切换功能
-const themeToggle = document.getElementById('theme-toggle');
-if (themeToggle) {
-  // 应用初始主题
-  function applyTheme(dark) {
-    if (dark) {
-      document.body.classList.add('dark');
-      document.documentElement.classList.add('dark');
-      themeToggle.textContent = '☀️';
-    } else {
-      document.body.classList.remove('dark');
-      document.documentElement.classList.remove('dark');
-      themeToggle.textContent = '🌙';
-    }
-  }
-
-  applyTheme(isDarkMode);
-
-  themeToggle.addEventListener('click', () => {
-    isDarkMode = !isDarkMode;
-    localStorage.setItem('darkMode', isDarkMode.toString());
-    applyTheme(isDarkMode);
   });
 }
 

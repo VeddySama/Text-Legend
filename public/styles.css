@@ -1138,13 +1138,12 @@ body.log-collapsed .game-layout {
 
 .status-log .log-wrap {
   flex: 1;
-  height: 100%;
   min-height: 360px;
+  max-height: 420px;
 }
 
 .status-log .log {
-  max-height: none;
-  height: 100%;
+  max-height: 420px;
   overflow-y: auto;
 }
 

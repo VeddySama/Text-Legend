@@ -1029,9 +1029,6 @@ function appendLine(payload) {
   // 过滤伤害和战斗信息
   const isSkillHintLine = /释放了.*[!！]|施放.*召唤了/.test(text);
   const isDamageLine = /你释放了|对.*造成.*点伤害|受到.*点伤害|闪避了.*的攻击|躲过了.*的攻击|溅射到|造成.*点伤害|中了毒|中毒伤害|毒特效|恢复.*点生命|施放.*恢复|暴击|连击触发|破防攻击|破防效果|无敌状态|无敌效果|减伤效果|禁疗影响|禁疗效果|免疫了所有伤害|处于无敌|施放.*护盾|震退了怪物|施放.*，震退|施放.*，造成范围伤害|攻击落空|被麻痹戒指定身|被麻痹|无法行动|施毒成功|施毒失败/.test(text);
-  if (!showDamage && (isDamageLine || isSkillHintLine)) {
-    return;
-  }
   if (isDamageLine) {
     const selfName = activeChar || lastState?.player?.name || '你';
     const dmgMatch = text.match(/(\d+)\s*点伤害/);
@@ -1104,6 +1101,9 @@ function appendLine(payload) {
         spawnDamageFloatOnMob(targetName, amount, kind, label, selectedMobId);
       }
     }
+  }
+  if (!showDamage && (isDamageLine || isSkillHintLine)) {
+    return;
   }
   // 过滤经验和金币信息
   const isExpGoldLine = /获得.*点经验|获得.*金币/.test(text);

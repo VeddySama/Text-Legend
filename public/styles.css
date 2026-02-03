@@ -1005,6 +1005,7 @@ button:hover {
 body.log-collapsed .game-layout {
   grid-template-columns: minmax(0, 1200px) 52px;
   justify-content: center;
+  align-items: start;
 }
 
 .game-main {
@@ -1226,6 +1227,8 @@ body.log-collapsed .game-layout {
 
 body.log-collapsed .status-log {
   padding: 8px 6px;
+  height: auto;
+  align-self: start;
 }
 
 body.log-collapsed .status-log .log-wrap {

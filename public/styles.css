@@ -1135,14 +1135,12 @@ body.log-collapsed .game-layout {
   height: 100%;
   min-width: 0;
   min-height: 0;
-  max-height: clamp(360px, 60vh, 560px);
 }
 
 .status-log .log-wrap {
   flex: 1;
   min-height: 360px;
   height: 100%;
-  max-height: 100%;
 }
 
 .status-log .log {

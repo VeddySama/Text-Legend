@@ -4157,6 +4157,7 @@ async function loadWorldBossSettings() {
     document.getElementById('wb-base-def').value = data.baseDef || '';
     document.getElementById('wb-base-mdef').value = data.baseMdef || '';
     document.getElementById('wb-drop-bonus').value = data.dropBonus || '';
+    document.getElementById('wb-respawn-mins').value = data.respawnMinutes || '';
     worldBossPlayerBonusConfig = data.playerBonusConfig || [];
     renderWorldBossPlayerBonusList();
   } catch (err) {

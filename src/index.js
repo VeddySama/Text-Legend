@@ -3782,18 +3782,19 @@ function isSpecialBossEnraged(mob) {
 
 function clearNegativeStatuses(target) {
   if (!target?.status) return;
-  delete target.status.stunTurns;
   delete target.status.poison;
   delete target.status.activePoisons;
   delete target.status.poisonsBySource;
   if (target.status.debuffs) {
     const healBlock = target.status.debuffs.healBlock;
     const armorBreak = target.status.debuffs.armorBreak;
+    const weak = target.status.debuffs.weak;
     delete target.status.debuffs;
-    if (healBlock || armorBreak) {
+    if (healBlock || armorBreak || weak) {
       target.status.debuffs = {};
       if (healBlock) target.status.debuffs.healBlock = healBlock;
       if (armorBreak) target.status.debuffs.armorBreak = armorBreak;
+      if (weak) target.status.debuffs.weak = weak;
     }
   }
 }
@@ -7509,15 +7510,17 @@ async function combatTick() {
         }
       }
 
-      if (!mobImmuneToDebuffs && hasSpecialRingEquipped(player, 'ring_magic') &&
+      const mobTemplate = MOB_TEMPLATES[mob.templateId];
+      const magicRingChance = isBossMob(mobTemplate) ? 0.05 : 0.1;
+      if (hasSpecialRingEquipped(player, 'ring_magic') &&
           canTriggerMagicRing(player, chosenSkillId, skill) &&
-          Math.random() <= 0.1) {
+          Math.random() <= magicRingChance) {
         if (!mob.status) mob.status = {};
         mob.status.stunTurns = 2;
         player.send(`${mob.name} 被麻痹戒指定身。`);
       }
       // 弱化戒指：攻击时10%几率使目标伤害降低20%，持续2秒
-      if (!mobImmuneToDebuffs && hasSpecialRingEquipped(player, 'ring_teleport') && Math.random() <= 0.1) {
+      if (hasSpecialRingEquipped(player, 'ring_teleport') && Math.random() <= 0.1) {
         if (!mob.status) mob.status = {};
         if (!mob.status.debuffs) mob.status.debuffs = {};
         mob.status.debuffs.weak = { expiresAt: Date.now() + 2000, dmgReduction: 0.2 };

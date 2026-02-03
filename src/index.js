@@ -112,6 +112,7 @@ import { randInt, clamp } from './game/utils.js';
 import { expForLevel, setRoomVariantCount as applyRoomVariantCount } from './game/constants.js';
 import {
   setAllClassLevelBonusConfigs,
+  setClassLevelBonusConfig as setClassLevelBonusConfigMem,
   getTrainingFruitDropRate,
   setTrainingFruitCoefficient,
   setTrainingFruitDropRate as setTrainingFruitDropRateConfig,
@@ -846,6 +847,28 @@ app.post('/admin/class-level-bonus/update', async (req, res) => {
     }
   }
   await setClassLevelBonusConfig(classId, config);
+  // 同步到内存配置，并刷新在线角色属性
+  setClassLevelBonusConfigMem(classId, config);
+  const targets = listOnlinePlayers().filter((p) => p.classId === classId);
+  await Promise.all(
+    targets.map(async (p) => {
+      computeDerived(p);
+      await sendState(p);
+      await savePlayer(p);
+    })
+  );
+  // 离线角色也更新
+  const offlineRows = await knex('characters')
+    .where({ class: classId })
+    .select('user_id', 'name', 'realm_id');
+  for (const row of offlineRows) {
+    const online = playersByName(row.name, row.realm_id || 1);
+    if (online) continue;
+    const loaded = await loadCharacter(row.user_id, row.name, row.realm_id || 1);
+    if (!loaded) continue;
+    computeDerived(loaded);
+    await saveCharacter(row.user_id, loaded, row.realm_id || 1);
+  }
   res.json({ ok: true, classId, config });
 });
 

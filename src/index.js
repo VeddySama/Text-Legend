@@ -3766,8 +3766,12 @@ function pickPlayerBonusConfig(playerBonusConfig, playerCount) {
 function isSpecialBossDebuffImmune(target) {
   if (!target || !target.templateId) return false;
   const tpl = MOB_TEMPLATES[target.templateId];
-  if (!tpl?.specialBoss) return false;
-  return true;
+  if (!tpl) return false;
+  if (!isBossMob(tpl) && !tpl.worldBoss && !tpl.sabakBoss) return false;
+  const maxHp = Number(target.max_hp ?? tpl.hp ?? 0) || 0;
+  if (maxHp <= 0) return false;
+  const hp = Number(target.hp ?? maxHp) || 0;
+  return hp / maxHp <= 0.8;
 }
 
 function isSpecialBossEnraged(mob) {
@@ -3816,9 +3820,9 @@ function enforceSpecialBossDebuffImmunity(target, realmId = null) {
         p.position.room === target.roomId &&
         p.hp > 0
       );
-      roomPlayers.forEach((roomPlayer) => {
-        roomPlayer.send(`${target.name} 血量低于30%，进入负面免疫状态！`);
-      });
+        roomPlayers.forEach((roomPlayer) => {
+          roomPlayer.send(`${target.name} 血量低于80%，进入负面免疫状态！`);
+        });
     }
   }
   return true;
@@ -5262,6 +5266,7 @@ function calcPoisonEffectTickDamage(target) {
 
 function tryApplyPoisonEffect(attacker, target) {
   if (!attacker || !target) return false;
+  if (isSpecialBossDebuffImmune(target)) return false;
   if (!attacker?.flags?.hasPoisonEffect) return false;
   if (Math.random() > 0.1) return false;
   applyPoison(target, 10, calcPoisonEffectTickDamage(target), attacker.name);

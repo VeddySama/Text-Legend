@@ -1520,6 +1520,10 @@ export async function handleCommand({ player, players, allCharacters, playersByN
         send('已关闭自动技能与自动喝药。');
         return;
       }
+      if (!player.flags?.vip) {
+        send('挂机功能仅VIP可用。');
+        return;
+      }
       if (lower === 'all') {
         if (!player.flags) player.flags = {};
         player.flags.autoSkillId = 'all';
@@ -1562,6 +1566,10 @@ export async function handleCommand({ player, players, allCharacters, playersByN
           player.flags.autoMpPct = null;
         }
         send('已关闭自动喝药。');
+        return;
+      }
+      if (!player.flags?.vip) {
+        send('挂机功能仅VIP可用。');
         return;
       }
       const parts = args.split(' ').filter(Boolean);

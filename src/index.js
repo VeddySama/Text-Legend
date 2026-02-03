@@ -2713,7 +2713,7 @@ function adjustWorldBossStatsByPlayerCount(zoneId, roomId, realmId) {
 
   // 获取人数分段加成配置
   const playerBonusConfig = getWorldBossPlayerBonusConfigSync() || [];
-  const bonusConfig = playerBonusConfig.find(config => playerCount >= config.min);
+  const bonusConfig = pickPlayerBonusConfig(playerBonusConfig, playerCount);
 
   // 计算加成后的属性（基于基础属性 + 分段加成）
   const addedHp = bonusConfig ? (bonusConfig.hp || 0) : 0;
@@ -3657,6 +3657,69 @@ function isInvincible(target) {
   return false;
 }
 
+function isVipAutoEnabled(player) {
+  return Boolean(player?.flags?.vip);
+}
+
+function pickPlayerBonusConfig(playerBonusConfig, playerCount) {
+  if (!Array.isArray(playerBonusConfig) || playerBonusConfig.length === 0) return null;
+  let best = null;
+  for (const config of playerBonusConfig) {
+    if (!config || typeof config.min !== 'number') continue;
+    if (playerCount < config.min) continue;
+    if (!best || config.min > best.min) {
+      best = config;
+    }
+  }
+  return best;
+}
+
+function isSpecialBossDebuffImmune(target) {
+  if (!target || !target.templateId) return false;
+  const tpl = MOB_TEMPLATES[target.templateId];
+  if (!tpl?.specialBoss) return false;
+  const maxHp = Number(target.max_hp ?? tpl.hp ?? 0) || 0;
+  if (maxHp <= 0) return false;
+  const hp = Number(target.hp ?? maxHp) || 0;
+  return hp / maxHp <= 0.3;
+}
+
+function clearNegativeStatuses(target) {
+  if (!target?.status) return;
+  delete target.status.stunTurns;
+  delete target.status.poison;
+  delete target.status.activePoisons;
+  delete target.status.poisonsBySource;
+  if (target.status.debuffs) {
+    delete target.status.debuffs;
+  }
+}
+
+function enforceSpecialBossDebuffImmunity(target, realmId = null) {
+  if (!target?.status) target.status = {};
+  if (!isSpecialBossDebuffImmune(target)) {
+    if (target.status.debuffImmuneActive) {
+      delete target.status.debuffImmuneActive;
+    }
+    return false;
+  }
+  clearNegativeStatuses(target);
+  if (!target.status.debuffImmuneActive) {
+    target.status.debuffImmuneActive = true;
+    if (realmId && target.zoneId && target.roomId) {
+      const roomPlayers = listOnlinePlayers(realmId).filter((p) =>
+        p.position.zone === target.zoneId &&
+        p.position.room === target.roomId &&
+        p.hp > 0
+      );
+      roomPlayers.forEach((roomPlayer) => {
+        roomPlayer.send(`${target.name} 血量低于30%，进入负面免疫状态！`);
+      });
+    }
+  }
+  return true;
+}
+
 function getSpiritValue(target) {
   if (!target) return 0;
   const base = Number(target.spirit ?? target.atk ?? 0) || 0;
@@ -3782,6 +3845,11 @@ function applyOfflineRewards(player) {
   if (!player.flags) player.flags = {};
   const offlineAt = player.flags.offlineAt;
   if (!offlineAt) return;
+  if (!player.flags.vip) {
+    player.flags.offlineAt = null;
+    player.send('离线挂机仅VIP可用。');
+    return;
+  }
   const maxHours = player.flags.vip ? 24 : 12;
   const offlineMinutes = Math.min(Math.floor((Date.now() - offlineAt) / 60000), maxHours * 60);
   if (offlineMinutes <= 0) return;
@@ -4590,6 +4658,7 @@ function applyDamageToMob(mob, dmg, attackerName, realmId = null) {
   }
 
   applyDamage(mob, dmg);
+  enforceSpecialBossDebuffImmunity(mob, realmId);
 
   return { damageTaken: true, actualDamage: dmg };
 }
@@ -5145,6 +5214,7 @@ function consumeItem(player, itemId) {
 }
 
 function tryAutoPotion(player) {
+  if (!isVipAutoEnabled(player)) return;
   const hpPct = player.flags?.autoHpPct;
   const mpPct = player.flags?.autoMpPct;
   if (!hpPct && !mpPct) return;
@@ -6015,6 +6085,7 @@ function selectAutoSkill(player) {
 
 function tryAutoHeal(player) {
   if (!player.flags?.autoSkillId) return false;
+  if (!isVipAutoEnabled(player)) return false;
   const autoSkill = player.flags.autoSkillId;
   const autoHealEnabled = autoSkill === 'all'
     || (Array.isArray(autoSkill) && autoSkill.includes('heal'))
@@ -6129,6 +6200,7 @@ function applyBuff(target, buff) {
 
 function tryAutoBuff(player) {
   if (!player.flags?.autoSkillId) return false;
+  if (!isVipAutoEnabled(player)) return false;
   const autoSkill = player.flags.autoSkillId;
   const learnedBuffs = getLearnedSkills(player).filter((skill) =>
     skill.type === 'buff_def' || skill.type === 'buff_mdef' || skill.type === 'buff_shield' || skill.type === 'stealth_group'
@@ -6235,6 +6307,7 @@ function pickCombatSkillId(player, combatSkillId) {
   const isCombatSkill = (skill) =>
     Boolean(skill && ['attack', 'spell', 'cleave', 'dot', 'aoe'].includes(skill.type));
   if (player.flags?.autoSkillId) {
+    if (!isVipAutoEnabled(player)) return combatSkillId;
     const autoSkill = player.flags.autoSkillId;
     const now = Date.now();
     
@@ -6297,6 +6370,7 @@ function pickCombatSkillId(player, combatSkillId) {
 
 function autoResummon(player, desiredSkillId = null) {
   if (!player || player.hp <= 0) return false;
+  if (!isVipAutoEnabled(player)) return false;
   const skills = getLearnedSkills(player).filter((skill) => skill.type === 'summon');
   if (!skills.length) return false;
 
@@ -6758,8 +6832,8 @@ function updateSpecialBossStatsBasedOnPlayers() {
           ? getWorldBossPlayerBonusConfigSync()
           : getSpecialBossPlayerBonusConfigSync();
 
-        // 找到适用的人数加成配置
-        const bonusConfig = playerBonusConfig.find(config => playersInRoom >= config.min);
+        // 找到适用的人数加成配置（取最大满足档位）
+        const bonusConfig = pickPlayerBonusConfig(playerBonusConfig, playersInRoom);
         const atkBonus = bonusConfig ? (bonusConfig.atk || 0) : 0;
         const defBonus = bonusConfig ? (bonusConfig.def || 0) : 0;
         const mdefBonus = bonusConfig ? (bonusConfig.mdef || 0) : 0;
@@ -6847,7 +6921,7 @@ async function combatTick() {
       if (aggroMob) {
         player.combat = { targetId: aggroMob.id, targetType: 'mob', skillId: null };
       }
-      if (player.flags?.autoSkillId) {
+      if (player.flags?.autoSkillId && isVipAutoEnabled(player)) {
         if (!player.combat) {
           const idle = roomMobs.filter((m) => !m.status?.aggroTarget);
           const pool = idle.length ? idle : roomMobs;
@@ -7298,27 +7372,29 @@ async function combatTick() {
             player.send(`连击触发，对 ${mob.name} 造成 ${dmg} 点伤害。`);
           }
         }
-        if (tryApplyHealBlockEffect(player, mob)) {
+        const mobImmuneToDebuffs = enforceSpecialBossDebuffImmunity(mob, player.realmId || 1);
+        if (!mobImmuneToDebuffs && tryApplyHealBlockEffect(player, mob)) {
           player.send(`禁疗效果作用于 ${mob.name}。`);
         }
         if (skill && skill.id === 'assassinate') {
           const extraTargets = mobs.filter((m) => m.id !== mob.id);
           if (extraTargets.length) {
             const extraTarget = extraTargets[randInt(0, extraTargets.length - 1)];
-          const extraDmg = Math.max(1, Math.floor(dmg * ASSASSINATE_SECONDARY_DAMAGE_RATE));
-          const extraResult = applyDamageToMob(extraTarget, extraDmg, player.name, player.realmId || 1);
-          if (extraResult?.damageTaken) {
-            player.send(`刺杀剑术波及 ${extraTarget.name}，造成 ${extraDmg} 点伤害。`);
-          }
-            if (tryApplyHealBlockEffect(player, extraTarget)) {
+            const extraDmg = Math.max(1, Math.floor(dmg * ASSASSINATE_SECONDARY_DAMAGE_RATE));
+            const extraResult = applyDamageToMob(extraTarget, extraDmg, player.name, player.realmId || 1);
+            if (extraResult?.damageTaken) {
+              player.send(`刺杀剑术波及 ${extraTarget.name}，造成 ${extraDmg} 点伤害。`);
+            }
+            const extraImmuneToDebuffs = enforceSpecialBossDebuffImmunity(extraTarget, player.realmId || 1);
+            if (!extraImmuneToDebuffs && tryApplyHealBlockEffect(player, extraTarget)) {
               player.send(`禁疗效果作用于 ${extraTarget.name}。`);
             }
-            if (tryApplyPoisonEffect(player, extraTarget)) {
+            if (!extraImmuneToDebuffs && tryApplyPoisonEffect(player, extraTarget)) {
               player.send(`你的毒特效作用于 ${extraTarget.name}。`);
             }
-          if (extraTarget.hp <= 0) {
+            if (extraTarget.hp <= 0) {
               await processMobDeath(player, extraTarget, online);
-          }
+            }
           }
         }
         if (mob.hp > 0) {
@@ -7326,7 +7402,7 @@ async function combatTick() {
         }
       }
 
-      if (hasSpecialRingEquipped(player, 'ring_magic') &&
+      if (!mobImmuneToDebuffs && hasSpecialRingEquipped(player, 'ring_magic') &&
           canTriggerMagicRing(player, chosenSkillId, skill) &&
           Math.random() <= 0.1) {
         if (!mob.status) mob.status = {};
@@ -7334,7 +7410,7 @@ async function combatTick() {
         player.send(`${mob.name} 被麻痹戒指定身。`);
       }
       // 弱化戒指：攻击时10%几率使目标伤害降低20%，持续2秒
-      if (hasSpecialRingEquipped(player, 'ring_teleport') && Math.random() <= 0.1) {
+      if (!mobImmuneToDebuffs && hasSpecialRingEquipped(player, 'ring_teleport') && Math.random() <= 0.1) {
         if (!mob.status) mob.status = {};
         if (!mob.status.debuffs) mob.status.debuffs = {};
         mob.status.debuffs.weak = { expiresAt: Date.now() + 2000, dmgReduction: 0.2 };
@@ -7347,18 +7423,18 @@ async function combatTick() {
         player.send(`吸血戒指生效，恢复 ${heal} 点生命。`);
       }
       // 破防戒指：攻击时10%几率使目标防御魔御降低20%，持续2秒
-      if (hasSpecialRingEquipped(player, 'ring_break') && Math.random() <= 0.1) {
+      if (!mobImmuneToDebuffs && hasSpecialRingEquipped(player, 'ring_break') && Math.random() <= 0.1) {
         if (!mob.status) mob.status = {};
         if (!mob.status.debuffs) mob.status.debuffs = {};
         mob.status.debuffs.armorBreak = { expiresAt: Date.now() + 2000, defMultiplier: 0.8 };
         player.send(`破防戒指生效，${mob.name} 防御降低20%！`);
       }
-      if (skill && skill.type === 'dot') {
+      if (!mobImmuneToDebuffs && skill && skill.type === 'dot') {
         if (!mob.status) mob.status = {};
         applyPoison(mob, 30, calcPoisonTickDamage(mob), player.name);
         applyPoisonDebuff(mob);
         player.send(`施毒成功：${mob.name} 中毒。`);
-      } else if (tryApplyPoisonEffect(player, mob)) {
+      } else if (!mobImmuneToDebuffs && tryApplyPoisonEffect(player, mob)) {
         player.send(`你的毒特效作用于 ${mob.name}。`);
       }
       if (skill && skill.type === 'cleave') {
@@ -7390,6 +7466,7 @@ async function combatTick() {
       }
     }
 
+    enforceSpecialBossDebuffImmunity(mob, player.realmId || 1);
     const statusTick = tickStatus(mob);
     if (statusTick && statusTick.type === 'poison') {
       player.send(`${mob.name} 受到 ${statusTick.dmg} 点中毒伤害。`);

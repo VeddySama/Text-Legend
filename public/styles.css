@@ -754,6 +754,13 @@ header p {
   overflow: hidden;
 }
 
+#game.panel {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+}
+
 .hidden {
   display: none;
 }

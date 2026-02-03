@@ -1134,16 +1134,20 @@ body.log-collapsed .game-layout {
   flex-direction: column;
   height: 100%;
   min-width: 0;
+  min-height: 0;
+  max-height: clamp(360px, 60vh, 560px);
 }
 
 .status-log .log-wrap {
   flex: 1;
   min-height: 360px;
-  max-height: 420px;
+  height: 100%;
+  max-height: 100%;
 }
 
 .status-log .log {
-  max-height: 420px;
+  max-height: none;
+  height: 100%;
   overflow-y: auto;
 }
 

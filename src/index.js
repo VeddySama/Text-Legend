@@ -7365,7 +7365,8 @@ async function combatTick() {
     }
 
     const hitChance = calcHitChance(player, mob);
-    if (Math.random() <= hitChance) {
+      if (Math.random() <= hitChance) {
+      const mobImmuneToDebuffs = enforceSpecialBossDebuffImmunity(mob, player.realmId || 1);
       let dmg = 0;
       let skillPower = 1;
       if (skill && (skill.type === 'attack' || skill.type === 'spell' || skill.type === 'cleave' || skill.type === 'dot' || skill.type === 'aoe')) {
@@ -7494,7 +7495,6 @@ async function combatTick() {
         }
       }
 
-      const mobImmuneToDebuffs = enforceSpecialBossDebuffImmunity(mob, player.realmId || 1);
       if (!mobImmuneToDebuffs && hasSpecialRingEquipped(player, 'ring_magic') &&
           canTriggerMagicRing(player, chosenSkillId, skill) &&
           Math.random() <= 0.1) {

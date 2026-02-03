@@ -1678,6 +1678,7 @@ body.dark .battle-skill-grid .chip {
 .battle-log {
   max-height: 420px;
   min-height: 360px;
+  overflow-x: hidden;
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
@@ -1691,6 +1692,14 @@ body.dark .battle-skill-grid .chip {
 .battle-log::-webkit-scrollbar {
   width: 0;
   height: 0;
+}
+
+.battle-log .line-text {
+  flex: 1;
+  min-width: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 .damage-layer {

@@ -6832,36 +6832,34 @@ async function processMobDeath(player, mob, online) {
     }
 
   const dropTargets = [];
+  let classRanks = null;
+  let classRankMap = null;
   if (isSpecialBoss) {
     const totalDamage = entries.reduce((sum, [, dmg]) => sum + dmg, 0) || 1;
-    const classBuckets = { warrior: [], mage: [], taoist: [] };
-    entries.forEach(([name, damage]) => {
+    classRanks = entries.length ? buildBossClassRank(mob, entries, roomRealmId) : null;
+    if (classRanks) {
+      classRankMap = new Map();
+      Object.entries(classRanks).forEach(([cls, list]) => {
+        list.forEach((entry, idx) => {
+          classRankMap.set(`${cls}:${entry.name}`, idx + 1);
+        });
+      });
+    }
+
+    entries.forEach(([name, damage], idx) => {
       const player = playersByName(name, roomRealmId);
       if (!player) return;
       if (isBoss && !isPlayerInMobRoom(player)) return;
+      const damageRatio = damage / totalDamage;
       const cls = player.classId;
-      if (!classBuckets[cls]) return;
-      classBuckets[cls].push({ player, damage, name });
+      const classRank = classRankMap ? (classRankMap.get(`${cls}:${name}`) || null) : null;
+      dropTargets.push({
+        player,
+        damageRatio,
+        rank: idx + 1,
+        classRank
+      });
     });
-    Object.values(classBuckets).forEach((list) => {
-      list
-        .sort((a, b) => (b.damage !== a.damage ? b.damage - a.damage : a.name.localeCompare(b.name)))
-        .slice(0, 10)
-        .forEach((entry, idx) => {
-          const damageRatio = entry.damage / totalDamage;
-          dropTargets.push({
-            player: entry.player,
-            damageRatio,
-            rank: entries.findIndex(([n]) => n === entry.name) + 1,
-            classRank: idx + 1
-          });
-        });
-    });
-    if (!dropTargets.length) {
-      if (!isBoss || isPlayerInMobRoom(lootOwner)) {
-        dropTargets.push({ player: lootOwner, damageRatio: 1, rank: 1, classRank: 1 });
-      }
-    }
   } else {
     if (!isBoss || isPlayerInMobRoom(lootOwner)) {
       dropTargets.push({ player: lootOwner, damageRatio: 1, rank: 1, classRank: 1 });
@@ -6869,7 +6867,7 @@ async function processMobDeath(player, mob, online) {
   }
 
     if (isSpecialBoss && entries.length) {
-      const classRanks = buildBossClassRank(mob, entries, roomRealmId);
+      classRanks = classRanks || buildBossClassRank(mob, entries, roomRealmId);
       const rewardKey = `${roomRealmId}:${mob.id}`;
       let rewardState = bossClassFirstDamageRewardGiven.get(rewardKey);
       if (!rewardState) {

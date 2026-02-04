@@ -5726,9 +5726,13 @@ io.on('connection', (socket) => {
     const inputSource = typeof clean.source === 'string' ? clean.source : '';
     const prevZone = player.position.zone;
     const prevRoom = player.position.room;
+    const commandRealmId = getRoomRealmId(player.position.zone, player.position.room, player.realmId || 1);
+    const commandPlayers = commandRealmId === CROSS_REALM_REALM_ID
+      ? listOnlinePlayers()
+      : listOnlinePlayers(player.realmId || 1);
     await handleCommand({
       player,
-      players: listOnlinePlayers(player.realmId || 1),
+      players: commandPlayers,
       allCharacters: listAllCharacters(player.realmId || 1),
       playersByName: (name, realmId) => {
         const list = Array.from(players.values());

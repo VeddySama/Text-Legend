@@ -59,6 +59,17 @@ export async function setLootLogEnabled(enabled) {
   await setSetting('loot_log_enabled', enabled ? 'true' : 'false');
 }
 
+export async function getCrossWorldBossRespawnAt() {
+  const value = await getSetting('cross_world_boss_respawn_at', '0');
+  const parsed = parseInt(value, 10);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+export async function setCrossWorldBossRespawnAt(timestamp) {
+  const normalized = Math.max(0, Math.floor(Number(timestamp) || 0));
+  await setSetting('cross_world_boss_respawn_at', String(normalized));
+}
+
 /**
  * 获取状态刷新节流开关
  */

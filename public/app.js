@@ -1313,6 +1313,9 @@ function setTradeStatus(text) {
   if (!text) return;
   if (text.includes('交易建立')) {
     tradeUi.modal.classList.remove('hidden');
+    if (lastState) {
+      refreshTradeItemOptions(buildItemTotals(lastState.items || []));
+    }
   } else if (
     text.includes('交易完成') ||
     text.includes('交易已取消') ||
@@ -1326,6 +1329,41 @@ function setTradeStatus(text) {
 function setTradePartnerStatus(text) {
   if (!tradeUi.partnerStatus) return;
   tradeUi.partnerStatus.textContent = text;
+}
+
+function buildItemTotals(items) {
+  const totals = {};
+  (items || []).forEach((i) => {
+    const key = i.key || i.id;
+    if (!totals[key]) {
+      totals[key] = { ...i, qty: 0, key };
+    }
+    totals[key].qty += i.qty;
+  });
+  return Object.values(totals);
+}
+
+function refreshTradeItemOptions(items) {
+  if (!tradeUi.itemSelect) return;
+  const list = Array.isArray(items) ? items : [];
+  const savedValue = tradeUi.itemSelect.value;
+  tradeUi.itemSelect.innerHTML = '';
+  if (!list.length) {
+    const opt = document.createElement('option');
+    opt.value = '';
+    opt.textContent = '无可用物品';
+    tradeUi.itemSelect.appendChild(opt);
+  } else {
+    list.forEach((entry) => {
+      const opt = document.createElement('option');
+      opt.value = entry.key || entry.id;
+      opt.textContent = `${formatItemName(entry)} x${entry.qty}`;
+      tradeUi.itemSelect.appendChild(opt);
+    });
+  }
+  if (savedValue && list.some(e => (e.key || e.id) === savedValue)) {
+    tradeUi.itemSelect.value = savedValue;
+  }
 }
 
 function updateTradeDisplay() {
@@ -5239,15 +5277,7 @@ function renderState(state) {
     }
   }
 
-    const itemTotals = {};
-    (state.items || []).forEach((i) => {
-      const key = i.key || i.id;
-      if (!itemTotals[key]) {
-        itemTotals[key] = { ...i, qty: 0, key };
-      }
-      itemTotals[key].qty += i.qty;
-    });
-    const allItems = Object.values(itemTotals);
+    const allItems = buildItemTotals(state.items || []);
     const displayItems = allItems.filter((i) => i.type === 'consumable' && (i.hp || i.mp));
     const displayChips = displayItems.map((i) => ({
       id: i.key || i.id,
@@ -5307,24 +5337,7 @@ function renderState(state) {
     });
   }
   if (tradeUi.itemSelect && !tradeUi.modal.classList.contains('hidden')) {
-    const savedValue = tradeUi.itemSelect.value;
-    tradeUi.itemSelect.innerHTML = '';
-    if (!allItems.length) {
-      const opt = document.createElement('option');
-      opt.value = '';
-      opt.textContent = '\u65e0\u53ef\u7528\u7269\u54c1';
-      tradeUi.itemSelect.appendChild(opt);
-    } else {
-      allItems.forEach((entry) => {
-        const opt = document.createElement('option');
-        opt.value = entry.key || entry.id;
-        opt.textContent = `${formatItemName(entry)} x${entry.qty}`;
-        tradeUi.itemSelect.appendChild(opt);
-      });
-    }
-    if (savedValue && allItems.some(e => (e.key || e.id) === savedValue)) {
-      tradeUi.itemSelect.value = savedValue;
-    }
+    refreshTradeItemOptions(allItems);
   }
 
   const actions = [

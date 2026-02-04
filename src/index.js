@@ -6286,7 +6286,7 @@ io.on('connection', (socket) => {
     const members = await listGuildMembers(clean.guildId, player.realmId || 1);
     members.forEach((m) => {
       if (m.role === 'leader' || m.role === 'vice_leader') {
-        const onlineMember = players.get(socketIds.get(m.char_name));
+        const onlineMember = playersByName(m.char_name, player.realmId || 1);
         if (onlineMember) {
           onlineMember.send(`${player.name} 申请加入行会`);
         }
@@ -6334,7 +6334,7 @@ io.on('connection', (socket) => {
       await approveGuildApplication(player.guild.id, targetApp.user_id, clean.charName, player.realmId || 1);
       socket.emit('guild_approve_result', { ok: true, msg: `已批准 ${clean.charName} 加入行会` });
 
-      const onlineTarget = players.get(socketIds.get(clean.charName));
+      const onlineTarget = playersByName(clean.charName, player.realmId || 1);
       if (onlineTarget) {
         onlineTarget.guild = { id: player.guild.id, name: player.guild.name, role: 'member' };
         onlineTarget.send(`你的申请已被批准，已加入行会 ${player.guild.name}`);
@@ -6369,7 +6369,7 @@ io.on('connection', (socket) => {
     await removeGuildApplication(player.guild.id, targetApp.user_id, player.realmId || 1);
     socket.emit('guild_reject_result', { ok: true, msg: `已拒绝 ${clean.charName} 的申请` });
 
-    const onlineTarget = players.get(socketIds.get(clean.charName));
+    const onlineTarget = playersByName(clean.charName, player.realmId || 1);
     if (onlineTarget) {
       onlineTarget.send('你的加入行会申请已被拒绝');
     }

@@ -6910,7 +6910,21 @@ async function processMobDeath(player, mob, online) {
   const announcementRealmId = roomRealmId === CROSS_REALM_REALM_ID ? null : realmId;
   const isPlayerInMobRoom = (target) =>
     Boolean(target && target.position && target.position.zone === mobZoneId && target.position.room === mobRoomId);
-  removeMob(mobZoneId, mobRoomId, mob.id, roomRealmId);
+  const removedMob = removeMob(mobZoneId, mobRoomId, mob.id, roomRealmId);
+  if (removedMob && removedMob.respawnAt) {
+    try {
+      await upsertMobRespawn(
+        roomRealmId,
+        mobZoneId,
+        mobRoomId,
+        removedMob.slotIndex,
+        removedMob.templateId,
+        removedMob.respawnAt
+      );
+    } catch (err) {
+      console.warn('Failed to persist mob respawn state:', err);
+    }
+  }
   removeSummonedMobsByOwner(mob, roomRealmId, mobZoneId, mobRoomId);
   if (template?.summoned || mob.summoned || mob.status?.summoned) {
     return;

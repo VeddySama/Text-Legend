@@ -2754,14 +2754,15 @@ export async function handleCommand({ player, players, allCharacters, playersByN
         });
         if (todayRegistrations.length >= 1) return send('今天已经有行会报名了，每天只能有一个行会申请攻城。');
         if (player.gold < 1000000) return send('报名需要100万金币。');
-        player.gold -= 5000000;
+        player.gold -= 1000000;
         try {
           await guildApi.registerSabak(player.guild.id);
           send('已报名沙巴克攻城，支付100万金币。');
         } catch {
           send('该行会已经报名。');
-          player.gold += 5000000;
+          player.gold += 1000000;
         }
+        player.forceStateRefresh = true;
         return;
       }
       return;

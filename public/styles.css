@@ -2898,15 +2898,44 @@ body.dark .mail-tab.active {
 }
 
 @media (max-width: 720px) {
+  .mail-card {
+    width: 96vw;
+    max-height: 92vh;
+    overflow: auto;
+  }
   .mail-grid {
     grid-template-columns: 1fr;
+    gap: 10px;
   }
   .mail-list,
   .mail-detail {
     max-height: none;
   }
+  .mail-list {
+    max-height: 220px;
+  }
+  .mail-detail {
+    min-height: 0;
+  }
+  .mail-detail-title {
+    font-size: 1rem;
+  }
+  .mail-detail-body {
+    font-size: 0.95rem;
+    line-height: 1.5;
+  }
   .mail-attach-row {
     grid-template-columns: 1fr;
+  }
+  .mail-compose {
+    gap: 10px;
+  }
+  .mail-compose button,
+  .mail-attach-row button,
+  #mail-send,
+  #mail-refresh,
+  #mail-close {
+    width: 100%;
   }
 }
 

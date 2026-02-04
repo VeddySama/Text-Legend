@@ -4414,9 +4414,12 @@ function buildRoomExits(zoneId, roomId) {
     const destRoom = destZone?.rooms?.[destRoomId];
     // 只添加目标房间存在的出口,过滤掉无效的变种出口
     if (!destRoom) return null;
-    const label = destRoom
+    const fullLabel = destRoom
       ? (destZoneId === zoneId ? destRoom.name : `${destZone.name} - ${destRoom.name}`)
       : dest;
+    const label = fullLabel.includes(' - ')
+      ? fullLabel.split(' - ').slice(1).join(' - ')
+      : fullLabel;
     return { dir, label };
   }).filter(Boolean);
 
@@ -4427,7 +4430,9 @@ function buildRoomExits(zoneId, roomId) {
     const baseDir = dir.replace(/[0-9]+$/, '');
 
     // 检查是否是暗之BOSS房间的入口
-    const isDarkBossRoom = exit.label.includes('暗之BOSS领域');
+    const isDarkBossRoom = typeof room.exits?.[dir] === 'string'
+      ? room.exits[dir].startsWith('dark_bosses:')
+      : false;
 
     // 检查是否有数字后缀的变体
     const hasVariants = allExits.some(

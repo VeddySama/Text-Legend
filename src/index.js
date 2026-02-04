@@ -13,7 +13,7 @@ import { validatePlayerName } from './game/validator.js';
 import knex from './db/index.js';
 import { createUser, verifyUser, createSession, getSession, getUserByName, setAdminFlag, verifyUserPassword, updateUserPassword, clearUserSessions, clearAllSessions } from './db/users.js';
 import { listCharacters, loadCharacter, saveCharacter, findCharacterByName, findCharacterByNameInRealm, listAllCharacters, deleteCharacter } from './db/characters.js';
-import { addGuildMember, createGuild, getGuildByName, getGuildByNameInRealm, getGuildById, getGuildMember, getSabakOwner, isGuildLeader, isGuildLeaderOrVice, setGuildMemberRole, listGuildMembers, listSabakRegistrations, registerSabak, hasSabakRegistrationToday, removeGuildMember, leaveGuild, setSabakOwner, clearSabakRegistrations, transferGuildLeader, ensureSabakState, applyToGuild, listGuildApplications, removeGuildApplication, approveGuildApplication, getApplicationByUser, listAllGuilds } from './db/guilds.js';
+import { addGuildMember, createGuild, getGuildByName, getGuildByNameInRealm, getGuildById, getGuildMember, getSabakOwner, isGuildLeader, isGuildLeaderOrVice, setGuildMemberRole, listGuildMembers, listSabakRegistrations, registerSabak, hasSabakRegistrationToday, hasAnySabakRegistrationToday, removeGuildMember, leaveGuild, setSabakOwner, clearSabakRegistrations, transferGuildLeader, ensureSabakState, applyToGuild, listGuildApplications, removeGuildApplication, approveGuildApplication, getApplicationByUser, listAllGuilds } from './db/guilds.js';
 import { createAdminSession, listUsers, verifyAdminSession, deleteUser } from './db/admin.js';
 import { sendMail, listMail, listSentMail, markMailRead, markMailClaimed, deleteMail } from './db/mail.js';
 import { createVipCodes, listVipCodes, useVipCode } from './db/vip.js';
@@ -6028,6 +6028,10 @@ io.on('connection', (socket) => {
         }
       }
     });
+    if (player.forceStateRefresh) {
+      await sendState(player);
+      await savePlayer(player);
+    }
   });
 
   socket.on('guild_applications', async () => {
@@ -6204,9 +6208,15 @@ io.on('connection', (socket) => {
     try {
         await registerSabak(player.guild.id, player.realmId || 1);
       player.send('已报名沙巴克攻城，支付100万金币。');
+      player.forceStateRefresh = true;
+      await sendState(player);
+      await savePlayer(player);
     } catch {
       player.send('该行会已经报名。');
       player.gold += 1000000;
+      player.forceStateRefresh = true;
+      await sendState(player);
+      await savePlayer(player);
     }
   });
 
@@ -8092,17 +8102,10 @@ async function sabakTick(realmId) {
   // 自动开始攻城战
   if (!sabakState.active && isSabakActive(nowDate) && sabakState.ownerGuildId) {
     // 检查是否有行会报名
-    const registrations = await listSabakRegistrations(realmId);
-    const today = new Date();
-    const todayRegistrations = registrations.filter(r => {
-      if (!r.registered_at) return false;
-      const regDate = new Date(r.registered_at);
-      return regDate.toDateString() === today.toDateString();
-    });
-
-    if (todayRegistrations.length === 0) {
+    const hasRegistration = await hasAnySabakRegistrationToday(realmId);
+    if (!hasRegistration) {
       // 没有行会报名，直接判定守城方胜利（每日仅公告一次）
-      const todayKey = today.toDateString();
+      const todayKey = nowDate.toDateString();
       if (sabakState.noRegAnnounceDate !== todayKey) {
         sabakState.noRegAnnounceDate = todayKey;
         emitAnnouncement('今日无行会报名攻城，守城方自动获胜！', 'announce', null, realmId);

@@ -153,6 +153,18 @@ export async function hasSabakRegistrationToday(guildId, realmId = 1) {
   return !!row;
 }
 
+export async function hasAnySabakRegistrationToday(realmId = 1) {
+  const start = new Date();
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(start.getTime() + 24 * 60 * 60 * 1000);
+  const row = await knex('sabak_registrations')
+    .where({ realm_id: realmId })
+    .where('registered_at', '>=', start)
+    .where('registered_at', '<', end)
+    .first();
+  return !!row;
+}
+
 export async function clearSabakRegistrations(realmId = 1) {
   await knex('sabak_registrations').where({ realm_id: realmId }).del();
 }

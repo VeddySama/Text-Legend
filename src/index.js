@@ -4428,7 +4428,7 @@ function buildRoomExits(zoneId, roomId) {
     const label = (isBossDestination && fullLabel.includes(' - '))
       ? fullLabel.split(' - ').slice(1).join(' - ')
       : fullLabel;
-    return { dir, label };
+    return { dir, label, destZoneId, destRoomId };
   }).filter(Boolean);
 
   // 合并带数字后缀的方向，只显示一个入口（暗之BOSS房间除外）
@@ -4438,9 +4438,7 @@ function buildRoomExits(zoneId, roomId) {
     const baseDir = dir.replace(/[0-9]+$/, '');
 
     // 检查是否是暗之BOSS房间的入口
-    const isDarkBossRoom = typeof room.exits?.[dir] === 'string'
-      ? room.exits[dir].startsWith('dark_bosses:')
-      : false;
+    const isDarkBossRoom = exit.destZoneId === 'dark_bosses';
 
     // 检查是否有数字后缀的变体
     const hasVariants = allExits.some(
@@ -4453,7 +4451,12 @@ function buildRoomExits(zoneId, roomId) {
     } else if (hasVariants) {
       // 只添加基础方向，不添加数字后缀的
       if (!/[0-9]+$/.test(dir) && !filteredExits.some((e) => e.dir === baseDir)) {
-        filteredExits.push({ dir: baseDir, label: exit.label.replace(/[0-9]+$/, '') });
+        filteredExits.push({
+          dir: baseDir,
+          label: exit.label.replace(/[0-9]+$/, ''),
+          destZoneId: exit.destZoneId,
+          destRoomId: exit.destRoomId
+        });
       }
     } else {
       // 没有变体，正常添加
@@ -4462,19 +4465,20 @@ function buildRoomExits(zoneId, roomId) {
   });
 
   // 额外处理：确保每个暗之BOSS房间只显示一个入口
-  const darkBossExits = filteredExits.filter(exit => exit.label.includes('暗之BOSS领域'));
+  const darkBossExits = filteredExits.filter(exit => exit.destZoneId === 'dark_bosses');
   const uniqueDarkBossExits = [];
-  const seenLabels = new Set();
+  const seenRooms = new Set();
   
   darkBossExits.forEach(exit => {
-    if (!seenLabels.has(exit.label)) {
-      seenLabels.add(exit.label);
+    const key = exit.destRoomId || exit.label;
+    if (!seenRooms.has(key)) {
+      seenRooms.add(key);
       uniqueDarkBossExits.push(exit);
     }
   });
 
   // 替换原有的暗之BOSS出口
-  const nonDarkBossExits = filteredExits.filter(exit => !exit.label.includes('暗之BOSS领域'));
+  const nonDarkBossExits = filteredExits.filter(exit => exit.destZoneId !== 'dark_bosses');
   filteredExits.splice(0, filteredExits.length, ...nonDarkBossExits, ...uniqueDarkBossExits);
 
   // 移除标签中的数字后缀（如 "平原1" -> "平原"）（暗之BOSS房间除外）

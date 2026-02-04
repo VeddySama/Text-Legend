@@ -98,7 +98,9 @@ export function seedRespawnCache(records) {
     const zoneId = row.zone_id || row.zoneId;
     const roomId = row.room_id || row.roomId;
     const slotIndex = Number(row.slot_index ?? row.slotIndex);
-    const realmId = Number(row.realm_id ?? row.realmId ?? 1) || 1;
+    const realmValue = row.realm_id ?? row.realmId;
+    let realmId = realmValue === undefined || realmValue === null ? 1 : Number(realmValue);
+    if (Number.isNaN(realmId)) realmId = 1;
     if (!zoneId || !roomId || Number.isNaN(slotIndex)) return;
     
     let status = {};
@@ -352,7 +354,8 @@ export function getAllAliveMobs(realmId = 1) {
   const aliveMobs = [];
   for (const [key, mobs] of ROOM_MOBS.entries()) {
     const [realmKey, zoneId, roomId] = key.split(':');
-    const keyRealmId = Number(realmKey || 1) || 1;
+    let keyRealmId = realmKey === undefined || realmKey === null || realmKey === '' ? 1 : Number(realmKey);
+    if (Number.isNaN(keyRealmId)) keyRealmId = 1;
     if (keyRealmId !== realmId) continue;
     for (const mob of mobs) {
       const tpl = MOB_TEMPLATES[mob.templateId];

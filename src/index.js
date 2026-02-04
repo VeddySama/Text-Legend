@@ -8549,7 +8549,9 @@ async function start() {
       // 保留有血量数据的怪物，即使重生时间已过期
       activeRespawns.push(row);
     } else {
-      await clearMobRespawn(row.realm_id || 1, row.zone_id, row.room_id, row.slot_index);
+      const realmValue = row.realm_id ?? row.realmId;
+      const realmId = (realmValue === undefined || realmValue === null) ? 1 : Number(realmValue);
+      await clearMobRespawn(Number.isNaN(realmId) ? 1 : realmId, row.zone_id, row.room_id, row.slot_index);
     }
   }
   seedRespawnCache(activeRespawns);

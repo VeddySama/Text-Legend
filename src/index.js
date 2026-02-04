@@ -2267,7 +2267,7 @@ async function refreshRealmCache() {
 
 function getRealmIds() {
   const ids = realmCache.map((r) => r.id);
-  return Array.from(new Set([1, ...ids]));
+  return Array.from(new Set([0, 1, ...ids]));
 }
 
 const sabakConfig = {
@@ -8259,6 +8259,8 @@ async function start() {
       clearMobRespawn(realmId, zoneId, roomId, slotIndex)
   });
   const respawnRows = [];
+  const crossRealmRows = await listMobRespawns(CROSS_REALM_REALM_ID);
+  respawnRows.push(...crossRealmRows);
   for (const realm of realmCache) {
     const rows = await listMobRespawns(realm.id);
     respawnRows.push(...rows);
@@ -8381,9 +8383,9 @@ async function start() {
   setEffectDropSingleChance(effectDropSingleChance);
   const effectDropDoubleChance = await getEffectDropDoubleChanceDb();
   setEffectDropDoubleChance(effectDropDoubleChance);
-  for (const realm of realmCache) {
-    checkMobRespawn(realm.id);
-  }
+  getRealmIds().forEach((realmId) => {
+    checkMobRespawn(realmId);
+  });
   setInterval(() => {
     getRealmIds().forEach((realmId) => {
       checkMobRespawn(realmId);

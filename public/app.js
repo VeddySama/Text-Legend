@@ -27,6 +27,7 @@ let crossRankTimer = null;
 let crossRankTimerTarget = null;
 let crossRankTimerEl = null;
 let crossRankTimerLabel = null;
+const tradeInviteCooldown = new Map();
 let trainingConfig = null; // 修炼配置
 let deviceId = null;
 let deviceFingerprint = null;
@@ -1198,6 +1199,29 @@ function parseTradeRequest(text) {
   const match = text.match(/^(.+?) 请求交易/);
   if (!match) return null;
   return match[1];
+}
+
+function handleTradeInvite(from) {
+  if (!from || !socket) return;
+  const now = Date.now();
+  const lastAt = tradeInviteCooldown.get(from) || 0;
+  if (now - lastAt < 1500) return;
+  tradeInviteCooldown.set(from, now);
+  promptModal({
+    title: '交易请求',
+    text: `${from} 请求交易，是否接受？`,
+    placeholder: '',
+    extra: { text: '拒绝' },
+    allowEmpty: true
+  }).then((res) => {
+    if (res === '__extra__') {
+      socket.emit('cmd', { text: `trade cancel` });
+      return;
+    }
+    if (res === null) return;
+    const targetName = res || from;
+    socket.emit('cmd', { text: `trade accept ${targetName}` });
+  });
 }
 
 
@@ -6010,6 +6034,10 @@ function enterGame(name) {
       exitGame();
     }
   });
+  socket.on('trade_invite', (payload) => {
+    const from = payload?.from;
+    if (from) handleTradeInvite(from);
+  });
   socket.on('output', (payload) => {
     console.log('Received output:', payload);
     appendLine(payload);
@@ -6023,22 +6051,8 @@ function enterGame(name) {
       appendChatLine(payload);
     }
     const tradeFrom = parseTradeRequest(payload.text);
-    if (tradeFrom && socket) {
-      promptModal({
-        title: '交易请求',
-        text: `${tradeFrom} 请求交易，是否接受？`,
-        placeholder: '',
-        extra: { text: '拒绝' },
-        allowEmpty: true
-      }).then((res) => {
-        if (res === '__extra__') {
-          socket.emit('cmd', { text: `trade cancel` });
-          return;
-        }
-        if (res === null) return;
-        const targetName = res || tradeFrom;
-        socket.emit('cmd', { text: `trade accept ${targetName}` });
-      });
+    if (tradeFrom) {
+      handleTradeInvite(tradeFrom);
     }
     const followFrom = parseFollowInvite(payload.text);
     if (followFrom && socket) {

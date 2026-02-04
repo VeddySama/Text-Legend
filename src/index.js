@@ -2242,7 +2242,8 @@ function createSabakState() {
 }
 
 function getRealmState(realmId = 1) {
-  const id = Number(realmId) || 1;
+  const numeric = Number(realmId);
+  const id = Number.isFinite(numeric) ? (numeric === 0 ? 0 : (numeric || 1)) : 1;
   if (!realmStates.has(id)) {
     realmStates.set(id, {
       parties: new Map(),
@@ -3140,6 +3141,16 @@ function getTradeByPlayer(name, realmId) {
   return state.tradesByPlayer.get(name);
 }
 
+function getTradeByPlayerAny(name, realmId) {
+  const direct = getTradeByPlayer(name, realmId);
+  if (direct) return { trade: direct, realmId };
+  if (realmId !== CROSS_REALM_REALM_ID) {
+    const cross = getTradeByPlayer(name, CROSS_REALM_REALM_ID);
+    if (cross) return { trade: cross, realmId: CROSS_REALM_REALM_ID };
+  }
+  return { trade: null, realmId };
+}
+
 function clearTrade(trade, reason, realmId) {
   const state = getRealmState(realmId);
   const names = [trade.a.name, trade.b.name];
@@ -3222,7 +3233,7 @@ function applyOfferItems(from, to, offer) {
 }
 
 function createTrade(player, target) {
-  const realmId = player.realmId || 1;
+  const realmId = getRoomRealmId(player.position.zone, player.position.room, player.realmId || 1);
   const state = getRealmState(realmId);
   const trade = {
     id: `trade-${Date.now()}-${randInt(100, 999)}`,
@@ -3243,11 +3254,13 @@ function createTrade(player, target) {
 
 const tradeApi = {
   requestTrade(player, targetName) {
-    const realmId = player.realmId || 1;
+    const realmId = getRoomRealmId(player.position.zone, player.position.room, player.realmId || 1);
     const state = getRealmState(realmId);
     if (getTradeByPlayer(player.name, realmId)) return { ok: false, msg: '你正在交易中。' };
     const target = playersByName(targetName, realmId);
     if (!target) return { ok: false, msg: '玩家不在线。' };
+    if (CROSS_REALM_ZONES.has(player.position.zone)) return { ok: false, msg: '跨服房间内无法交易。' };
+    if ((target.realmId || 1) !== (player.realmId || 1)) return { ok: false, msg: '只能与本区服玩家交易。' };
     if (target.name === player.name) return { ok: false, msg: '不能和自己交易。' };
     if (getTradeByPlayer(target.name, realmId)) return { ok: false, msg: '对方正在交易中。' };
     const existing = state.tradeInvites.get(target.name);
@@ -3256,16 +3269,21 @@ const tradeApi = {
     }
     state.tradeInvites.set(target.name, { from: player.name, at: Date.now() });
     target.send(`${player.name} 请求交易。`);
+    if (target.socket) {
+      target.socket.emit('trade_invite', { from: player.name });
+    }
     return { ok: true, msg: `交易请求已发送给 ${target.name}。` };
   },
   acceptTrade(player, fromName) {
-    const realmId = player.realmId || 1;
+    const realmId = getRoomRealmId(player.position.zone, player.position.room, player.realmId || 1);
     const state = getRealmState(realmId);
     const invite = state.tradeInvites.get(player.name);
     if (!invite || invite.from !== fromName) return { ok: false, msg: '没有该交易请求。' };
     if (getTradeByPlayer(player.name, realmId)) return { ok: false, msg: '你正在交易中。' };
     const inviter = playersByName(fromName, realmId);
     if (!inviter) return { ok: false, msg: '对方不在线。' };
+    if (CROSS_REALM_ZONES.has(player.position.zone)) return { ok: false, msg: '跨服房间内无法交易。' };
+    if ((inviter.realmId || 1) !== (player.realmId || 1)) return { ok: false, msg: '只能与本区服玩家交易。' };
     if (getTradeByPlayer(inviter.name, realmId)) return { ok: false, msg: '对方正在交易中。' };
     state.tradeInvites.delete(player.name);
     const trade = createTrade(inviter, player);
@@ -3274,7 +3292,7 @@ const tradeApi = {
     return { ok: true, trade };
   },
   addItem(player, itemId, qty, effects = null) {
-    const trade = getTradeByPlayer(player.name, player.realmId || 1);
+    const { trade } = getTradeByPlayerAny(player.name, player.realmId || 1);
     if (!trade) return { ok: false, msg: '你不在交易中。' };
     if (trade.locked[player.name] || trade.locked[trade.a.name === player.name ? trade.b.name : trade.a.name]) {
       return { ok: false, msg: '交易已锁定，无法修改。' };
@@ -3307,7 +3325,7 @@ const tradeApi = {
     return { ok: true, trade };
   },
   addGold(player, amount) {
-    const trade = getTradeByPlayer(player.name, player.realmId || 1);
+    const { trade } = getTradeByPlayerAny(player.name, player.realmId || 1);
     if (!trade) return { ok: false, msg: '你不在交易中。' };
     if (trade.locked[player.name] || trade.locked[trade.a.name === player.name ? trade.b.name : trade.a.name]) {
       return { ok: false, msg: '交易已锁定，无法修改。' };
@@ -3326,13 +3344,13 @@ const tradeApi = {
     return { ok: true, trade };
   },
   lock(player) {
-    const trade = getTradeByPlayer(player.name, player.realmId || 1);
+    const { trade } = getTradeByPlayerAny(player.name, player.realmId || 1);
     if (!trade) return { ok: false, msg: '你不在交易中。' };
     trade.locked[player.name] = true;
     return { ok: true, trade };
   },
   confirm(player) {
-    const trade = getTradeByPlayer(player.name, player.realmId || 1);
+    const { trade } = getTradeByPlayerAny(player.name, player.realmId || 1);
     if (!trade) return { ok: false, msg: '你不在交易中。' };
     if (!trade.locked[trade.a.name] || !trade.locked[trade.b.name]) {
       return { ok: false, msg: '双方都锁定后才能确认。' };
@@ -3341,9 +3359,10 @@ const tradeApi = {
     return { ok: true, trade };
   },
   cancel(player, reason) {
-    const realmId = player.realmId || 1;
+    const lookup = getTradeByPlayerAny(player.name, player.realmId || 1);
+    const trade = lookup.trade;
+    const realmId = trade ? (trade.realmId ?? lookup.realmId) : (player.realmId || 1);
     const state = getRealmState(realmId);
-    const trade = getTradeByPlayer(player.name, realmId);
     if (trade) {
       clearTrade(trade, reason || `交易已取消（${player.name}）。`, realmId);
       return { ok: true };
@@ -3396,7 +3415,11 @@ const tradeApi = {
     return { ok: true };
   },
   getTrade(playerName) {
-    return getTradeByPlayer(playerName);
+    for (const state of realmStates.values()) {
+      const trade = state.tradesByPlayer.get(playerName);
+      if (trade) return trade;
+    }
+    return null;
   },
   offerText
 };
@@ -4738,8 +4761,8 @@ async function buildState(player) {
     party: party ? { size: party.members.length, leader: party.leader, members: partyMembers } : null,
     training: player.flags?.training || { hp: 0, mp: 0, atk: 0, def: 0, mag: 0, mdef: 0, spirit: 0, dex: 0 },
     online: { count: onlineCount },
-    trade: getTradeByPlayer(player.name, realmId) ? (() => {
-      const trade = getTradeByPlayer(player.name, realmId);
+    trade: getTradeByPlayerAny(player.name, realmId).trade ? (() => {
+      const trade = getTradeByPlayerAny(player.name, realmId).trade;
       const myOffer = trade.offers[player.name];
       const partnerName = trade.a.name === player.name ? trade.b.name : trade.a.name;
       const partnerOffer = trade.offers[partnerName];
@@ -6443,10 +6466,11 @@ io.on('connection', (socket) => {
         console.log(`[disconnect] ${player.name} (${player.userId || 'unknown'}) reason=${reason || 'unknown'}`);
         if (!player.flags) player.flags = {};
         player.flags.offlineAt = Date.now();
-        const trade = getTradeByPlayer(player.name, player.realmId || 1);
-      if (trade) {
-        clearTrade(trade, `交易已取消（${player.name} 离线）。`, player.realmId || 1);
-      }
+    const lookup = getTradeByPlayerAny(player.name, player.realmId || 1);
+    const trade = lookup.trade;
+    if (trade) {
+      clearTrade(trade, `交易已取消（${player.name} 离线）。`, trade.realmId ?? lookup.realmId ?? (player.realmId || 1));
+    }
       await savePlayer(player);
       getRealmState(player.realmId || 1).lastSaveTime.delete(player.name); // 清理保存时间记录
       const throttleKey = getStateThrottleKey(player, socket);

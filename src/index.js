@@ -2587,7 +2587,19 @@ function getCrossRankEndAt(now = new Date()) {
   return end.getTime();
 }
 
+function getCrossRankStartAt(now = new Date()) {
+  const start = new Date(now);
+  start.setHours(19, 0, 0, 0);
+  const end = new Date(now);
+  end.setHours(19, 30, 0, 0);
+  if (now.getTime() >= end.getTime()) {
+    start.setDate(start.getDate() + 1);
+  }
+  return start.getTime();
+}
+
 function getCrossRankSnapshot(limit = 10) {
+  const now = new Date();
   const entries = Array.from(CROSS_RANK_EVENT_STATE.stats.values())
     .filter((entry) => entry.kills > 0)
     .sort((a, b) => {
@@ -2598,7 +2610,8 @@ function getCrossRankSnapshot(limit = 10) {
     .map((entry) => ({ name: entry.name, kills: entry.kills }));
   return {
     active: CROSS_RANK_EVENT_STATE.active,
-    endsAt: CROSS_RANK_EVENT_STATE.active ? getCrossRankEndAt() : null,
+    startsAt: CROSS_RANK_EVENT_STATE.active ? null : getCrossRankStartAt(now),
+    endsAt: CROSS_RANK_EVENT_STATE.active ? getCrossRankEndAt(now) : null,
     entries
   };
 }

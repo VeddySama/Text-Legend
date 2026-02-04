@@ -23,6 +23,10 @@ let refineMaterialCount = 20; // 默认值
 let bossRespawnTimer = null;
 let bossRespawnTarget = null;
 let bossRespawnTimerEl = null;
+let crossRankTimer = null;
+let crossRankTimerTarget = null;
+let crossRankTimerEl = null;
+let crossRankTimerLabel = null;
 let trainingConfig = null; // 修炼配置
 let deviceId = null;
 let deviceFingerprint = null;
@@ -1126,6 +1130,12 @@ function appendLine(payload) {
 function formatServerTime(ms) {
   if (!ms) return '-';
   return new Date(ms).toLocaleString('zh-CN', { hour12: false });
+}
+
+function getServerNow() {
+  if (serverTimeBase == null || serverTimeLocal == null) return Date.now();
+  const delta = Date.now() - serverTimeLocal;
+  return serverTimeBase + delta;
 }
 
 function updateServerTimeDisplay() {
@@ -4874,6 +4884,18 @@ function renderState(state) {
         ui.worldBossRank.querySelectorAll('.boss-respawn-time').forEach((node) => node.remove());
       }
     };
+    const resetCrossRankTimer = () => {
+      if (crossRankTimer) {
+        clearInterval(crossRankTimer);
+      }
+      crossRankTimer = null;
+      crossRankTimerTarget = null;
+      crossRankTimerEl = null;
+      crossRankTimerLabel = null;
+      if (ui.worldBossRank) {
+        ui.worldBossRank.querySelectorAll('.cross-rank-time').forEach((node) => node.remove());
+      }
+    };
     const prevRoomKey = ui.worldBossRank.dataset.roomKey || null;
     const roomChanged = prevRoomKey !== currentRoomKey;
     if (roomChanged) {
@@ -4886,12 +4908,16 @@ function renderState(state) {
     if (!inRankRoom) {
       if (rankBlock) rankBlock.classList.add('hidden');
       resetBossRespawn();
+      resetCrossRankTimer();
       if (ui.worldBossRank) ui.worldBossRank.innerHTML = '';
       if (ui.worldBossRank) {
         ui.worldBossRank.removeAttribute('data-room-key');
       }
     } else {
       if (rankBlock) rankBlock.classList.remove('hidden');
+      if (!inCrossRankRoom) {
+        resetCrossRankTimer();
+      }
       const ranks = state.worldBossRank || [];
       const classRanks = state.worldBossClassRank || null;
       const hasClassRanks = classRanks && Object.values(classRanks).some((list) => Array.isArray(list) && list.length);
@@ -4917,19 +4943,54 @@ function renderState(state) {
       if (inCrossRankRoom) {
         resetBossRespawn();
         if (ui.worldBossRank) ui.worldBossRank.innerHTML = '';
+        const ensureCrossRankTimer = (label, target) => {
+          if (!target || target <= getServerNow()) {
+            resetCrossRankTimer();
+            return;
+          }
+          const updateTimer = () => {
+            if (!crossRankTimerTarget || !crossRankTimerEl) return;
+            const remaining = Math.max(0, crossRankTimerTarget - getServerNow());
+            const minutes = Math.floor(remaining / 60000);
+            const seconds = Math.floor((remaining % 60000) / 1000);
+            crossRankTimerEl.textContent = `${minutes}分${seconds}秒`;
+          };
+          if (crossRankTimerTarget !== target || crossRankTimerLabel !== label || !crossRankTimerEl) {
+            crossRankTimerTarget = target;
+            crossRankTimerLabel = label;
+            const timeDiv = document.createElement('div');
+            timeDiv.className = 'cross-rank-time';
+            const timerSpan = document.createElement('span');
+            timerSpan.textContent = '计算中...';
+            timeDiv.appendChild(document.createTextNode(label === 'start' ? '距离开始: ' : '距离结束: '));
+            timeDiv.appendChild(timerSpan);
+            ui.worldBossRank.appendChild(timeDiv);
+            crossRankTimerEl = timerSpan;
+            updateTimer();
+            if (crossRankTimer) clearInterval(crossRankTimer);
+            crossRankTimer = setInterval(updateTimer, 1000);
+          } else {
+            updateTimer();
+          }
+        };
         if (!crossRank) {
+          resetCrossRankTimer();
           const empty = document.createElement('div');
           empty.textContent = '暂无排行';
           ui.worldBossRank.appendChild(empty);
         } else if (!isCrossRankActive) {
+          ensureCrossRankTimer('start', crossRank.startsAt || null);
           const empty = document.createElement('div');
           empty.textContent = '排位赛尚未开始';
           ui.worldBossRank.appendChild(empty);
-        } else if (!crossRank.entries.length) {
-          const empty = document.createElement('div');
-          empty.textContent = '暂无排行';
-          ui.worldBossRank.appendChild(empty);
         } else {
+          ensureCrossRankTimer('end', crossRank.endsAt || null);
+          if (!crossRank.entries.length) {
+            const empty = document.createElement('div');
+            empty.textContent = '暂无排行';
+            ui.worldBossRank.appendChild(empty);
+            return;
+          }
           crossRank.entries.forEach((entry, idx) => {
             const row = document.createElement('div');
             row.className = 'rank-item';

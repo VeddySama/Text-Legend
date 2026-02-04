@@ -4339,6 +4339,7 @@ function getRoomCommonState(zoneId, roomId, realmId = 1) {
       max_hp: Math.floor(p.max_hp || 0),
       guild: p.guild?.name || null,
       guildId: p.guild?.id || null,
+      realmId: p.realmId || 1,
       pk: p.pk || 0
     }));
 
@@ -4409,6 +4410,7 @@ async function buildState(player) {
         max_hp: Math.floor(p.max_hp || 0),
         guild: p.guild?.name || null,
         guildId: p.guild?.id || null,
+        realmId: p.realmId || 1,
         pk: p.pk || 0
       }));
   }
@@ -4519,6 +4521,7 @@ async function buildState(player) {
       name: player.name,
       classId: player.classId,
       level: player.level,
+      realmId: player.realmId || 1,
       guildId: player.guild?.id || null,
       rankTitle: player.rankTitle || ''
     },
@@ -4919,10 +4922,11 @@ function retaliateMobAgainstPlayer(mob, player, online) {
     }
   }
   const mobHitChance = calcHitChance(mob, mobTarget);
-  if (Math.random() > mobHitChance) return;
+  const isBoss = mobTemplate ? isBossMob(mobTemplate) : false;
+  if (!isBoss && Math.random() > mobHitChance) return;
   const isWorldBoss = Boolean(mobTemplate?.worldBoss);
   const isSpecialBoss = Boolean(mobTemplate?.specialBoss);
-  if (!isWorldBoss && !isSpecialBoss && mobTarget && mobTarget.evadeChance && Math.random() <= mobTarget.evadeChance) {
+  if (!isBoss && !isWorldBoss && !isSpecialBoss && mobTarget && mobTarget.evadeChance && Math.random() <= mobTarget.evadeChance) {
     if (mobTarget.userId) {
       mobTarget.send(`你闪避了 ${mob.name} 的攻击。`);
     } else {
@@ -7222,6 +7226,12 @@ async function combatTick() {
           player.send('目标已消失。');
           continue;
         }
+        const inCrossBossRoom = player.position.zone === 'crb' && player.position.room === 'arena';
+        if (inCrossBossRoom && (target.realmId || 1) === (player.realmId || 1)) {
+          player.combat = null;
+          player.send('跨服房间不能攻击同区服玩家。');
+          continue;
+        }
         if (isSabakZone(player.position.zone)) {
           const sameGuild = player.guild && target.guild && String(player.guild.id) === String(target.guild.id);
           if (sameGuild) {
@@ -7480,7 +7490,9 @@ async function combatTick() {
       if (target.hp <= 0 && !tryRevive(target)) {
         const wasRed = isRedName(target);
         if (!player.flags) player.flags = {};
-        if (!wasRed && !isSabakZone(player.position.zone)) {
+        const inCrossBossRoom = player.position.zone === 'crb' && player.position.room === 'arena';
+        const crossRealmKill = inCrossBossRoom && (target.realmId || 1) !== (player.realmId || 1);
+        if (!wasRed && !isSabakZone(player.position.zone) && !crossRealmKill) {
           player.flags.pkValue = (player.flags.pkValue || 0) + 50;
           savePlayer(player);
         }
@@ -7844,11 +7856,12 @@ async function combatTick() {
     }
     if (!skipMobAttack) {
     const mobHitChance = calcHitChance(mob, mobTarget);
-    if (Math.random() <= mobHitChance) {
+    const isBoss = mobTemplate ? isBossMob(mobTemplate) : false;
+    if (isBoss || Math.random() <= mobHitChance) {
       const isWorldBoss = Boolean(mobTemplate?.worldBoss);
       const isSpecialBoss = Boolean(mobTemplate?.specialBoss);
       const enragedMultiplier = isSpecialBossEnraged(mob) ? 2 : 1;
-      if (!isWorldBoss && !isSpecialBoss && mobTarget && mobTarget.evadeChance && Math.random() <= mobTarget.evadeChance) {
+      if (!isBoss && !isWorldBoss && !isSpecialBoss && mobTarget && mobTarget.evadeChance && Math.random() <= mobTarget.evadeChance) {
         if (mobTarget.userId) {
           mobTarget.send(`你闪避了 ${mob.name} 的攻击。`);
         } else {

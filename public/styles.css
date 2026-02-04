@@ -4694,6 +4694,31 @@ body.dark .changeclass-options .chip:disabled {
   background: #fff0f0;
 }
 
+.cross-realm-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 6px;
+  padding: 0 6px;
+  height: 18px;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #5b3a1c;
+  background: #ffe9c7;
+  border: 1px solid #e5c08c;
+  letter-spacing: 0.02em;
+}
+
+.chip .cross-realm-badge {
+  font-size: 0.65rem;
+  height: 16px;
+}
+
+.battle-card-name .cross-realm-badge {
+  margin-left: 4px;
+}
+
 .summon-details {
   margin-top: 10px;
   padding: 10px;

@@ -3051,6 +3051,12 @@ function renderChips(container, items, onClick, activeId) {
       btn.classList.add('highlight-marquee');
     }
     btn.textContent = item.label;
+    if (item.badgeLabel) {
+      const badge = document.createElement('span');
+      badge.className = item.badgeClass || 'cross-realm-badge';
+      badge.textContent = item.badgeLabel;
+      btn.appendChild(badge);
+    }
     if (item.tooltip) {
       btn.addEventListener('mouseenter', (evt) => showItemTooltip(item.tooltip, evt));
       btn.addEventListener('mousemove', (evt) => positionTooltip(evt.clientX, evt.clientY));
@@ -4661,13 +4667,19 @@ function renderState(state) {
     }
   });
 
+  const inCrossBossRoom = state.room && state.room.zoneId === 'crb' && state.room.roomId === 'arena';
+  const localRealmId = state.player ? state.player.realmId : null;
   const players = (state.players || [])
     .filter((p) => p.name && (!state.player || p.name !== state.player.name))
     .map((p) => {
       let className = '';
+      let badgeLabel = '';
       // 红名玩家显示深红色
       if (p.pk >= 100) {
         className = 'player-red-name';
+      } else if (inCrossBossRoom && localRealmId && p.realmId) {
+        className = p.realmId === localRealmId ? 'player-friendly' : 'player-red-name';
+        badgeLabel = p.realmId === localRealmId ? '' : '跨服';
       } else if (state.sabak && state.sabak.inZone) {
         className = (state.player && state.player.guildId && p.guildId === state.player.guildId
           ? 'player-friendly'
@@ -4677,7 +4689,8 @@ function renderState(state) {
         id: p.name,
         label: `${p.name} Lv${p.level} ${classNames[p.classId] || p.classId}`,
         raw: p,
-        className: className
+        className: className,
+        badgeLabel
       };
     });
   renderChips(ui.players, players, (p) => showPlayerModal(p.raw));
@@ -4689,19 +4702,24 @@ function renderState(state) {
       name: state.player.name,
       meta: `Lv${state.player.level} ${classNames[state.player.classId] || state.player.classId}`,
       hp: state.stats.hp,
-      maxHp: state.stats.max_hp
+      maxHp: state.stats.max_hp,
+      className: ''
     });
     setLocalHpCache('players', state.player.name, state.stats.hp, state.stats.max_hp);
   }
   (state.players || [])
     .filter((p) => p.name && (!state.player || p.name !== state.player.name))
     .forEach((p) => {
+      const isCrossEnemy = inCrossBossRoom && localRealmId && p.realmId && p.realmId !== localRealmId;
+      const isCrossAlly = inCrossBossRoom && localRealmId && p.realmId && p.realmId === localRealmId;
       battlePlayers.push({
         type: 'player',
         name: p.name,
         meta: `Lv${p.level} ${classNames[p.classId] || p.classId}`,
         hp: p.hp || 0,
-        maxHp: p.max_hp || 0
+        maxHp: p.max_hp || 0,
+        className: isCrossEnemy ? 'player-red-name' : (isCrossAlly ? 'player-friendly' : ''),
+        badgeLabel: isCrossEnemy ? '跨服' : ''
       });
       setLocalHpCache('players', p.name, p.hp || 0, p.max_hp || 0);
     });
@@ -5557,7 +5575,16 @@ function renderBattleList(container, entries, onClick) {
     header.className = 'battle-card-header';
     const name = document.createElement('div');
     name.className = 'battle-card-name';
+    if (entry.className) {
+      name.classList.add(entry.className);
+    }
     name.textContent = entry.name || '-';
+    if (entry.badgeLabel) {
+      const badge = document.createElement('span');
+      badge.className = entry.badgeClass || 'cross-realm-badge';
+      badge.textContent = entry.badgeLabel;
+      name.appendChild(badge);
+    }
     const meta = document.createElement('div');
     meta.className = 'battle-card-meta';
     meta.textContent = entry.meta || '';

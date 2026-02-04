@@ -6539,8 +6539,8 @@ if (tradeUi.cancelBtn) {
 if (tradeUi.modal) {
   tradeUi.modal.addEventListener('click', (e) => {
     if (e.target === tradeUi.modal) {
-      tradeUi.modal.classList.add('hidden');
-      setTradeStatus('\u4ea4\u6613\u5df2\u53d6\u6d88');
+      // 禁止点击遮罩自动关闭交易窗口
+      e.preventDefault();
     }
   });
 }

@@ -7243,6 +7243,12 @@ async function processMobDeath(player, mob, online) {
     }
   }
 
+  const legendaryClassAwarded = new Set();
+  const supremeClassAwarded = new Set();
+  // Prevent a player from receiving multiple legendary/supreme drops in the same boss settlement
+  const legendaryPlayerAwarded = new Set();
+  const supremePlayerAwarded = new Set();
+
     if (isSpecialBoss && entries.length) {
       classRanks = classRanks || buildBossClassRank(mob, entries, roomRealmId);
       const rewardKey = `${roomRealmId}:${mob.id}`;
@@ -7282,6 +7288,8 @@ async function processMobDeath(player, mob, online) {
         const forcedItem = ITEM_TEMPLATES[forcedId];
         if (forcedItem) {
           const forcedRarity = rarityByPrice(forcedItem);
+          if (forcedRarity === 'legendary') legendaryPlayerAwarded.add(topPlayer.name);
+          if (forcedRarity === 'supreme') supremePlayerAwarded.add(topPlayer.name);
           if (['legendary', 'supreme'].includes(forcedRarity)) {
             emitAnnouncement(`${topPlayer.name}（${cls.name}）获得伤害第一奖励 ${formatItemLabel(forcedId, forcedEffects)}！`, forcedRarity, null, announcementRealmId);
           }
@@ -7293,8 +7301,6 @@ async function processMobDeath(player, mob, online) {
       });
     }
 
-  const legendaryClassAwarded = new Set();
-  const supremeClassAwarded = new Set();
   const lootOwnersToSave = new Set();
   dropTargets.forEach(({ player: owner, damageRatio, rank, classRank }) => {
       const vipDropBonus = isVipActive(owner) ? 1.01 : 1;
@@ -7344,6 +7350,10 @@ async function processMobDeath(player, mob, online) {
                 logLoot(`[loot][special][skip] ${owner.name} ${entry.id} (legendary class limit)`);
                 return;
               }
+              if (legendaryPlayerAwarded.has(owner.name)) {
+                logLoot(`[loot][special][skip] ${owner.name} ${entry.id} (legendary already awarded in class reward)`);
+                return;
+              }
               // 检查该玩家是否已经获得过传说装备
               if (actualDrops.some(d => {
                 const dItem = ITEM_TEMPLATES[d.id];
@@ -7362,6 +7372,10 @@ async function processMobDeath(player, mob, online) {
             if (rarity === 'supreme') {
               if (owner.classId && supremeClassAwarded.has(owner.classId)) {
                 logLoot(`[loot][special][skip] ${owner.name} ${entry.id} (supreme class limit)`);
+                return;
+              }
+              if (supremePlayerAwarded.has(owner.name)) {
+                logLoot(`[loot][special][skip] ${owner.name} ${entry.id} (supreme already awarded in class reward)`);
                 return;
               }
               // 检查该玩家是否已经获得过至尊装备

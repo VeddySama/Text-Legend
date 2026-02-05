@@ -2892,6 +2892,24 @@ function isSpecialBoss(mobTemplate) {
   return Boolean(mobTemplate?.specialBoss);
 }
 
+const SPLASH_BOSS_IDS = new Set([
+  'molong_boss',
+  'dark_woma_boss',
+  'dark_zuma_boss',
+  'dark_hongmo_boss',
+  'dark_huangquan_boss',
+  'dark_doublehead_boss',
+  'dark_skeleton_boss',
+  'sabak_boss',
+  'world_boss',
+  'cross_world_boss'
+]);
+
+function isSplashBossTemplate(mobTemplate) {
+  if (!mobTemplate?.specialBoss) return false;
+  return SPLASH_BOSS_IDS.has(mobTemplate.id);
+}
+
 function isEquipmentItem(item) {
   return Boolean(item && ['weapon', 'armor', 'accessory'].includes(item.type));
 }
@@ -2954,6 +2972,7 @@ function rollRarityEquipmentDrop(mobTemplate, bonus = 1) {
 
 let WORLD_BOSS_DROP_BONUS = 1.5;
 const bossClassFirstDamageRewardGiven = new Map(); // 追踪特殊BOSS各职业伤害第一奖励是否已发放
+const bossClassFirstDamageRewardProcessed = new Set(); // 防止同一只BOSS重复发放职业第一奖励
 
 async function applyWorldBossSettings() {
   // 从数据库加载世界BOSS设置并应用到常量
@@ -5392,7 +5411,13 @@ function retaliateMobAgainstPlayer(mob, player, online) {
     }
     
     // 特殊BOSS溅射效果：对房间所有其他玩家和召唤物造成BOSS攻击力50%的溅射伤害
-    if (isSpecialBoss && online && online.length > 0) {
+    if (
+      isSpecialBoss &&
+      isSplashBossTemplate(mobTemplate) &&
+      isBossRoom(player.position.zone, player.position.room, player.realmId || 1) &&
+      online &&
+      online.length > 0
+    ) {
       if (!mob.status) mob.status = {};
       if (mob.status.splashing) return;
       mob.status.splashing = true;
@@ -5449,7 +5474,13 @@ function retaliateMobAgainstPlayer(mob, player, online) {
   player.send(`${mob.name} 对 ${mobTarget.name} 造成 ${dmg} 点伤害。`);
   
   // 特殊BOSS溅射效果：主目标是召唤物时，对玩家和房间所有其他玩家及召唤物造成BOSS攻击力50%的溅射伤害
-  if (isSpecialBoss && online && online.length > 0) {
+  if (
+    isSpecialBoss &&
+    isSplashBossTemplate(mobTemplate) &&
+    isBossRoom(player.position.zone, player.position.room, player.realmId || 1) &&
+    online &&
+    online.length > 0
+  ) {
     if (!mob.status) mob.status = {};
     if (mob.status.splashing) return;
     mob.status.splashing = true;
@@ -7386,6 +7417,10 @@ async function processMobDeath(player, mob, online) {
     if (isSpecialBoss && entries.length) {
       classRanks = classRanks || buildBossClassRank(mob, entries, roomRealmId);
       const rewardKey = `${roomRealmId}:${mob.id}`;
+      if (bossClassFirstDamageRewardProcessed.has(rewardKey)) {
+        return;
+      }
+      bossClassFirstDamageRewardProcessed.add(rewardKey);
       let rewardState = bossClassFirstDamageRewardGiven.get(rewardKey);
       if (!rewardState) {
         rewardState = new Set();
@@ -8541,7 +8576,13 @@ async function combatTick() {
         }
         
         // 特殊BOSS溅射效果：对房间所有其他玩家和召唤物造成BOSS攻击力50%的溅射伤害
-        if (isSpecialBoss && online && online.length > 0) {
+        if (
+          isSpecialBoss &&
+          isSplashBossTemplate(mobTemplate) &&
+          isBossRoom(player.position.zone, player.position.room, roomRealmId) &&
+          online &&
+          online.length > 0
+        ) {
           if (!mob.status) mob.status = {};
           if (!mob.status.splashing) {
             mob.status.splashing = true;
@@ -8597,7 +8638,13 @@ async function combatTick() {
         player.send(`${mob.name} 对 ${mobTarget.name} 造成 ${dmg} 点伤害。`);
         
         // 特殊BOSS溅射效果：主目标是召唤物时，对玩家和房间所有其他玩家及召唤物造成BOSS攻击力50%的溅射伤害
-        if (isSpecialBoss && online && online.length > 0) {
+        if (
+          isSpecialBoss &&
+          isSplashBossTemplate(mobTemplate) &&
+          isBossRoom(player.position.zone, player.position.room, roomRealmId) &&
+          online &&
+          online.length > 0
+        ) {
           if (!mob.status) mob.status = {};
           if (!mob.status.splashing) {
             mob.status.splashing = true;

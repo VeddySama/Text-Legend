@@ -660,21 +660,21 @@ app.post('/admin/worldboss-respawn', async (req, res) => {
   for (const realm of allRealms) {
     try {
       // 先删除所有世界BOSS
-      const mobs = getAliveMobs('mg_town', 'lair', realm.id);
+      const mobs = getAliveMobs('wb', 'lair', realm.id);
       const worldBossMobs = mobs.filter(m => m.templateId === 'world_boss');
 
       for (const boss of worldBossMobs) {
-        removeMob(boss.id, 'mg_town', 'lair', realm.id);
+        removeMob('wb', 'lair', boss.id, realm.id);
         // 清除该BOSS的奖励标记
         bossClassFirstDamageRewardGiven.delete(`${realm.id}:${boss.id}`);
         removedCount++;
       }
 
       // 清理世界BOSS的重生时间记录，避免影响正常刷新
-      await clearMobRespawn(realm.id, 'mg_town', 'lair', 0);
+      await clearMobRespawn(realm.id, 'wb', 'lair', 0);
 
       // 刷新新的世界BOSS
-      const newMobs = spawnMobs('mg_town', 'lair', realm.id);
+      const newMobs = spawnMobs('wb', 'lair', realm.id);
       const newBossCount = newMobs.filter(m => m.templateId === 'world_boss').length;
       spawnedCount += newBossCount;
     } catch (err) {
@@ -8403,6 +8403,10 @@ async function combatTick() {
     }
     const mobZoneId = mob.zoneId || player.position.zone;
     const mobRoomId = mob.roomId || player.position.room;
+    // BOSS刷新中或已死亡时，不应继续对玩家造成伤害
+    if (mob.hp <= 0 || (mob.respawnAt && mob.respawnAt > Date.now())) {
+      continue;
+    }
     const mobSkill = pickMobSkill(mob);
     let skipMobAttack = false;
     if (mobSkill && mobSkill.type === 'summon') {

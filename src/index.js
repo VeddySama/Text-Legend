@@ -2291,7 +2291,7 @@ const CROSS_REALM_REALM_ID = 0;
 const CROSS_REALM_ZONES = new Set([CROSS_REALM_ZONE_ID, CROSS_RANK_ZONE_ID]);
 
 const CROSS_RANK_EVENT_START_MINUTES = 19 * 60;
-const CROSS_RANK_EVENT_END_MINUTES = 19 * 60 + 30;
+const CROSS_RANK_EVENT_END_MINUTES = 19 * 60 + 10;
 const CROSS_RANK_EVENT_STATE = {
   active: false,
   startAt: null,
@@ -2591,7 +2591,7 @@ function chooseCrossRankRewardRarity(rank) {
 
 function getCrossRankEndAt(now = new Date()) {
   const end = new Date(now);
-  end.setHours(19, 30, 0, 0);
+  end.setHours(19, 10, 0, 0);
   return end.getTime();
 }
 
@@ -2599,7 +2599,7 @@ function getCrossRankStartAt(now = new Date()) {
   const start = new Date(now);
   start.setHours(19, 0, 0, 0);
   const end = new Date(now);
-  end.setHours(19, 30, 0, 0);
+  end.setHours(19, 10, 0, 0);
   if (now.getTime() >= end.getTime()) {
     start.setDate(start.getDate() + 1);
   }
@@ -2658,7 +2658,7 @@ function startCrossRankEvent() {
     roomId: CROSS_RANK_ROOM_ID,
     label: '跨服排位赛场 - 跨服排位赛'
   };
-  emitAnnouncement('跨服排位赛已开始（19:00-19:30），前往跨服排位赛场参与！', 'announce', locationData, null);
+  emitAnnouncement('跨服排位赛已开始（19:00-19:10），前往跨服排位赛场参与！', 'announce', locationData, null);
 }
 
 async function endCrossRankEvent() {
@@ -7658,7 +7658,7 @@ async function combatTick() {
           if (extraTarget.hp <= 0 && !tryRevive(extraTarget)) {
             const wasRed = isRedName(extraTarget);
             if (!player.flags) player.flags = {};
-            if (!wasRed && !isSabakZone(player.position.zone)) {
+            if (!wasRed && !isSabakZone(player.position.zone) && !isCrossRankRoom(player.position.zone, player.position.room)) {
               player.flags.pkValue = (player.flags.pkValue || 0) + 50;
               savePlayer(player);
             }
@@ -7736,8 +7736,9 @@ async function combatTick() {
         const wasRed = isRedName(target);
         if (!player.flags) player.flags = {};
         const inCrossBossRoom = player.position.zone === 'crb' && player.position.room === 'arena';
+        const inCrossRankRoom = isCrossRankRoom(player.position.zone, player.position.room);
         const crossRealmKill = inCrossBossRoom && (target.realmId || 1) !== (player.realmId || 1);
-        if (!wasRed && !isSabakZone(player.position.zone) && !crossRealmKill) {
+        if (!wasRed && !isSabakZone(player.position.zone) && !crossRealmKill && !inCrossRankRoom) {
           player.flags.pkValue = (player.flags.pkValue || 0) + 50;
           savePlayer(player);
         }

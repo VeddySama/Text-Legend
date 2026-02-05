@@ -2384,8 +2384,8 @@ function getRealmIds() {
 
 const sabakConfig = {
   startHour: 20,
-  durationMinutes: 30,
-  siegeMinutes: 30
+  durationMinutes: 10,
+  siegeMinutes: 10
 };
 const deviceOnlineMap = new Map();
 const CROSS_REALM_ZONE_ID = 'crb';
@@ -4048,7 +4048,12 @@ async function handleSabakEntry(player) {
     return;
   }
   if (String(player.guild.id) !== String(sabakState.ownerGuildId) && !sabakState.active) {
-    startSabakSiege(player.guild, player.realmId || 1);
+    const realmId = player.realmId || 1;
+    const hasRegisteredToday = await hasSabakRegistrationToday(player.guild.id, realmId);
+    if (!hasRegisteredToday) {
+      return;
+    }
+    startSabakSiege(player.guild, realmId);
   }
 }
 
@@ -8794,8 +8799,15 @@ async function sabakTick(realmId) {
 
   // 自动开始攻城战
   if (!sabakState.active && isSabakActive(nowDate) && sabakState.ownerGuildId) {
-    // 检查是否有行会报名
-    const hasRegistration = await hasAnySabakRegistrationToday(realmId);
+    // 检查是否有行会报名（使用应用侧日期判断，避免DB时区/类型差异）
+    const registrations = await listSabakRegistrations(realmId);
+    const todayKey = nowDate.toDateString();
+    const hasRegistration = registrations.some((r) => {
+      if (!r?.registered_at) return false;
+      const regDate = new Date(r.registered_at);
+      if (Number.isNaN(regDate.getTime())) return true;
+      return regDate.toDateString() === todayKey;
+    });
     if (!hasRegistration) {
       // 没有行会报名，直接判定守城方胜利（每日仅公告一次）
       const todayKey = nowDate.toDateString();

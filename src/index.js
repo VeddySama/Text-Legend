@@ -5815,7 +5815,6 @@ function tryApplyPoisonEffect(attacker, target) {
   if (!attacker || !target) return false;
   if (!attacker?.flags?.hasPoisonEffect) return false;
   if (Math.random() > 0.1) return false;
-  applyPoison(target, 10, calcPoisonEffectTickDamage(target), attacker.name);
   applyPoisonEffectDebuff(target);
   return true;
 }

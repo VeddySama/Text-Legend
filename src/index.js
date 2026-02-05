@@ -6880,12 +6880,45 @@ function applyBuff(target, buff) {
   target.status.buffs[buff.key] = buff;
 }
 
+function applyMagicShield(target, ratio, durationSec, mpMultiplier = 1) {
+  if (!target) return false;
+  if (!target.status) target.status = {};
+  if (!target.status.buffs) target.status.buffs = {};
+  const now = Date.now();
+  const existing = target.status.buffs.magicShield;
+  if (existing && (!existing.expiresAt || existing.expiresAt > now)) {
+    return false;
+  }
+  const buff = {
+    key: 'magicShield',
+    expiresAt: now + durationSec * 1000,
+    ratio
+  };
+  if (mpMultiplier > 1 && target.max_mp !== undefined) {
+    const boost = Math.floor((target.max_mp || 0) * (mpMultiplier - 1));
+    if (boost > 0) {
+      target.max_mp += boost;
+      if (target.mp !== undefined) {
+        target.mp = Math.min(target.max_mp, (target.mp || 0) + boost);
+      }
+      buff.mpBoost = boost;
+    }
+  }
+  applyBuff(target, buff);
+  return true;
+}
+
 function tryAutoBuff(player) {
   if (!player.flags?.autoSkillId) return false;
   if (!isVipAutoEnabled(player)) return false;
   const autoSkill = player.flags.autoSkillId;
   const learnedBuffs = getLearnedSkills(player).filter((skill) =>
-    skill.type === 'buff_def' || skill.type === 'buff_mdef' || skill.type === 'buff_shield' || skill.type === 'stealth_group'
+    skill.type === 'buff_def' ||
+    skill.type === 'buff_mdef' ||
+    skill.type === 'buff_shield' ||
+    skill.type === 'buff_magic_shield_group' ||
+    skill.type === 'buff_tiangang' ||
+    skill.type === 'stealth_group'
   );
   if (!learnedBuffs.length) return false;
 
@@ -6912,7 +6945,23 @@ function tryAutoBuff(player) {
       const skillLevel = getSkillLevel(player, buffSkill.id);
       const duration = 120 + skillLevel * 60;
       const ratio = 0.6 + (skillLevel - 1) * 0.1;
-      applyBuff(player, { key: 'magicShield', expiresAt: now + duration * 1000, ratio });
+      applyMagicShield(player, ratio, duration, 1);
+      player.send(`自动施放 ${buffSkill.name}，持续 ${duration} 秒。`);
+      return true;
+    }
+    if (buffSkill.type === 'buff_tiangang') {
+      const atkBuff = player.status?.buffs?.atkBuff;
+      if (atkBuff && (!atkBuff.expiresAt || atkBuff.expiresAt >= now + 5000)) continue;
+      player.mp = clamp(player.mp - buffSkill.mp, 0, player.max_mp);
+      const duration = 5;
+      applyBuff(player, { key: 'atkBuff', expiresAt: now + duration * 1000, multiplier: 2.0 });
+      applyBuff(player, { key: 'defBuff', expiresAt: now + duration * 1000, defMultiplier: 1.5 });
+      applyBuff(player, { key: 'mdefBuff', expiresAt: now + duration * 1000, mdefMultiplier: 1.5 });
+      if (!player.status) player.status = {};
+      if (!player.status.skillCooldowns) player.status.skillCooldowns = {};
+      if (buffSkill.cooldown) {
+        player.status.skillCooldowns[buffSkill.id] = Date.now();
+      }
       player.send(`自动施放 ${buffSkill.name}，持续 ${duration} 秒。`);
       return true;
     }
@@ -6956,6 +7005,29 @@ function tryAutoBuff(player) {
         player.status.skillCooldowns[buffSkill.id] = Date.now();
       }
       player.send(`自动施放 ${buffSkill.name}，自己和召唤物 ${duration} 秒内免疫所有伤害，道术提升100%。`);
+      return true;
+    }
+    if (buffSkill.type === 'buff_magic_shield_group') {
+      const duration = 5;
+      const alreadyActive = targets.every((p) => {
+        const shield = p.status?.buffs?.magicShield;
+        return shield && (!shield.expiresAt || shield.expiresAt > now + 1000);
+      });
+      if (alreadyActive) continue;
+
+      player.mp = clamp(player.mp - buffSkill.mp, 0, player.max_mp);
+      targets.forEach((p) => {
+        const applied = applyMagicShield(p, 1, duration, 2);
+        if (applied && p.send && p.name && p.name !== player.name) {
+          p.send(`${player.name} 自动为你施放 ${buffSkill.name}。`);
+        }
+      });
+      if (!player.status) player.status = {};
+      if (!player.status.skillCooldowns) player.status.skillCooldowns = {};
+      if (buffSkill.cooldown) {
+        player.status.skillCooldowns[buffSkill.id] = Date.now();
+      }
+      player.send(`自动施放 ${buffSkill.name}，持续 ${duration} 秒。`);
       return true;
     }
 

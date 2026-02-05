@@ -429,6 +429,39 @@ export function computeDerived(player) {
   player.elementAtk = elementAtk;
   player.evadeChance = evadeChance + (player.dex || 0) * 0.0001; // 1点敏捷增加0.0001闪避
 
+  const dailyLucky = player.flags?.dailyLucky;
+  if (dailyLucky && dailyLucky.attr && Number(dailyLucky.multiplier) > 1) {
+    const mult = Number(dailyLucky.multiplier);
+    switch (dailyLucky.attr) {
+      case 'atk':
+        player.atk = Math.floor(player.atk * mult);
+        break;
+      case 'def':
+        player.def = Math.floor(player.def * mult);
+        break;
+      case 'mag':
+        player.mag = Math.floor(player.mag * mult);
+        break;
+      case 'mdef':
+        player.mdef = Math.floor(player.mdef * mult);
+        break;
+      case 'spirit':
+        player.spirit = Math.floor(player.spirit * mult);
+        break;
+      case 'dex':
+        player.dex = Math.floor(player.dex * mult);
+        break;
+      case 'max_hp':
+        player.max_hp = Math.floor(player.max_hp * mult);
+        break;
+      case 'max_mp':
+        player.max_mp = Math.floor(player.max_mp * mult);
+        break;
+      default:
+        break;
+    }
+  }
+
   player.hp = clamp(player.hp, 1, player.max_hp);
   player.mp = clamp(player.mp, 0, player.max_mp);
 }

@@ -1758,6 +1758,86 @@ async function updateRankTitles() {
   console.log('[Rank] 排行榜称号更新完成');
 }
 
+const DAILY_LUCKY_ATTRS = [
+  { key: 'atk', label: '攻击' },
+  { key: 'def', label: '防御' },
+  { key: 'mag', label: '魔法' },
+  { key: 'mdef', label: '魔御' },
+  { key: 'spirit', label: '道术' },
+  { key: 'dex', label: '敏捷' },
+  { key: 'max_hp', label: '生命上限' },
+  { key: 'max_mp', label: '法力上限' }
+];
+
+function pickDailyLuckyAttr() {
+  return DAILY_LUCKY_ATTRS[randInt(0, DAILY_LUCKY_ATTRS.length - 1)];
+}
+
+async function updateCharacterFlagsInRealm(name, realmId, flags) {
+  await knex('characters')
+    .where({ name, realm_id: realmId })
+    .update({ flags_json: JSON.stringify(flags || {}), updated_at: knex.fn.now() });
+}
+
+async function clearDailyLuckyForRealm(realmId) {
+  const allCharacters = await listAllCharacters(realmId);
+  for (const character of allCharacters) {
+    if (!character.flags?.dailyLucky && !character.flags?.dailyLuckyTitle) continue;
+    const online = playersByName(character.name, realmId);
+    if (online) {
+      if (!online.flags) online.flags = {};
+      delete online.flags.dailyLucky;
+      delete online.flags.dailyLuckyTitle;
+      computeDerived(online);
+      await sendState(online);
+      await savePlayer(online);
+      online.send('每日幸运加成已清除。');
+      continue;
+    }
+    const flags = { ...(character.flags || {}) };
+    delete flags.dailyLucky;
+    delete flags.dailyLuckyTitle;
+    await updateCharacterFlagsInRealm(character.name, realmId, flags);
+  }
+}
+
+async function assignDailyLuckyForRealm(realmId, realmName = '') {
+  const allCharacters = await listAllCharacters(realmId);
+  if (!allCharacters.length) return null;
+  const target = allCharacters[randInt(0, allCharacters.length - 1)];
+  const attr = pickDailyLuckyAttr();
+  const payload = { attr: attr.key, multiplier: 2, assignedAt: Date.now() };
+  const online = playersByName(target.name, realmId);
+  if (online) {
+    if (!online.flags) online.flags = {};
+    online.flags.dailyLucky = payload;
+    online.flags.dailyLuckyTitle = '欧皇';
+    computeDerived(online);
+    await sendState(online);
+    await savePlayer(online);
+    online.send(`你被选为今日幸运玩家，${attr.label}提升100%，称号：欧皇！`);
+  } else {
+    const flags = { ...(target.flags || {}), dailyLucky: payload, dailyLuckyTitle: '欧皇' };
+    await updateCharacterFlagsInRealm(target.name, realmId, flags);
+  }
+  const realmTag = realmName ? `(${realmName})` : '';
+  console.log(`[DailyLucky] ${realmTag} 幸运玩家: ${target.name}, 属性: ${attr.label}`);
+  return { name: target.name, attr: attr.label };
+}
+
+async function refreshDailyLucky() {
+  const realms = await listRealms();
+  const realmList = realms.length ? realms : [{ id: 1, name: '默认' }];
+  for (const realm of realmList) {
+    try {
+      await clearDailyLuckyForRealm(realm.id);
+      await assignDailyLuckyForRealm(realm.id, realm.name);
+    } catch (err) {
+      console.error(`[DailyLucky] 更新失败: realm=${realm.id}`, err);
+    }
+  }
+}
+
 // 设置排行榜自动更新
 function setupRankUpdate() {
   cron.schedule('0 0 * * *', async () => {
@@ -1768,6 +1848,17 @@ function setupRankUpdate() {
   // 服务器启动时立即执行一次
   updateRankTitles().catch(err => {
     console.error('[Rank] 服务器启动时更新排行榜失败:', err);
+  });
+}
+
+function setupDailyLucky() {
+  cron.schedule('0 0 * * *', async () => {
+    await refreshDailyLucky();
+  });
+  console.log('[DailyLucky] 已设置每日0点抽取幸运玩家');
+
+  refreshDailyLucky().catch(err => {
+    console.error('[DailyLucky] 服务器启动时抽取失败:', err);
   });
 }
 
@@ -4348,6 +4439,13 @@ const bossBloodAnnouncementStatus = new Map();
 // 在线玩家排行榜称号：Map<playerName, rankTitle>
 const onlinePlayerRankTitles = new Map();
 
+function getDisplayTitle(player) {
+  const baseTitle = player?.rankTitle || '';
+  const luckyTitle = player?.flags?.dailyLuckyTitle || '';
+  if (baseTitle && luckyTitle) return `${baseTitle}·${luckyTitle}`;
+  return luckyTitle || baseTitle || '';
+}
+
 function getStateThrottleKey(player, socket = null) {
   if (player) {
     return player.userId || player.name || player.socket?.id || socket?.id || null;
@@ -4744,7 +4842,7 @@ async function buildState(player) {
       level: player.level,
       realmId: player.realmId || 1,
       guildId: player.guild?.id || null,
-      rankTitle: player.rankTitle || ''
+      rankTitle: getDisplayTitle(player)
     },
     room: {
       zone: zone?.name || player.position.zone,
@@ -8510,6 +8608,9 @@ async function start() {
 
   // 启动排行榜自动更新定时任务
   setupRankUpdate();
+
+  // 启动每日幸运玩家定时任务
+  setupDailyLucky();
 
   setRespawnStore({
     set: (realmId, zoneId, roomId, slotIndex, templateId, respawnAt) =>

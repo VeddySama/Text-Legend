@@ -141,26 +141,36 @@ export async function listSabakRegistrations(realmId = 1) {
 }
 
 export async function hasSabakRegistrationToday(guildId, realmId = 1) {
-  const start = new Date();
-  start.setHours(0, 0, 0, 0);
-  const end = new Date(start.getTime() + 24 * 60 * 60 * 1000);
-  const row = await knex('sabak_registrations')
-    .where({ guild_id: guildId, realm_id: realmId })
-    .where('registered_at', '>=', start)
-    .where('registered_at', '<', end)
-    .first();
+  const isSqlite = knex.client.config.client === 'sqlite3';
+  let query = knex('sabak_registrations').where({ guild_id: guildId, realm_id: realmId });
+  if (isSqlite) {
+    query = query
+      .whereRaw("registered_at >= datetime('now','start of day','localtime')")
+      .whereRaw("registered_at < datetime('now','start of day','localtime','+1 day')");
+  } else {
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(start.getTime() + 24 * 60 * 60 * 1000);
+    query = query.where('registered_at', '>=', start).where('registered_at', '<', end);
+  }
+  const row = await query.first();
   return !!row;
 }
 
 export async function hasAnySabakRegistrationToday(realmId = 1) {
-  const start = new Date();
-  start.setHours(0, 0, 0, 0);
-  const end = new Date(start.getTime() + 24 * 60 * 60 * 1000);
-  const row = await knex('sabak_registrations')
-    .where({ realm_id: realmId })
-    .where('registered_at', '>=', start)
-    .where('registered_at', '<', end)
-    .first();
+  const isSqlite = knex.client.config.client === 'sqlite3';
+  let query = knex('sabak_registrations').where({ realm_id: realmId });
+  if (isSqlite) {
+    query = query
+      .whereRaw("registered_at >= datetime('now','start of day','localtime')")
+      .whereRaw("registered_at < datetime('now','start of day','localtime','+1 day')");
+  } else {
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(start.getTime() + 24 * 60 * 60 * 1000);
+    query = query.where('registered_at', '>=', start).where('registered_at', '<', end);
+  }
+  const row = await query.first();
   return !!row;
 }
 

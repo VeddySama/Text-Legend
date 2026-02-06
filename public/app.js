@@ -390,7 +390,8 @@ const sabakUi = {
   info: document.getElementById('sabak-info'),
   guildList: document.getElementById('sabak-guild-list'),
   confirm: document.getElementById('sabak-confirm'),
-  close: document.getElementById('sabak-close')
+  close: document.getElementById('sabak-close'),
+  msg: document.getElementById('sabak-register-msg')
 };
 const sabakPalaceStatsUi = {
   title: document.getElementById('sabak-palace-stats-title'),
@@ -4228,6 +4229,9 @@ function renderSabakModal(payload) {
     const titleWindow = windowInfo || '每日 20:00-20:10';
     sabakUi.title.textContent = `沙巴克攻城报名（${titleWindow}）`;
   }
+  if (sabakUi.msg) {
+    sabakUi.msg.textContent = '';
+  }
   if (sabakUi.guildList) {
     sabakUi.guildList.innerHTML = '';
     if (!registrations || registrations.length === 0) {
@@ -6502,13 +6506,13 @@ if (chat.sabakRegisterBtn) {
     socket.emit('sabak_info');
   });
 }
-if (sabakUi.confirm) {
-  sabakUi.confirm.addEventListener('click', () => {
-    if (!socket) return;
-    socket.emit('sabak_register_confirm');
-    socket.emit('sabak_info');
-  });
-}
+  if (sabakUi.confirm) {
+    sabakUi.confirm.addEventListener('click', () => {
+      if (!socket) return;
+      socket.emit('sabak_register_confirm');
+      socket.emit('sabak_info');
+    });
+  }
 if (sabakUi.close) {
   sabakUi.close.addEventListener('click', () => {
     if (sabakUi.modal) sabakUi.modal.classList.add('hidden');
@@ -6519,6 +6523,16 @@ if (sabakUi.modal) {
     if (e.target === sabakUi.modal) {
       sabakUi.modal.classList.add('hidden');
     }
+  });
+}
+
+if (socket) {
+  socket.on('sabak_register_result', (payload) => {
+    if (!sabakUi.msg) return;
+    const ok = Boolean(payload?.ok);
+    const msg = payload?.msg || (ok ? '报名成功。' : '报名失败。');
+    sabakUi.msg.textContent = msg;
+    sabakUi.msg.style.color = ok ? 'green' : 'red';
   });
 }
 if (chat.locationBtn) {

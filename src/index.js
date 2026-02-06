@@ -6832,33 +6832,41 @@ io.on('connection', (socket) => {
     const player = players.get(socket.id);
     if (!player) return;
     sanitizePayload(payload, [], 'sabak_register_confirm');
+    const sendRegisterResult = (ok, msg) => {
+      socket.emit('sabak_register_result', { ok: Boolean(ok), msg });
+    };
 
     if (!player.guild) {
       player.send('你不在行会中。');
+      sendRegisterResult(false, '你不在行会中。');
       return;
     }
     const realmId = await resolvePlayerGuildRealmId(player);
     const isLeader = await isGuildLeaderOrVice(player.guild.id, player.userId, player.name, realmId);
     if (!isLeader) {
       player.send('只有会长或副会长可以报名。');
+      sendRegisterResult(false, '只有会长或副会长可以报名。');
       return;
     }
     const sabakState = getSabakState(realmId);
     const isOwner = String(player.guild.id) === String(sabakState.ownerGuildId);
     if (isOwner) {
       player.send('守城行会无需报名。');
+      sendRegisterResult(false, '守城行会无需报名。');
       return;
     }
-      // 检查报名时间：截至攻城开始前10分钟
-      const now = new Date();
-      const registerEnd = new Date(sabakWindowRange(now).start.getTime() - 10 * 60 * 1000);
-      if (now >= registerEnd) {
-        player.send(`报名时间为每日 ${sabakRegistrationWindowInfo()}，当前时间已截止报名。`);
-        return;
-      }
+    // 检查报名时间：截至攻城开始前10分钟
+    const now = new Date();
+    const registerEnd = new Date(sabakWindowRange(now).start.getTime() - 10 * 60 * 1000);
+    if (now >= registerEnd) {
+      player.send(`报名时间为每日 ${sabakRegistrationWindowInfo()}，当前时间已截止报名。`);
+      sendRegisterResult(false, `报名时间为每日 ${sabakRegistrationWindowInfo()}，当前时间已截止报名。`);
+      return;
+    }
     const hasRegisteredToday = await hasSabakRegistrationToday(player.guild.id, realmId);
     if (hasRegisteredToday) {
       player.send('该行会今天已经报名过了。');
+      sendRegisterResult(false, '该行会今天已经报名过了。');
       return;
     }
     const registrations = await listSabakRegistrations(realmId);
@@ -6870,21 +6878,25 @@ io.on('connection', (socket) => {
     });
     if (todayRegistrations.length >= 1) {
       player.send('今天已经有行会报名了，每天只能有一个行会申请攻城。');
+      sendRegisterResult(false, '今天已经有行会报名了，每天只能有一个行会申请攻城。');
       return;
     }
     if (player.gold < 1000000) {
       player.send('报名需要100万金币。');
+      sendRegisterResult(false, '报名需要100万金币。');
       return;
     }
     player.gold -= 1000000;
     try {
         await registerSabak(player.guild.id, realmId);
       player.send('已报名沙巴克攻城，支付100万金币。');
+      sendRegisterResult(true, '报名成功，已支付100万金币。');
       player.forceStateRefresh = true;
       await sendState(player);
       await savePlayer(player);
     } catch {
       player.send('该行会已经报名。');
+      sendRegisterResult(false, '该行会已经报名。');
       player.gold += 1000000;
       player.forceStateRefresh = true;
       await sendState(player);

@@ -98,7 +98,6 @@ const sbKillMsg = document.getElementById('sb-kill-msg');
 const sabakTimeStartHourInput = document.getElementById('sabak-time-start-hour');
 const sabakTimeStartMinuteInput = document.getElementById('sabak-time-start-minute');
 const sabakTimeDurationInput = document.getElementById('sabak-time-duration');
-const sabakTimeSiegeInput = document.getElementById('sabak-time-siege');
 const crossRankStartHourInput = document.getElementById('cross-rank-start-hour');
 const crossRankStartMinuteInput = document.getElementById('cross-rank-start-minute');
 const crossRankDurationInput = document.getElementById('cross-rank-duration');
@@ -126,7 +125,6 @@ async function loadEventTimeSettings() {
       if (sabakTimeStartHourInput) sabakTimeStartHourInput.value = data.sabak.startHour ?? '';
       if (sabakTimeStartMinuteInput) sabakTimeStartMinuteInput.value = data.sabak.startMinute ?? '';
       if (sabakTimeDurationInput) sabakTimeDurationInput.value = data.sabak.durationMinutes ?? '';
-      if (sabakTimeSiegeInput) sabakTimeSiegeInput.value = data.sabak.siegeMinutes ?? '';
     }
     if (data?.crossRank) {
       if (crossRankStartHourInput) crossRankStartHourInput.value = data.crossRank.startHour ?? '';
@@ -153,7 +151,7 @@ async function saveEventTimeSettings() {
         startHour: Number(sabakTimeStartHourInput?.value),
         startMinute: Number(sabakTimeStartMinuteInput?.value),
         durationMinutes: Number(sabakTimeDurationInput?.value),
-        siegeMinutes: Number(sabakTimeSiegeInput?.value)
+        siegeMinutes: Number(sabakTimeDurationInput?.value)
       },
       crossRank: {
         startHour: Number(crossRankStartHourInput?.value),

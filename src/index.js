@@ -906,7 +906,7 @@ app.post('/admin/event-time-settings/update', async (req, res) => {
     if (sabak.startHour !== undefined) await setSabakStartHour(sabak.startHour);
     if (sabak.startMinute !== undefined) await setSabakStartMinute(sabak.startMinute);
     if (sabak.durationMinutes !== undefined) await setSabakDurationMinutes(sabak.durationMinutes);
-    if (sabak.siegeMinutes !== undefined) await setSabakSiegeMinutes(sabak.siegeMinutes);
+    if (sabak.durationMinutes !== undefined) await setSabakSiegeMinutes(sabak.durationMinutes);
   }
   if (crossRank) {
     if (crossRank.startHour !== undefined) await setCrossRankStartHour(crossRank.startHour);
@@ -2509,7 +2509,7 @@ async function loadEventTimeSettings() {
   sabakConfig.startHour = await getSabakStartHour();
   sabakConfig.startMinute = await getSabakStartMinute();
   sabakConfig.durationMinutes = await getSabakDurationMinutes();
-  sabakConfig.siegeMinutes = await getSabakSiegeMinutes();
+  sabakConfig.siegeMinutes = sabakConfig.durationMinutes;
 
   crossRankConfig.startHour = await getCrossRankStartHour();
   crossRankConfig.startMinute = await getCrossRankStartMinute();

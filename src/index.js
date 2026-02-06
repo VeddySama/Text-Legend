@@ -2919,9 +2919,8 @@ async function endCrossRankEvent() {
 
 function tickCrossRankEvent() {
   const now = new Date();
-  const minutes = now.getHours() * 60 + now.getMinutes();
-  const { start, end } = crossRankWindowRange(nowDate);
-  const inWindow = nowDate >= start && nowDate < end;
+  const { start, end } = crossRankWindowRange(now);
+  const inWindow = now >= start && now < end;
   if (inWindow && !CROSS_RANK_EVENT_STATE.active) {
     startCrossRankEvent();
     return;

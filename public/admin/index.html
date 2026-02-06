@@ -234,6 +234,44 @@
 
         <div class="block" data-collapsible>
           <div class="block-title">
+            <h2>活动时间设置</h2>
+            <button class="btn-small block-toggle">折叠</button>
+          </div>
+          <div class="block-body">
+            <p style="color: #666; margin-bottom: 6px; font-size: 13px;">沙巴克攻城</p>
+            <div class="row" style="margin-bottom: 6px; font-size: 13px; gap: 6px; align-items: center; justify-content: flex-start; flex-wrap: wrap;">
+              <label style="min-width: 60px;">开始时间:</label>
+              <input id="sabak-time-start-hour" type="number" min="0" max="23" step="1" placeholder="20" style="width: 60px; font-size: 13px; padding: 4px 6px;">
+              <span>:</span>
+              <input id="sabak-time-start-minute" type="number" min="0" max="59" step="1" placeholder="00" style="width: 60px; font-size: 13px; padding: 4px 6px;">
+              <label style="min-width: 70px;">攻城时间:</label>
+              <input id="sabak-time-duration" type="number" min="1" step="1" placeholder="10" style="width: 70px; font-size: 13px; padding: 4px 6px;">
+              <span>分钟</span>
+              <label style="min-width: 70px;">攻城时长:</label>
+              <input id="sabak-time-siege" type="number" min="1" step="1" placeholder="10" style="width: 70px; font-size: 13px; padding: 4px 6px;">
+              <span>分钟</span>
+            </div>
+
+            <p style="color: #666; margin: 10px 0 6px; font-size: 13px;">跨服排位赛</p>
+            <div class="row" style="margin-bottom: 6px; font-size: 13px; gap: 6px; align-items: center; justify-content: flex-start; flex-wrap: wrap;">
+              <label style="min-width: 60px;">开始时间:</label>
+              <input id="cross-rank-start-hour" type="number" min="0" max="23" step="1" placeholder="19" style="width: 60px; font-size: 13px; padding: 4px 6px;">
+              <span>:</span>
+              <input id="cross-rank-start-minute" type="number" min="0" max="59" step="1" placeholder="00" style="width: 60px; font-size: 13px; padding: 4px 6px;">
+              <label style="min-width: 70px;">时长:</label>
+              <input id="cross-rank-duration" type="number" min="1" step="1" placeholder="10" style="width: 70px; font-size: 13px; padding: 4px 6px;">
+              <span>分钟</span>
+            </div>
+
+            <div class="row" style="margin-top: 8px;">
+              <button id="event-time-save-btn" class="btn-small">保存</button>
+            </div>
+            <div id="event-time-msg" class="msg"></div>
+          </div>
+        </div>
+
+        <div class="block" data-collapsible>
+          <div class="block-title">
             <h2>VIP 设置</h2>
             <button class="btn-small block-toggle">折叠</button>
           </div>

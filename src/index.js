@@ -17,7 +17,7 @@ import { addGuildMember, createGuild, getGuildByName, getGuildByNameInRealm, get
 import { createAdminSession, listUsers, verifyAdminSession, deleteUser } from './db/admin.js';
 import { sendMail, listMail, listSentMail, markMailRead, markMailClaimed, deleteMail } from './db/mail.js';
 import { createVipCodes, listVipCodes, useVipCode } from './db/vip.js';
-import { getSetting, setSetting, getVipSelfClaimEnabled, setVipSelfClaimEnabled, getLootLogEnabled, setLootLogEnabled, getCrossWorldBossRespawnAt, setCrossWorldBossRespawnAt, getStateThrottleEnabled, setStateThrottleEnabled, getStateThrottleIntervalSec, setStateThrottleIntervalSec, getStateThrottleOverrideServerAllowed, setStateThrottleOverrideServerAllowed, getConsignExpireHours, setConsignExpireHours, getRoomVariantCount, setRoomVariantCount, canUserClaimVip, incrementCharacterVipClaimCount, getWorldBossKillCount, setWorldBossKillCount, getSpecialBossKillCount, setSpecialBossKillCount, getWorldBossDropBonus, setWorldBossDropBonus, getWorldBossBaseHp, setWorldBossBaseHp, getWorldBossBaseAtk, setWorldBossBaseAtk, getWorldBossBaseDef, setWorldBossBaseDef, getWorldBossBaseMdef, setWorldBossBaseMdef, getWorldBossBaseExp, setWorldBossBaseExp, getWorldBossBaseGold, setWorldBossBaseGold, getWorldBossRespawnMinutes, setWorldBossRespawnMinutes, getWorldBossPlayerBonusConfig, setWorldBossPlayerBonusConfig, getClassLevelBonusConfig, setClassLevelBonusConfig, getSpecialBossDropBonus, setSpecialBossDropBonus, getSpecialBossBaseHp, setSpecialBossBaseHp, getSpecialBossBaseAtk, setSpecialBossBaseAtk, getSpecialBossBaseDef, setSpecialBossBaseDef, getSpecialBossBaseMdef, setSpecialBossBaseMdef, getSpecialBossBaseExp, setSpecialBossBaseExp, getSpecialBossBaseGold, setSpecialBossBaseGold, getSpecialBossRespawnMinutes, setSpecialBossRespawnMinutes, getSpecialBossPlayerBonusConfig, setSpecialBossPlayerBonusConfig, getTrainingFruitCoefficient as getTrainingFruitCoefficientDb, setTrainingFruitCoefficient as setTrainingFruitCoefficientDb, getTrainingFruitDropRate as getTrainingFruitDropRateDb, setTrainingFruitDropRate as setTrainingFruitDropRateDb, getTrainingPerLevelConfig as getTrainingPerLevelConfigDb, setTrainingPerLevelConfig as setTrainingPerLevelConfigDb, getRefineBaseSuccessRate as getRefineBaseSuccessRateDb, setRefineBaseSuccessRate as setRefineBaseSuccessRateDb, getRefineDecayRate as getRefineDecayRateDb, setRefineDecayRate as setRefineDecayRateDb, getRefineMaterialCount as getRefineMaterialCountDb, setRefineMaterialCount as setRefineMaterialCountDb, getRefineBonusPerLevel as getRefineBonusPerLevelDb, setRefineBonusPerLevel as setRefineBonusPerLevelDb, getEffectResetSuccessRate as getEffectResetSuccessRateDb, setEffectResetSuccessRate as setEffectResetSuccessRateDb, getEffectResetDoubleRate as getEffectResetDoubleRateDb, setEffectResetDoubleRate as setEffectResetDoubleRateDb, getEffectResetTripleRate as getEffectResetTripleRateDb, setEffectResetTripleRate as setEffectResetTripleRateDb, getEffectResetQuadrupleRate as getEffectResetQuadrupleRateDb, setEffectResetQuadrupleRate as setEffectResetQuadrupleRateDb, getEffectResetQuintupleRate as getEffectResetQuintupleRateDb, setEffectResetQuintupleRate as setEffectResetQuintupleRateDb, getEffectDropSingleChance as getEffectDropSingleChanceDb, setEffectDropSingleChance as setEffectDropSingleChanceDb, getEffectDropDoubleChance as getEffectDropDoubleChanceDb, setEffectDropDoubleChance as setEffectDropDoubleChanceDb } from './db/settings.js';
+import { getSetting, setSetting, getVipSelfClaimEnabled, setVipSelfClaimEnabled, getLootLogEnabled, setLootLogEnabled, getCrossWorldBossRespawnAt, setCrossWorldBossRespawnAt, getStateThrottleEnabled, setStateThrottleEnabled, getStateThrottleIntervalSec, setStateThrottleIntervalSec, getStateThrottleOverrideServerAllowed, setStateThrottleOverrideServerAllowed, getConsignExpireHours, setConsignExpireHours, getRoomVariantCount, setRoomVariantCount, getSabakStartHour, setSabakStartHour, getSabakStartMinute, setSabakStartMinute, getSabakDurationMinutes, setSabakDurationMinutes, getSabakSiegeMinutes, setSabakSiegeMinutes, getCrossRankStartHour, setCrossRankStartHour, getCrossRankStartMinute, setCrossRankStartMinute, getCrossRankDurationMinutes, setCrossRankDurationMinutes, canUserClaimVip, incrementCharacterVipClaimCount, getWorldBossKillCount, setWorldBossKillCount, getSpecialBossKillCount, setSpecialBossKillCount, getWorldBossDropBonus, setWorldBossDropBonus, getWorldBossBaseHp, setWorldBossBaseHp, getWorldBossBaseAtk, setWorldBossBaseAtk, getWorldBossBaseDef, setWorldBossBaseDef, getWorldBossBaseMdef, setWorldBossBaseMdef, getWorldBossBaseExp, setWorldBossBaseExp, getWorldBossBaseGold, setWorldBossBaseGold, getWorldBossRespawnMinutes, setWorldBossRespawnMinutes, getWorldBossPlayerBonusConfig, setWorldBossPlayerBonusConfig, getClassLevelBonusConfig, setClassLevelBonusConfig, getSpecialBossDropBonus, setSpecialBossDropBonus, getSpecialBossBaseHp, setSpecialBossBaseHp, getSpecialBossBaseAtk, setSpecialBossBaseAtk, getSpecialBossBaseDef, setSpecialBossBaseDef, getSpecialBossBaseMdef, setSpecialBossBaseMdef, getSpecialBossBaseExp, setSpecialBossBaseExp, getSpecialBossBaseGold, setSpecialBossBaseGold, getSpecialBossRespawnMinutes, setSpecialBossRespawnMinutes, getSpecialBossPlayerBonusConfig, setSpecialBossPlayerBonusConfig, getTrainingFruitCoefficient as getTrainingFruitCoefficientDb, setTrainingFruitCoefficient as setTrainingFruitCoefficientDb, getTrainingFruitDropRate as getTrainingFruitDropRateDb, setTrainingFruitDropRate as setTrainingFruitDropRateDb, getTrainingPerLevelConfig as getTrainingPerLevelConfigDb, setTrainingPerLevelConfig as setTrainingPerLevelConfigDb, getRefineBaseSuccessRate as getRefineBaseSuccessRateDb, setRefineBaseSuccessRate as setRefineBaseSuccessRateDb, getRefineDecayRate as getRefineDecayRateDb, setRefineDecayRate as setRefineDecayRateDb, getRefineMaterialCount as getRefineMaterialCountDb, setRefineMaterialCount as setRefineMaterialCountDb, getRefineBonusPerLevel as getRefineBonusPerLevelDb, setRefineBonusPerLevel as setRefineBonusPerLevelDb, getEffectResetSuccessRate as getEffectResetSuccessRateDb, setEffectResetSuccessRate as setEffectResetSuccessRateDb, getEffectResetDoubleRate as getEffectResetDoubleRateDb, setEffectResetDoubleRate as setEffectResetDoubleRateDb, getEffectResetTripleRate as getEffectResetTripleRateDb, setEffectResetTripleRate as setEffectResetTripleRateDb, getEffectResetQuadrupleRate as getEffectResetQuadrupleRateDb, setEffectResetQuadrupleRate as setEffectResetQuadrupleRateDb, getEffectResetQuintupleRate as getEffectResetQuintupleRateDb, setEffectResetQuintupleRate as setEffectResetQuintupleRateDb, getEffectDropSingleChance as getEffectDropSingleChanceDb, setEffectDropSingleChance as setEffectDropSingleChanceDb, getEffectDropDoubleChance as getEffectDropDoubleChanceDb, setEffectDropDoubleChance as setEffectDropDoubleChanceDb } from './db/settings.js';
 import { listRealms, getRealmById, updateRealmName, createRealm } from './db/realms.js';
 import {
   listMobRespawns,
@@ -877,6 +877,44 @@ app.post('/admin/room-variant-update', async (req, res) => {
   shrinkRoomVariants(WORLD, count);
   expandRoomVariants(WORLD);
   res.json({ ok: true, count });
+});
+
+app.get('/admin/event-time-settings', async (req, res) => {
+  const admin = await requireAdmin(req);
+  if (!admin) return res.status(401).json({ error: '无管理员权限。' });
+  res.json({
+    ok: true,
+    sabak: {
+      startHour: sabakConfig.startHour,
+      startMinute: sabakConfig.startMinute,
+      durationMinutes: sabakConfig.durationMinutes,
+      siegeMinutes: sabakConfig.siegeMinutes
+    },
+    crossRank: {
+      startHour: crossRankConfig.startHour,
+      startMinute: crossRankConfig.startMinute,
+      durationMinutes: crossRankConfig.durationMinutes
+    }
+  });
+});
+
+app.post('/admin/event-time-settings/update', async (req, res) => {
+  const admin = await requireAdmin(req);
+  if (!admin) return res.status(401).json({ error: '无管理员权限。' });
+  const { sabak, crossRank } = req.body || {};
+  if (sabak) {
+    if (sabak.startHour !== undefined) await setSabakStartHour(sabak.startHour);
+    if (sabak.startMinute !== undefined) await setSabakStartMinute(sabak.startMinute);
+    if (sabak.durationMinutes !== undefined) await setSabakDurationMinutes(sabak.durationMinutes);
+    if (sabak.siegeMinutes !== undefined) await setSabakSiegeMinutes(sabak.siegeMinutes);
+  }
+  if (crossRank) {
+    if (crossRank.startHour !== undefined) await setCrossRankStartHour(crossRank.startHour);
+    if (crossRank.startMinute !== undefined) await setCrossRankStartMinute(crossRank.startMinute);
+    if (crossRank.durationMinutes !== undefined) await setCrossRankDurationMinutes(crossRank.durationMinutes);
+  }
+  await loadEventTimeSettings();
+  res.json({ ok: true });
 });
 
 // 职业升级属性配置
@@ -2444,8 +2482,14 @@ function getRealmIds() {
 
 const sabakConfig = {
   startHour: 20,
+  startMinute: 0,
   durationMinutes: 10,
   siegeMinutes: 10
+};
+const crossRankConfig = {
+  startHour: 19,
+  startMinute: 0,
+  durationMinutes: 10
 };
 const deviceOnlineMap = new Map();
 const CROSS_REALM_ZONE_ID = 'crb';
@@ -2454,14 +2498,23 @@ const CROSS_RANK_ROOM_ID = 'arena';
 const CROSS_REALM_REALM_ID = 0;
 const CROSS_REALM_ZONES = new Set([CROSS_REALM_ZONE_ID, CROSS_RANK_ZONE_ID]);
 
-const CROSS_RANK_EVENT_START_MINUTES = 19 * 60;
-const CROSS_RANK_EVENT_END_MINUTES = 19 * 60 + 10;
 const CROSS_RANK_EVENT_STATE = {
   active: false,
   startAt: null,
   endAt: null,
   stats: new Map()
 };
+
+async function loadEventTimeSettings() {
+  sabakConfig.startHour = await getSabakStartHour();
+  sabakConfig.startMinute = await getSabakStartMinute();
+  sabakConfig.durationMinutes = await getSabakDurationMinutes();
+  sabakConfig.siegeMinutes = await getSabakSiegeMinutes();
+
+  crossRankConfig.startHour = await getCrossRankStartHour();
+  crossRankConfig.startMinute = await getCrossRankStartMinute();
+  crossRankConfig.durationMinutes = await getCrossRankDurationMinutes();
+}
 
 function getRoomRealmId(zoneId, roomId, realmId = 1) {
   if (CROSS_REALM_ZONES.has(zoneId)) return CROSS_REALM_REALM_ID;
@@ -2754,16 +2807,16 @@ function chooseCrossRankRewardRarity(rank) {
 }
 
 function getCrossRankEndAt(now = new Date()) {
-  const end = new Date(now);
-  end.setHours(19, 10, 0, 0);
+  const { start, end } = crossRankWindowRange(now);
+  if (now.getTime() >= end.getTime()) {
+    const nextStart = new Date(start.getTime() + 24 * 60 * 60 * 1000);
+    return nextStart.getTime() + crossRankConfig.durationMinutes * 60 * 1000;
+  }
   return end.getTime();
 }
 
 function getCrossRankStartAt(now = new Date()) {
-  const start = new Date(now);
-  start.setHours(19, 0, 0, 0);
-  const end = new Date(now);
-  end.setHours(19, 10, 0, 0);
+  const { start, end } = crossRankWindowRange(now);
   if (now.getTime() >= end.getTime()) {
     start.setDate(start.getDate() + 1);
   }
@@ -2822,7 +2875,7 @@ function startCrossRankEvent() {
     roomId: CROSS_RANK_ROOM_ID,
     label: '跨服排位赛场 - 跨服排位赛'
   };
-  emitAnnouncement('跨服排位赛已开始（19:00-19:10），前往跨服排位赛场参与！', 'announce', locationData, null);
+  emitAnnouncement(`跨服排位赛已开始（${crossRankWindowInfo()}），前往跨服排位赛场参与！`, 'announce', locationData, null);
 }
 
 async function endCrossRankEvent() {
@@ -2867,7 +2920,8 @@ async function endCrossRankEvent() {
 function tickCrossRankEvent() {
   const now = new Date();
   const minutes = now.getHours() * 60 + now.getMinutes();
-  const inWindow = minutes >= CROSS_RANK_EVENT_START_MINUTES && minutes < CROSS_RANK_EVENT_END_MINUTES;
+  const { start, end } = crossRankWindowRange(nowDate);
+  const inWindow = nowDate >= start && nowDate < end;
   if (inWindow && !CROSS_RANK_EVENT_STATE.active) {
     startCrossRankEvent();
     return;
@@ -3989,7 +4043,7 @@ function getSabakPalaceKillStats(realmId) {
 
 function sabakWindowRange(now = new Date()) {
   const start = new Date(now);
-  start.setHours(sabakConfig.startHour, 0, 0, 0);
+  start.setHours(sabakConfig.startHour, sabakConfig.startMinute || 0, 0, 0);
   const end = new Date(start.getTime() + sabakConfig.durationMinutes * 60 * 1000);
   return { start, end };
 }
@@ -4001,8 +4055,35 @@ function isSabakActive(now = new Date()) {
 
 function sabakWindowInfo() {
   const startHour = String(sabakConfig.startHour).padStart(2, '0');
-  const endMinute = sabakConfig.durationMinutes;
-  return `每天 ${startHour}:00-${startHour}:${String(endMinute).padStart(2, '0')}`;
+  const startMinute = String(sabakConfig.startMinute || 0).padStart(2, '0');
+  const totalMinutes = sabakConfig.startHour * 60 + (sabakConfig.startMinute || 0) + sabakConfig.durationMinutes;
+  const endHour = String(Math.floor(totalMinutes / 60) % 24).padStart(2, '0');
+  const endMinuteStr = String(totalMinutes % 60).padStart(2, '0');
+  return `每天 ${startHour}:${startMinute}-${endHour}:${endMinuteStr}`;
+}
+
+function sabakRegistrationWindowInfo() {
+  const start = sabakWindowRange(new Date()).start;
+  const end = new Date(start.getTime() - 10 * 60 * 1000);
+  const endHour = String(end.getHours()).padStart(2, '0');
+  const endMinute = String(end.getMinutes()).padStart(2, '0');
+  return `0:00-${endHour}:${endMinute}`;
+}
+
+function crossRankWindowRange(now = new Date()) {
+  const start = new Date(now);
+  start.setHours(crossRankConfig.startHour, crossRankConfig.startMinute || 0, 0, 0);
+  const end = new Date(start.getTime() + crossRankConfig.durationMinutes * 60 * 1000);
+  return { start, end };
+}
+
+function crossRankWindowInfo() {
+  const startHour = String(crossRankConfig.startHour).padStart(2, '0');
+  const startMinute = String(crossRankConfig.startMinute || 0).padStart(2, '0');
+  const totalMinutes = crossRankConfig.startHour * 60 + (crossRankConfig.startMinute || 0) + crossRankConfig.durationMinutes;
+  const endHour = String(Math.floor(totalMinutes / 60) % 24).padStart(2, '0');
+  const endMinute = String(totalMinutes % 60).padStart(2, '0');
+  return `${startHour}:${startMinute}-${endHour}:${endMinute}`;
 }
 
 function isSabakRegistrationToday(registration, now = new Date()) {
@@ -6706,6 +6787,7 @@ io.on('connection', (socket) => {
     const sabakState = getSabakState(realmId);
     const ownerGuildName = sabakState.ownerGuildName || '无';
     const windowInfo = sabakWindowInfo();
+    const registrationWindowInfo = sabakRegistrationWindowInfo();
     const registrations = await listSabakRegistrations(realmId);
     const today = new Date();
     const todaysRegistrations = (registrations || []).filter((r) => isSabakRegistrationToday(r, today));
@@ -6728,6 +6810,7 @@ io.on('connection', (socket) => {
 
     socket.emit('sabak_info', {
       windowInfo,
+      registrationWindowInfo,
       ownerGuildName,
       registrations: displayRegistrations,
       canRegister,
@@ -8997,6 +9080,7 @@ async function start() {
   await runMigrations();
   await applyWorldBossSettings();
   await applySpecialBossSettings();
+  await loadEventTimeSettings();
   await refreshRealmCache();
   await clearInvalidCrossWorldBossRespawns();
 

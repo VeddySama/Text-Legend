@@ -138,6 +138,83 @@ export async function setRoomVariantCount(count) {
   await setSetting('room_variant_count', String(normalized));
 }
 
+export async function getSabakStartHour() {
+  const value = await getSetting('sabak_start_hour', '20');
+  const parsed = parseInt(value, 10);
+  return Number.isFinite(parsed) ? Math.min(23, Math.max(0, parsed)) : 20;
+}
+
+export async function setSabakStartHour(hour) {
+  const normalized = Math.min(23, Math.max(0, Math.floor(Number(hour) || 20)));
+  await setSetting('sabak_start_hour', String(normalized));
+}
+
+export async function getSabakStartMinute() {
+  const value = await getSetting('sabak_start_minute', '0');
+  const parsed = parseInt(value, 10);
+  return Number.isFinite(parsed) ? Math.min(59, Math.max(0, parsed)) : 0;
+}
+
+export async function setSabakStartMinute(minute) {
+  const normalized = Math.min(59, Math.max(0, Math.floor(Number(minute) || 0)));
+  await setSetting('sabak_start_minute', String(normalized));
+}
+
+export async function getSabakDurationMinutes() {
+  const value = await getSetting('sabak_duration_minutes', '10');
+  const parsed = parseInt(value, 10);
+  return Number.isFinite(parsed) ? Math.max(1, parsed) : 10;
+}
+
+export async function setSabakDurationMinutes(minutes) {
+  const normalized = Math.max(1, Math.floor(Number(minutes) || 10));
+  await setSetting('sabak_duration_minutes', String(normalized));
+}
+
+export async function getSabakSiegeMinutes() {
+  const value = await getSetting('sabak_siege_minutes', '10');
+  const parsed = parseInt(value, 10);
+  return Number.isFinite(parsed) ? Math.max(1, parsed) : 10;
+}
+
+export async function setSabakSiegeMinutes(minutes) {
+  const normalized = Math.max(1, Math.floor(Number(minutes) || 10));
+  await setSetting('sabak_siege_minutes', String(normalized));
+}
+
+export async function getCrossRankStartHour() {
+  const value = await getSetting('cross_rank_start_hour', '19');
+  const parsed = parseInt(value, 10);
+  return Number.isFinite(parsed) ? Math.min(23, Math.max(0, parsed)) : 19;
+}
+
+export async function setCrossRankStartHour(hour) {
+  const normalized = Math.min(23, Math.max(0, Math.floor(Number(hour) || 19)));
+  await setSetting('cross_rank_start_hour', String(normalized));
+}
+
+export async function getCrossRankStartMinute() {
+  const value = await getSetting('cross_rank_start_minute', '0');
+  const parsed = parseInt(value, 10);
+  return Number.isFinite(parsed) ? Math.min(59, Math.max(0, parsed)) : 0;
+}
+
+export async function setCrossRankStartMinute(minute) {
+  const normalized = Math.min(59, Math.max(0, Math.floor(Number(minute) || 0)));
+  await setSetting('cross_rank_start_minute', String(normalized));
+}
+
+export async function getCrossRankDurationMinutes() {
+  const value = await getSetting('cross_rank_duration_minutes', '10');
+  const parsed = parseInt(value, 10);
+  return Number.isFinite(parsed) ? Math.max(1, parsed) : 10;
+}
+
+export async function setCrossRankDurationMinutes(minutes) {
+  const normalized = Math.max(1, Math.floor(Number(minutes) || 10));
+  await setSetting('cross_rank_duration_minutes', String(normalized));
+}
+
 export async function getRealmCount() {
   const value = await getSetting('realm_count', '1');
   const parsed = parseInt(value, 10);

@@ -386,6 +386,7 @@ const guildApplicationsUi = {
 };
 const sabakUi = {
   modal: document.getElementById('sabak-modal'),
+  title: document.getElementById('sabak-modal-title'),
   info: document.getElementById('sabak-info'),
   guildList: document.getElementById('sabak-guild-list'),
   confirm: document.getElementById('sabak-confirm'),
@@ -4207,6 +4208,7 @@ function renderSabakModal(payload) {
   if (!sabakUi.modal) return;
   const { windowInfo, ownerGuildName, registrations, canRegister, isOwner } = payload;
   if (sabakUi.info) {
+    const registrationWindow = payload?.registrationWindowInfo || '0:00-19:50';
     sabakUi.info.innerHTML = `
       <div class="sabak-info-section">
         <div class="sabak-info-title">攻城时间</div>
@@ -4218,9 +4220,13 @@ function renderSabakModal(payload) {
       </div>
       <div class="sabak-info-section">
         <div class="sabak-info-title">报名</div>
-        <div class="sabak-info-content">0:00-19:50 · ${isOwner ? '守城免费' : '100万金币'}</div>
+        <div class="sabak-info-content">${registrationWindow} · ${isOwner ? '守城免费' : '100万金币'}</div>
       </div>
     `;
+  }
+  if (sabakUi.title) {
+    const titleWindow = windowInfo || '每日 20:00-20:10';
+    sabakUi.title.textContent = `沙巴克攻城报名（${titleWindow}）`;
   }
   if (sabakUi.guildList) {
     sabakUi.guildList.innerHTML = '';

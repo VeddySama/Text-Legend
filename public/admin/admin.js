@@ -95,6 +95,15 @@ const sbKillRealmInput = document.getElementById('sb-kill-realm');
 const sbKillCountInput = document.getElementById('sb-kill-count');
 const sbKillMsg = document.getElementById('sb-kill-msg');
 
+const sabakTimeStartHourInput = document.getElementById('sabak-time-start-hour');
+const sabakTimeStartMinuteInput = document.getElementById('sabak-time-start-minute');
+const sabakTimeDurationInput = document.getElementById('sabak-time-duration');
+const sabakTimeSiegeInput = document.getElementById('sabak-time-siege');
+const crossRankStartHourInput = document.getElementById('cross-rank-start-hour');
+const crossRankStartMinuteInput = document.getElementById('cross-rank-start-minute');
+const crossRankDurationInput = document.getElementById('cross-rank-duration');
+const eventTimeMsg = document.getElementById('event-time-msg');
+
 const adminPwModal = document.getElementById('admin-pw-modal');
 const adminPwTitle = document.getElementById('admin-pw-title');
 const adminPwText = document.getElementById('admin-pw-text');
@@ -106,6 +115,62 @@ function getRealmIdFromInput(input, fallback = 1) {
   const raw = input?.value;
   const parsed = Number(raw);
   return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+async function loadEventTimeSettings() {
+  if (!eventTimeMsg) return;
+  eventTimeMsg.textContent = '';
+  try {
+    const data = await api('/admin/event-time-settings', 'GET');
+    if (data?.sabak) {
+      if (sabakTimeStartHourInput) sabakTimeStartHourInput.value = data.sabak.startHour ?? '';
+      if (sabakTimeStartMinuteInput) sabakTimeStartMinuteInput.value = data.sabak.startMinute ?? '';
+      if (sabakTimeDurationInput) sabakTimeDurationInput.value = data.sabak.durationMinutes ?? '';
+      if (sabakTimeSiegeInput) sabakTimeSiegeInput.value = data.sabak.siegeMinutes ?? '';
+    }
+    if (data?.crossRank) {
+      if (crossRankStartHourInput) crossRankStartHourInput.value = data.crossRank.startHour ?? '';
+      if (crossRankStartMinuteInput) crossRankStartMinuteInput.value = data.crossRank.startMinute ?? '';
+      if (crossRankDurationInput) crossRankDurationInput.value = data.crossRank.durationMinutes ?? '';
+    }
+    eventTimeMsg.textContent = '加载成功';
+    eventTimeMsg.style.color = 'green';
+    setTimeout(() => {
+      eventTimeMsg.textContent = '';
+    }, 1500);
+  } catch (err) {
+    eventTimeMsg.textContent = `加载失败: ${err.message}`;
+    eventTimeMsg.style.color = 'red';
+  }
+}
+
+async function saveEventTimeSettings() {
+  if (!eventTimeMsg) return;
+  eventTimeMsg.textContent = '';
+  try {
+    const payload = {
+      sabak: {
+        startHour: Number(sabakTimeStartHourInput?.value),
+        startMinute: Number(sabakTimeStartMinuteInput?.value),
+        durationMinutes: Number(sabakTimeDurationInput?.value),
+        siegeMinutes: Number(sabakTimeSiegeInput?.value)
+      },
+      crossRank: {
+        startHour: Number(crossRankStartHourInput?.value),
+        startMinute: Number(crossRankStartMinuteInput?.value),
+        durationMinutes: Number(crossRankDurationInput?.value)
+      }
+    };
+    await api('/admin/event-time-settings/update', 'POST', payload);
+    eventTimeMsg.textContent = '保存成功';
+    eventTimeMsg.style.color = 'green';
+    setTimeout(() => {
+      eventTimeMsg.textContent = '';
+    }, 1500);
+  } catch (err) {
+    eventTimeMsg.textContent = `保存失败: ${err.message}`;
+    eventTimeMsg.style.color = 'red';
+  }
 }
 
 async function loadWorldBossKillCount() {
@@ -4745,6 +4810,7 @@ if (adminToken) {
   listSponsors();
   loadWorldBossSettings();
   loadSpecialBossSettings();
+  loadEventTimeSettings();
   loadClassBonusConfig();
   loadTrainingFruitSettings();
   loadTrainingSettings();
@@ -4991,6 +5057,9 @@ if (document.getElementById('sb-add-bonus-btn')) {
 }
 if (document.getElementById('sb-save-btn')) {
   document.getElementById('sb-save-btn').addEventListener('click', saveSpecialBossSettings);
+}
+if (document.getElementById('event-time-save-btn')) {
+  document.getElementById('event-time-save-btn').addEventListener('click', saveEventTimeSettings);
 }
 if (document.getElementById('sb-kill-load-btn')) {
   document.getElementById('sb-kill-load-btn').addEventListener('click', loadSpecialBossKillCount);

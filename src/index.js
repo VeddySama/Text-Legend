@@ -6787,6 +6787,7 @@ io.on('connection', (socket) => {
     const ownerGuildName = sabakState.ownerGuildName || '无';
     const windowInfo = sabakWindowInfo();
     const registrationWindowInfo = sabakRegistrationWindowInfo();
+    const registrationWindowInfo = sabakRegistrationWindowInfo();
     const registrations = await listSabakRegistrations(realmId);
     const today = new Date();
     const todaysRegistrations = (registrations || []).filter((r) => isSabakRegistrationToday(r, today));
@@ -6805,7 +6806,9 @@ io.on('connection', (socket) => {
 
     const isOwner = player.guild && String(player.guild.id) === String(sabakState.ownerGuildId);
     const isLeaderOrVice = player.guild && (player.guild.role === 'leader' || player.guild.role === 'vice');
-    const canRegister = isLeaderOrVice && !isOwner;
+    const now = new Date();
+    const registerEnd = new Date(sabakWindowRange(now).start.getTime() - 10 * 60 * 1000);
+    const canRegister = isLeaderOrVice && !isOwner && now < registerEnd;
 
     socket.emit('sabak_info', {
       windowInfo,
@@ -6838,16 +6841,13 @@ io.on('connection', (socket) => {
       player.send('守城行会无需报名。');
       return;
     }
-    // 检查报名时间：0:00-19:50
-    const now = new Date();
-    const currentHour = now.getHours();
-    const currentMinute = now.getMinutes();
-    const totalMinutes = currentHour * 60 + currentMinute;
-    const registerEndMinutes = 19 * 60 + 50; // 19:50
-    if (totalMinutes >= registerEndMinutes) {
-      player.send('报名时间为每日 0:00-19:50，当前时间已截止报名。');
-      return;
-    }
+      // 检查报名时间：截至攻城开始前10分钟
+      const now = new Date();
+      const registerEnd = new Date(sabakWindowRange(now).start.getTime() - 10 * 60 * 1000);
+      if (now >= registerEnd) {
+        player.send(`报名时间为每日 ${sabakRegistrationWindowInfo()}，当前时间已截止报名。`);
+        return;
+      }
     const hasRegisteredToday = await hasSabakRegistrationToday(player.guild.id, realmId);
     if (hasRegisteredToday) {
       player.send('该行会今天已经报名过了。');
@@ -6870,7 +6870,7 @@ io.on('connection', (socket) => {
     }
     player.gold -= 1000000;
     try {
-        await registerSabak(player.guild.id, player.realmId || 1);
+        await registerSabak(player.guild.id, realmId);
       player.send('已报名沙巴克攻城，支付100万金币。');
       player.forceStateRefresh = true;
       await sendState(player);

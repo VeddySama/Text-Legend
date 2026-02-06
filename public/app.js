@@ -4233,7 +4233,7 @@ function renderSabakModal(payload) {
       registrations.forEach((reg) => {
         const row = document.createElement('div');
         row.className = 'guild-member';
-        const guildName = reg.guild_name || reg.guildName;
+        const guildName = reg.guild_name || reg.guildName || `行会#${reg.guild_id || reg.guildId || '未知'}`;
         if (reg.isDefender) {
           row.innerHTML = `<span class="defender-badge">守城</span>${guildName}`;
           row.classList.add('defender-row');

@@ -135,9 +135,8 @@ export async function registerSabak(guildId, realmId = 1) {
 
 export async function listSabakRegistrations(realmId = 1) {
   return knex('sabak_registrations')
-    .join('guilds', 'sabak_registrations.guild_id', 'guilds.id')
+    .leftJoin('guilds', 'sabak_registrations.guild_id', 'guilds.id')
     .where('sabak_registrations.realm_id', realmId)
-    .where('guilds.realm_id', realmId)
     .select('guilds.name as guild_name', 'sabak_registrations.guild_id', 'sabak_registrations.registered_at');
 }
 

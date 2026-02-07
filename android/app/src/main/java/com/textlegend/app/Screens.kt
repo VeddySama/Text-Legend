@@ -602,6 +602,7 @@ private fun ActionsTab(
 }
 
 @Composable
+@OptIn(ExperimentalMaterial3Api::class)
 private fun ScreenScaffold(
     title: String,
     onBack: () -> Unit,

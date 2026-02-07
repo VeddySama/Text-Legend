@@ -520,7 +520,7 @@ private fun ActionsTab(
 
     Column(modifier = Modifier.fillMaxSize()) {
         Text(text = "快捷功能", style = MaterialTheme.typography.titleSmall)
-        FlowRow(items = actions, onClick = { onAction(it.first) })
+        FlowRow(items = actions, onClick = { onAction(it) })
     }
 }
 

@@ -537,25 +537,196 @@ private fun BattleTab(
     onCast: (SkillInfo, MobInfo?) -> Unit
 ) {
     val scrollState: ScrollState = rememberScrollState()
+    val panelBg = Color(0xFF2C2622)
+    val panelBorder = Color(0xFF6E4B2D)
+    val accent = Color(0xFFD79A4E)
+    val textMain = Color(0xFFF4E8D6)
+
     Column(modifier = Modifier.fillMaxSize().verticalScroll(scrollState)) {
-        Text(text = "方向", style = MaterialTheme.typography.titleSmall)
-        FlowRow(items = state?.exits?.map { it.label to it.dir }.orEmpty(), onClick = { dir -> onGo(dir) })
-        Spacer(modifier = Modifier.height(8.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(text = "战斗面板", style = MaterialTheme.typography.titleMedium, color = textMain)
+        }
+        Spacer(modifier = Modifier.height(12.dp))
 
-        Text(text = "怪物", style = MaterialTheme.typography.titleSmall)
-        FlowRow(items = state?.mobs?.map { it.name to it }.orEmpty(), onClick = { mob -> onSelectMob(mob) }, selectedLabel = selectedMob?.name)
-        Spacer(modifier = Modifier.height(8.dp))
-
-        if (selectedMob != null) {
-            Button(onClick = { onAttack(selectedMob.name) }) { Text("攻击 ${selectedMob.name}") }
+        BattleSectionCard(title = "玩家", panelBg = panelBg, panelBorder = panelBorder, textMain = textMain) {
+            val player = state?.player
+            val stats = state?.stats
+            if (player == null || stats == null) {
+                Text("未连接", color = textMain)
+            } else {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text(player.name, fontWeight = FontWeight.SemiBold, color = textMain)
+                    Text("Lv${player.level} ${classLabel(player.classId)}", color = textMain)
+                }
+                Spacer(modifier = Modifier.height(6.dp))
+                BattleHpBar(
+                    current = stats.hp,
+                    max = stats.maxHp,
+                    accent = accent
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text("HP ${stats.hp}/${stats.maxHp}", color = textMain)
+            }
+            val others = state?.players.orEmpty()
+            if (others.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(10.dp))
+                Text("附近玩家", color = textMain)
+                Spacer(modifier = Modifier.height(6.dp))
+                BattlePillGrid(
+                    items = others.map { it.name to { onAttack(it.name) } }
+                )
+            }
         }
 
+        Spacer(modifier = Modifier.height(12.dp))
+
+        BattleSectionCard(title = "技能", panelBg = panelBg, panelBorder = panelBorder, textMain = textMain) {
+            val skills = state?.skills.orEmpty()
+            if (skills.isEmpty()) {
+                Text("暂无技能", color = textMain)
+            } else {
+                BattlePillGrid(
+                    items = skills.map { "${it.name} Lv${it.level}" to { onCast(it, selectedMob) } }
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        BattleSectionCard(title = "怪物", panelBg = panelBg, panelBorder = panelBorder, textMain = textMain) {
+            val mobs = state?.mobs.orEmpty()
+            if (mobs.isEmpty()) {
+                Text("暂无怪物", color = textMain)
+            } else {
+                mobs.forEach { mob ->
+                    BattleMobCard(
+                        mob = mob,
+                        selected = selectedMob?.name == mob.name,
+                        panelBg = panelBg,
+                        panelBorder = panelBorder,
+                        accent = accent,
+                        textMain = textMain,
+                        onClick = { onSelectMob(mob) }
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+            }
+            if (selectedMob != null) {
+                Spacer(modifier = Modifier.height(6.dp))
+                Button(onClick = { onAttack(selectedMob.name) }) { Text("攻击 ${selectedMob.name}") }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        BattleSectionCard(title = "方向", panelBg = panelBg, panelBorder = panelBorder, textMain = textMain) {
+            val exits = state?.exits.orEmpty().map { it.label to it.dir }
+            if (exits.isEmpty()) {
+                Text("暂无出口", color = textMain)
+            } else {
+                BattlePillGrid(
+                    items = exits.map { it.first to { onGo(it.second) } }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun BattleSectionCard(
+    title: String,
+    panelBg: Color,
+    panelBorder: Color,
+    textMain: Color,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Text(title, style = MaterialTheme.typography.titleSmall, color = textMain)
+        Spacer(modifier = Modifier.height(6.dp))
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            color = panelBg,
+            border = BorderStroke(1.dp, panelBorder),
+            tonalElevation = 2.dp
+        ) {
+            Column(modifier = Modifier.padding(12.dp), content = content)
+        }
+    }
+}
+
+@Composable
+private fun BattleHpBar(current: Int, max: Int, accent: Color) {
+    val progress = if (max > 0) current.toFloat() / max else 0f
+    LinearProgressIndicator(
+        progress = progress,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(8.dp),
+        color = accent,
+        trackColor = Color(0xFF3A302A)
+    )
+}
+
+@Composable
+private fun BattlePillGrid(items: List<Pair<String, () -> Unit>>) {
+    if (items.isEmpty()) return
+    items.chunked(2).forEach { rowItems ->
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            rowItems.forEach { (label, onClick) ->
+                Surface(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(40.dp)
+                        .clickable { onClick() },
+                    shape = RoundedCornerShape(10.dp),
+                    color = Color(0xFF1F1A16),
+                    border = BorderStroke(1.dp, Color(0xFF6E4B2D)),
+                    tonalElevation = 1.dp
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Text(label, color = Color(0xFFF4E8D6), fontWeight = FontWeight.SemiBold)
+                    }
+                }
+            }
+            if (rowItems.size == 1) Spacer(modifier = Modifier.weight(1f))
+        }
         Spacer(modifier = Modifier.height(8.dp))
-        Text(text = "技能", style = MaterialTheme.typography.titleSmall)
-        FlowRow(items = state?.skills?.map { it.name to it }.orEmpty(), onClick = { skill -> onCast(skill, selectedMob) })
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(text = "玩家", style = MaterialTheme.typography.titleSmall)
-        FlowRow(items = state?.players?.map { it.name to it }.orEmpty(), onClick = { player -> onAttack(player.name) })
+    }
+}
+
+@Composable
+private fun BattleMobCard(
+    mob: MobInfo,
+    selected: Boolean,
+    panelBg: Color,
+    panelBorder: Color,
+    accent: Color,
+    textMain: Color,
+    onClick: () -> Unit
+) {
+    val border = if (selected) accent else panelBorder
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
+        shape = RoundedCornerShape(12.dp),
+        color = panelBg,
+        border = BorderStroke(1.dp, border),
+        tonalElevation = if (selected) 3.dp else 1.dp
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text(mob.name, color = textMain, fontWeight = FontWeight.SemiBold)
+                Text("HP ${mob.hp}/${mob.maxHp}", color = textMain)
+            }
+            Spacer(modifier = Modifier.height(6.dp))
+            BattleHpBar(current = mob.hp, max = mob.maxHp, accent = accent)
+        }
     }
 }
 

@@ -221,7 +221,9 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
                 _lastStateAt.value = System.currentTimeMillis()
             },
             onOutput = { output ->
-                _outputLog.value = (listOf(output) + _outputLog.value).take(400)
+                if (shouldShowChatLine(output)) {
+                    _outputLog.value = (listOf(output) + _outputLog.value).take(400)
+                }
                 parseShopItems(output.text)
             },
             onAuthError = { msg -> _toast.value = msg },
@@ -246,6 +248,27 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             },
             onConsignHistory = { data -> _consignHistory.value = data }
         )
+    }
+
+    private fun shouldShowChatLine(output: OutputPayload): Boolean {
+        val prefix = output.prefix?.trim().orEmpty()
+        val prefixColor = output.prefixColor?.trim().orEmpty()
+        val color = output.color?.trim().orEmpty()
+        if (prefix == "公告" || prefixColor == "announce" || color == "announce") return true
+
+        val text = output.text?.trim().orEmpty()
+        if (text.isBlank()) return false
+
+        val guildChat = Regex("^\\[行会\\]\\[[^\\]]+\\]\\s*.+$")
+        val normalChat = Regex("^\\[[^\\[\\]]{1,20}\\]\\s*.+$")
+        if (guildChat.matches(text)) return true
+
+        if (normalChat.matches(text)) {
+            val name = text.substringAfter("[").substringBefore("]")
+            val blocked = setOf("系统", "公告", "提示", "队伍", "行会", "世界", "附近", "广播")
+            return name !in blocked
+        }
+        return false
     }
 
     fun disconnectSocket() {

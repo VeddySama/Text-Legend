@@ -3531,9 +3531,9 @@ const SET_DROPS = {
   caiya: {
     name: '菜芽套装',
     items: [
-      { id: 'sword_caiya', name: '菜芽王者之刃', drops: [{ mob: '跨服BOSS', chance: '0.3%' }] },
-      { id: 'staff_caiya', name: '菜芽王者权杖', drops: [{ mob: '跨服BOSS', chance: '0.3%' }] },
-      { id: 'sword_caiya_tao', name: '菜芽王者之剑', drops: [{ mob: '跨服BOSS', chance: '0.3%' }] },
+      { id: 'sword_caiya', name: '菜芽霸者之刃', drops: [{ mob: '跨服BOSS', chance: '0.3%' }] },
+      { id: 'staff_caiya', name: '菜芽霸者权杖', drops: [{ mob: '跨服BOSS', chance: '0.3%' }] },
+      { id: 'sword_caiya_tao', name: '菜芽霸者之剑', drops: [{ mob: '跨服BOSS', chance: '0.3%' }] },
       { id: 'armor_caiya_war', name: '菜芽战甲', drops: [{ mob: '跨服BOSS', chance: '0.2%' }] },
       { id: 'armor_caiya_mage', name: '菜芽法袍', drops: [{ mob: '跨服BOSS', chance: '0.2%' }] },
       { id: 'armor_caiya_tao', name: '菜芽道袍', drops: [{ mob: '跨服BOSS', chance: '0.2%' }] },

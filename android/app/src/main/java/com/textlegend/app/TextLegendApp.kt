@@ -68,7 +68,24 @@ fun TextLegendApp(vm: GameViewModel, activity: MainActivity) {
     )
 
     val roundedFont = FontFamily(Typeface.create("sans-serif-rounded", Typeface.NORMAL))
-    val typography = Typography(defaultFontFamily = roundedFont)
+    val baseTypography = Typography()
+    val typography = Typography(
+        displayLarge = baseTypography.displayLarge.copy(fontFamily = roundedFont),
+        displayMedium = baseTypography.displayMedium.copy(fontFamily = roundedFont),
+        displaySmall = baseTypography.displaySmall.copy(fontFamily = roundedFont),
+        headlineLarge = baseTypography.headlineLarge.copy(fontFamily = roundedFont),
+        headlineMedium = baseTypography.headlineMedium.copy(fontFamily = roundedFont),
+        headlineSmall = baseTypography.headlineSmall.copy(fontFamily = roundedFont),
+        titleLarge = baseTypography.titleLarge.copy(fontFamily = roundedFont),
+        titleMedium = baseTypography.titleMedium.copy(fontFamily = roundedFont),
+        titleSmall = baseTypography.titleSmall.copy(fontFamily = roundedFont),
+        bodyLarge = baseTypography.bodyLarge.copy(fontFamily = roundedFont),
+        bodyMedium = baseTypography.bodyMedium.copy(fontFamily = roundedFont),
+        bodySmall = baseTypography.bodySmall.copy(fontFamily = roundedFont),
+        labelLarge = baseTypography.labelLarge.copy(fontFamily = roundedFont),
+        labelMedium = baseTypography.labelMedium.copy(fontFamily = roundedFont),
+        labelSmall = baseTypography.labelSmall.copy(fontFamily = roundedFont)
+    )
     val shapes = Shapes(
         small = RoundedCornerShape(12),
         medium = RoundedCornerShape(18),

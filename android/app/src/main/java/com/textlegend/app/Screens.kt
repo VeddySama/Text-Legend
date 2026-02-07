@@ -707,7 +707,6 @@ private fun CartoonBackground(content: @Composable BoxScope.() -> Unit) {
     )
 }
 
-@Composable
 private data class ActionItem(val label: String, val action: String, val iconRes: Int)
 
 @Composable

@@ -93,7 +93,8 @@ class SocketManager(private val json: Json) {
                     val state = json.decodeFromString(GameState.serializer(), stateJson)
                     onState(state)
                 }.onFailure {
-                    onStatus("state_parse_failed")
+                    val msg = it.message?.take(120) ?: "unknown"
+                    onStatus("state_parse_failed: $msg")
                     onAuthError("状态解析失败")
                 }
             }

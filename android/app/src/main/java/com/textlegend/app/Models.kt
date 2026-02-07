@@ -3,6 +3,7 @@
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonElement
 
 @Serializable
 data class CaptchaResponse(
@@ -177,7 +178,7 @@ data class StatsInfo(
     val vip: Boolean = false,
     val vip_expires_at: Long? = null,
     val dodge: Int = 0,
-    val autoSkillId: String? = null,
+    val autoSkillId: JsonElement? = null,
     val sabak_bonus: Boolean = false,
     val set_bonus: Boolean = false
 )

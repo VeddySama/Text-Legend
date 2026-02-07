@@ -27,6 +27,9 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import kotlinx.coroutines.delay
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.JsonPrimitive
 import androidx.compose.ui.res.painterResource
 import androidx.compose.foundation.Image
 
@@ -641,7 +644,7 @@ private fun ActionsTab(
         vip.add(ActionItem("VIP激活", "vip activate", R.drawable.ic_vip))
     }
     val afk = listOf(
-        if (state?.stats?.autoSkillId != null)
+        if (hasAutoSkill(state?.stats))
             ActionItem("停止挂机", "autoskill off", R.drawable.ic_afk)
         else
             ActionItem("挂机", "afk", R.drawable.ic_afk)
@@ -758,6 +761,16 @@ private fun CartoonGrid(items: List<ActionItem>, onClick: (String) -> Unit) {
             if (rowItems.size == 2) Spacer(modifier = Modifier.weight(1f))
         }
         Spacer(modifier = Modifier.height(8.dp))
+    }
+}
+
+private fun hasAutoSkill(stats: StatsInfo?): Boolean {
+    val value = stats?.autoSkillId ?: return false
+    return when (value) {
+        is JsonNull -> false
+        is JsonArray -> value.isNotEmpty()
+        is JsonPrimitive -> value.contentOrNull?.isNotBlank() == true
+        else -> true
     }
 }
 

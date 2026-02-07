@@ -458,5 +458,6 @@ data class OutputPayload(
     val text: String? = null,
     val prefix: String? = null,
     val color: String? = null,
-    val prefixColor: String? = null
+    val prefixColor: String? = null,
+    val rankTitle: String? = null
 )

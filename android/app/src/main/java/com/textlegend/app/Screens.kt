@@ -16,6 +16,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -366,7 +367,7 @@ fun GameScreen(vm: GameViewModel, onExit: () -> Unit) {
                                 vm.sendCmd("equip $key")
                             }
                         })
-                        2 -> ChatTab(outputs = outputs, input = chatInput, onInputChange = { chatInput = it }, onSend = {
+                        2 -> ChatTab(state = state, outputs = outputs, onCommand = vm::sendCmd, input = chatInput, onInputChange = { chatInput = it }, onSend = {
                             val msg = chatInput.trim()
                             if (msg.isNotEmpty()) {
                                 vm.sendCmd("say $msg")
@@ -889,11 +890,23 @@ private fun itemTypeLabel(type: String?): String = when (type) {
 }
 
 @Composable
-private fun ChatTab(outputs: List<OutputPayload>, input: String, onInputChange: (String) -> Unit, onSend: () -> Unit) {
+private fun ChatTab(
+    state: GameState?,
+    outputs: List<OutputPayload>,
+    onCommand: (String) -> Unit,
+    input: String,
+    onInputChange: (String) -> Unit,
+    onSend: () -> Unit
+) {
+    var selectedName by remember { mutableStateOf<String?>(null) }
+    val selectedPlayer = state?.players?.firstOrNull { it.name == selectedName }
     Column(modifier = Modifier.fillMaxSize()) {
         LazyColumn(modifier = Modifier.weight(1f), reverseLayout = true) {
             items(outputs) { line ->
-                Text(text = line.text ?: "")
+                ChatLine(
+                    output = line,
+                    onNameClick = { name -> selectedName = name }
+                )
                 Divider()
             }
         }
@@ -904,6 +917,123 @@ private fun ChatTab(outputs: List<OutputPayload>, input: String, onInputChange: 
             Button(onClick = onSend) { Text("发送") }
         }
     }
+
+    if (!selectedName.isNullOrBlank()) {
+        PlayerInfoDialog(
+            name = selectedName ?: "",
+            player = selectedPlayer,
+            onDismiss = { selectedName = null },
+            onCommand = onCommand
+        )
+    }
+}
+
+@Composable
+private fun ChatLine(output: OutputPayload, onNameClick: (String) -> Unit) {
+    val prefix = output.prefix?.trim().orEmpty()
+    val prefixColor = output.prefixColor?.trim().orEmpty()
+    val color = output.color?.trim().orEmpty()
+    val text = output.text?.trim().orEmpty()
+    val isAnnounce = prefix == "公告" || prefixColor == "announce" || color == "announce"
+
+    if (isAnnounce) {
+        Text(text = text, color = Color(0xFFE0B25C), fontWeight = FontWeight.SemiBold)
+        return
+    }
+
+    val guildMatch = Regex("^\\[行会\\]\\[([^\\]]+)\\]\\s*(.*)$").find(text)
+    val normalMatch = Regex("^\\[([^\\[\\]]{1,20})\\]\\s*(.*)$").find(text)
+
+    if (guildMatch != null) {
+        val name = guildMatch.groupValues[1]
+        val msg = guildMatch.groupValues[2]
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("[行会] ", color = Color(0xFF9C7A4B))
+            Text(
+                text = "[$name]",
+                color = Color(0xFFD8C2A0),
+                modifier = Modifier.clickable { onNameClick(name) }
+            )
+            ChatTitleBadge(title = output.rankTitle)
+            Text(" $msg")
+        }
+        return
+    }
+
+    if (normalMatch != null) {
+        val name = normalMatch.groupValues[1]
+        val msg = normalMatch.groupValues[2]
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = "[$name]",
+                color = Color(0xFFD8C2A0),
+                modifier = Modifier.clickable { onNameClick(name) }
+            )
+            ChatTitleBadge(title = output.rankTitle)
+            Text(" $msg")
+        }
+        return
+    }
+
+    Text(text)
+}
+
+@Composable
+private fun ChatTitleBadge(title: String?) {
+    if (title.isNullOrBlank()) return
+    Spacer(modifier = Modifier.width(6.dp))
+    Surface(
+        shape = RoundedCornerShape(8.dp),
+        color = Color(0xFF3B2E25),
+        border = BorderStroke(1.dp, Color(0xFF7C5A32))
+    ) {
+        Text(
+            text = title,
+            color = Color(0xFFE8D6B8),
+            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+        )
+    }
+}
+
+@Composable
+private fun PlayerInfoDialog(
+    name: String,
+    player: PlayerBrief?,
+    onDismiss: () -> Unit,
+    onCommand: (String) -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("玩家信息") },
+        text = {
+            Column {
+                Text(name, fontWeight = FontWeight.SemiBold)
+                if (player != null) {
+                    Text("等级 Lv${player.level} ${classLabel(player.classId)}")
+                    if (!player.guild.isNullOrBlank()) Text("行会 ${player.guild}")
+                    Text("血量 ${player.hp}/${player.maxHp}")
+                    Text("PK ${player.pk}")
+                } else {
+                    Text("暂无玩家详细信息")
+                }
+                Spacer(modifier = Modifier.height(10.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(onClick = { onCommand("attack $name"); onDismiss() }) { Text("攻击") }
+                    Button(onClick = { onCommand("observe $name"); onDismiss() }) { Text("观察") }
+                }
+                Spacer(modifier = Modifier.height(6.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(onClick = { onCommand("trade request $name"); onDismiss() }) { Text("交易") }
+                    Button(onClick = { onCommand("party invite $name"); onDismiss() }) { Text("组队") }
+                }
+                Spacer(modifier = Modifier.height(6.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(onClick = { onCommand("guild invite $name"); onDismiss() }) { Text("行会") }
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text("关闭") } }
+    )
 }
 
 @Composable

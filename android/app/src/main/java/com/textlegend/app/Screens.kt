@@ -28,6 +28,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.style.TextAlign
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -556,7 +557,7 @@ private fun TopStatus(state: GameState?) {
             Spacer(modifier = Modifier.width(12.dp))
             Column(
                 modifier = Modifier.weight(1f),
-                horizontalAlignment = Alignment.End
+                horizontalAlignment = Alignment.Start
             ) {
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Text(text = "攻击 ${stats?.atk ?: 0}")
@@ -571,20 +572,42 @@ private fun TopStatus(state: GameState?) {
                     Text(text = "闪避 ${stats?.dodge ?: 0}%")
                 }
                 Spacer(modifier = Modifier.height(6.dp))
-                Column(horizontalAlignment = Alignment.End) {
+                Column {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            text = "沙巴克加成 ${if (stats?.sabak_bonus == true) "有" else "无"}",
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.weight(1f),
+                            textAlign = TextAlign.Start
+                        )
+                        Text(
+                            text = "套装加成 ${if (stats?.set_bonus == true) "有" else "无"}",
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.weight(1f),
+                            textAlign = TextAlign.Start
+                        )
+                        Text(
+                            text = "在线人数 ${state?.online?.count ?: 0}",
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.weight(1f),
+                            textAlign = TextAlign.Start
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(2.dp))
                     Text(text = vipStatusText(stats), style = MaterialTheme.typography.bodySmall)
-                    Text(
-                        text = "沙巴克加成 ${if (stats?.sabak_bonus == true) "有" else "无"}",
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                    Text(
-                        text = "套装加成 ${if (stats?.set_bonus == true) "有" else "无"}",
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                    Text(
-                        text = "在线人数 ${state?.online?.count ?: 0}",
-                        style = MaterialTheme.typography.bodySmall
-                    )
+                    val party = state?.party
+                    if (party == null || party.members.isEmpty()) {
+                        Text(text = "队伍 未加入", style = MaterialTheme.typography.bodySmall)
+                    } else {
+                        Text(
+                            text = "队伍 ${party.size}人 队长 ${party.leader}",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        Text(
+                            text = "成员 ${partyMembersText(party)}",
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
                 }
             }
         }
@@ -907,24 +930,28 @@ private fun InventoryTab(state: GameState?, onUse: (ItemInfo) -> Unit) {
                             row.forEach { eq ->
                                 val item = eq.item
                                 Surface(
-                                    modifier = Modifier.weight(1f),
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .heightIn(min = 96.dp),
                                     shape = RoundedCornerShape(10.dp),
                                     color = MaterialTheme.colorScheme.surfaceVariant,
                                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.35f))
                                 ) {
                                     Column(modifier = Modifier.padding(10.dp)) {
                                         if (item != null) {
+                                            val effectInline = formatEffectInline(item.effects)
                                             Text(
-                                                text = "${slotLabel(eq.slot)}：${item.name}",
+                                                text = "${slotLabel(eq.slot)}：${item.name}${if (effectInline.isNotBlank()) "（$effectInline）" else ""}",
                                                 color = rarityColor(item.rarity)
                                             )
                                             val refine = eq.refine_level ?: 0
-                                            if (refine > 0) {
+                                            val element = elementAtkFromEffects(item.effects)
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.SpaceBetween
+                                            ) {
                                                 Text("锻造 +$refine")
-                                            }
-                                            val effectText = formatEffectText(item.effects)
-                                            if (effectText.isNotBlank()) {
-                                                Text(effectText)
+                                                Text("元素 $element")
                                             }
                                             Text("耐久 ${eq.durability ?: 0}/${eq.max_durability ?: 0}")
                                         } else {
@@ -1052,6 +1079,18 @@ private fun formatEffectText(effects: JsonObject?): String {
     return parts.joinToString(" | ")
 }
 
+private fun formatEffectInline(effects: JsonObject?): String {
+    if (effects == null) return ""
+    val parts = mutableListOf<String>()
+    val elementAtk = effects["elementAtk"]?.jsonPrimitive?.doubleOrNull ?: 0.0
+    if (elementAtk > 0) parts.add("元素+${elementAtk.toInt()}")
+    val keys = effects.keys.filter { it != "elementAtk" }
+    if (keys.isNotEmpty()) {
+        parts.add(keys.joinToString("、") { effectLabel(it) })
+    }
+    return parts.joinToString(" ")
+}
+
 private fun effectLabel(key: String): String = when (key) {
     "combo" -> "连击"
     "fury" -> "狂攻"
@@ -1073,6 +1112,20 @@ private fun vipStatusText(stats: StatsInfo?): String {
 private fun formatTime(ts: Long): String {
     val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.getDefault())
     return sdf.format(Date(ts))
+}
+
+private fun partyMembersText(party: PartyInfo): String {
+    val names = party.members.map { "${it.name}${if (it.online) "(在线)" else "(离线)"}" }
+    return if (names.size <= 4) {
+        names.joinToString("，")
+    } else {
+        names.take(4).joinToString("，") + "…"
+    }
+}
+
+private fun elementAtkFromEffects(effects: JsonObject?): Int {
+    val value = effects?.get("elementAtk")?.jsonPrimitive?.doubleOrNull ?: 0.0
+    return if (value > 0) value.toInt() else 0
 }
 
 @Composable

@@ -1,0 +1,48 @@
+﻿name: Build Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: ["main", "master"]
+    paths:
+      - "android/**"
+      - ".github/workflows/android-apk.yml"
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Decode keystore
+        shell: bash
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/release.keystore
+
+      - name: Build APK (Release)
+        uses: gradle/gradle-build-action@v3
+        with:
+          gradle-version: 8.2.2
+          build-root-directory: android
+          arguments: :app:assembleRelease
+        env:
+          KEYSTORE_PATH: ${{ github.workspace }}/android/release.keystore
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release-apk
+          path: android/app/build/outputs/apk/release/app-release.apk

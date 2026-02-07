@@ -76,6 +76,52 @@ docker compose -f docker-compose.mysql.yml up --build
 - **沙巴克**：报名、查看沙巴克信息
 - **VIP**：激活与领取（按钮在右侧操作区）
 
+## 安卓客户端（原生）
+
+已提供一个原生安卓客户端（Kotlin + Jetpack Compose），通过现有 HTTP / Socket API 连接服务器，功能与网页端一致（不含 GM 功能）。
+
+### 构建
+
+1. 用 Android Studio 打开 `android` 目录  
+2. 等待 Gradle 同步完成  
+3. 运行 `app` 模块
+
+### GitHub Actions 打包 APK
+
+已提供工作流：`.github/workflows/android-apk.yml`  
+触发方式：推送 `android/**` 或手动 `workflow_dispatch`。
+
+构建产物会上传为 `app-release-apk`，路径：
+
+`android/app/build/outputs/apk/release/app-release.apk`
+
+### 自动签名（GitHub Secrets）
+
+已提供 keystore 生成工作流：`.github/workflows/android-keystore.yml`  
+运行后下载 `android-keystore` artifact，里面包含：
+
+- `keystore_base64.txt`
+- `store_password.txt`
+- `key_password.txt`
+- `key_alias.txt`
+
+将以上内容分别写入仓库 Secrets：
+
+- `KEYSTORE_BASE64`
+- `KEYSTORE_PASSWORD`
+- `KEY_ALIAS`
+- `KEY_PASSWORD`
+
+之后执行 APK 打包工作流会自动签名。
+
+### 连接服务器
+
+首次启动会提示输入服务器地址：
+
+- 默认：`https://cq.071717.xyz/`
+- 模拟器本地调试：`http://10.0.2.2:3000/`
+- 真机局域网：`http://192.168.1.10:3000/`
+
 ## GM 后台
 
 访问：`http://localhost:3000/admin/`

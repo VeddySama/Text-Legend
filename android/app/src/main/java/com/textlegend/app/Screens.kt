@@ -769,7 +769,7 @@ private fun hasAutoSkill(stats: StatsInfo?): Boolean {
     return when (value) {
         is JsonNull -> false
         is JsonArray -> value.isNotEmpty()
-        is JsonPrimitive -> value.contentOrNull?.isNotBlank() == true
+        is JsonPrimitive -> if (value.isString) value.content.isNotBlank() else true
         else -> true
     }
 }

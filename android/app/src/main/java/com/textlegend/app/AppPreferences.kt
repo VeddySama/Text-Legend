@@ -38,11 +38,18 @@ class AppPreferences(private val context: Context) {
         return next
     }
 
+    fun setPendingDownloadId(id: Long) {
+        prefs.edit().putLong(KEY_PENDING_DOWNLOAD_ID, id).apply()
+    }
+
+    fun getPendingDownloadId(): Long = prefs.getLong(KEY_PENDING_DOWNLOAD_ID, 0L)
+
     companion object {
         private const val KEY_SERVER_URL = "server_url"
         private const val KEY_TOKEN = "token"
         private const val KEY_USERNAME = "username"
         private const val KEY_REALM_ID = "realm_id"
         private const val KEY_DEVICE_ID = "device_id"
+        private const val KEY_PENDING_DOWNLOAD_ID = "pending_download_id"
     }
 }

@@ -1,6 +1,9 @@
 ﻿package com.textlegend.app
 
 import android.app.Application
+import android.content.Context
+import android.content.pm.PackageInfo
+import android.content.pm.PackageManager
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -13,6 +16,7 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
     private val json = Json { ignoreUnknownKeys = true }
     private val api = ApiService(json)
     private val socket = SocketManager(json)
+    private val updateManager = UpdateManager(application)
 
     private val _serverUrl = MutableStateFlow(prefs.getServerUrl() ?: "https://cq.071717.xyz/")
     val serverUrl: StateFlow<String> = _serverUrl
@@ -70,6 +74,9 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _selectedRealmId = MutableStateFlow(prefs.getRealmId())
     val selectedRealmId: StateFlow<Int> = _selectedRealmId
+
+    private val _updateInfo = MutableStateFlow<UpdateManager.UpdateInfo?>(null)
+    val updateInfo: StateFlow<UpdateManager.UpdateInfo?> = _updateInfo
 
     private var token: String? = prefs.getToken()
     private var username: String? = prefs.getUsername()
@@ -261,6 +268,35 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
         prefs.setUsername(null)
     }
 
+    fun checkUpdate() {
+        viewModelScope.launch {
+            val current = getVersionCode(getApplication())
+            val info = updateManager.checkForUpdate("e5sub/Text-Legend", current)
+            _updateInfo.value = info
+        }
+    }
+
+    fun startUpdate(activity: android.app.Activity) {
+        val info = _updateInfo.value ?: return
+        if (!updateManager.canRequestInstall()) {
+            updateManager.requestInstallPermission(activity)
+            return
+        }
+        val downloadId = updateManager.downloadAndInstall(info)
+        prefs.setPendingDownloadId(downloadId)
+    }
+
+    fun onDownloadCompleted(id: Long) {
+        updateManager.openDownloadedApk(id)
+        prefs.setPendingDownloadId(0)
+    }
+
+    fun getPendingDownloadId(): Long = prefs.getPendingDownloadId()
+
+    fun dismissUpdate() {
+        _updateInfo.value = null
+    }
+
     private fun normalizeBaseUrl(url: String): String {
         var next = url.trim()
         if (!next.startsWith("http://") && !next.startsWith("https://")) {
@@ -286,6 +322,16 @@ class GameViewModel(application: Application) : AndroidViewModel(application) {
             ShopItem(name, price)
         }
         _shopItems.value = items
+    }
+
+    private fun getVersionCode(context: Context): Int {
+        return try {
+            val pm = context.packageManager
+            val info = pm.getPackageInfo(context.packageName, 0)
+            if (android.os.Build.VERSION.SDK_INT >= 28) info.longVersionCode.toInt() else info.versionCode
+        } catch (_: Exception) {
+            0
+        }
     }
 }
 

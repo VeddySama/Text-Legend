@@ -1,12 +1,16 @@
 ﻿package com.textlegend.app
 
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -14,9 +18,13 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 
 @Composable
-fun TextLegendApp() {
+fun TextLegendApp(vm: GameViewModel, activity: MainActivity) {
     val navController = rememberNavController()
-    val vm: GameViewModel = viewModel()
+    val updateInfo by vm.updateInfo.collectAsState()
+
+    LaunchedEffect(Unit) {
+        vm.checkUpdate()
+    }
 
     MaterialTheme {
         Surface(modifier = Modifier.fillMaxSize()) {
@@ -72,6 +80,24 @@ fun TextLegendApp() {
                         }
                     )
                 }
+            }
+
+            if (updateInfo != null) {
+                AlertDialog(
+                    onDismissRequest = { vm.dismissUpdate() },
+                    confirmButton = {
+                        TextButton(onClick = { vm.startUpdate(activity) }) {
+                            Text("更新")
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { vm.dismissUpdate() }) {
+                            Text("稍后")
+                        }
+                    },
+                    title = { Text("发现新版本") },
+                    text = { Text("检测到新版本 ${updateInfo?.latestTag}，是否更新？") }
+                )
             }
         }
     }

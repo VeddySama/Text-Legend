@@ -12,8 +12,10 @@ android {
         applicationId "com.textlegend.app"
         minSdk 23
         targetSdk 34
-        versionCode 1
-        versionName "1.0.0"
+        def vc = System.getenv("VERSION_CODE")
+        def vn = System.getenv("VERSION_NAME")
+        versionCode vc ? vc.toInteger() : 1
+        versionName vn ?: "1.0.0"
     }
 
     signingConfigs {

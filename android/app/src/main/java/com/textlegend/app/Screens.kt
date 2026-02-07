@@ -710,6 +710,29 @@ private fun BattleTab(
                     items = skills.map { "${it.name} Lv${it.level}" to { onCast(it, selectedMob) } }
                 )
             }
+            val summons = state?.summons.orEmpty()
+            if (summons.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(10.dp))
+                Text("召唤物", color = textMain)
+                Spacer(modifier = Modifier.height(6.dp))
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(summons) { summon ->
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = Color(0xFF1F1A16),
+                            border = BorderStroke(1.dp, panelBorder),
+                            tonalElevation = 1.dp
+                        ) {
+                            Column(modifier = Modifier.padding(10.dp)) {
+                                Text("${summon.name} Lv${summon.level}", color = textMain, fontWeight = FontWeight.SemiBold)
+                                Text("HP ${summon.hp}/${summon.maxHp}", color = textMain)
+                                Text("攻击 ${summon.atk} 防御 ${summon.def}", color = textMain)
+                                Text("魔御 ${summon.mdef}", color = textMain)
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -810,6 +833,14 @@ private fun BattleSectionCard(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(title, style = MaterialTheme.typography.titleSmall, color = textMain)
+                    if (!expanded) {
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = summary,
+                            color = Color(0xFFB7A189),
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
                 }
                 Surface(
                     shape = RoundedCornerShape(999.dp),
@@ -825,14 +856,7 @@ private fun BattleSectionCard(
             }
         }
 
-        if (!expanded) {
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(
-                text = summary,
-                color = Color(0xFFB7A189),
-                modifier = Modifier.padding(horizontal = 6.dp)
-            )
-        } else {
+        if (expanded) {
             Spacer(modifier = Modifier.height(6.dp))
             Surface(
                 modifier = Modifier.fillMaxWidth(),

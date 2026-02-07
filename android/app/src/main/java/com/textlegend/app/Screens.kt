@@ -1007,11 +1007,25 @@ private fun InventoryTab(state: GameState?, onUse: (ItemInfo) -> Unit) {
                                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.35f))
                             ) {
                                 Column(modifier = Modifier.padding(10.dp)) {
+                                    val isEquip = !item.slot.isNullOrBlank() || item.type == "weapon" || item.type == "armor" || item.type == "accessory"
+                                    val effectInline = formatEffectInline(item.effects)
+                                    val refine = item.refine_level
+                                    val nameSuffixParts = mutableListOf<String>()
+                                    if (effectInline.isNotBlank()) nameSuffixParts.add(effectInline)
+                                    if (isEquip && refine > 0) nameSuffixParts.add("锻造+$refine")
+                                    val nameSuffix = if (nameSuffixParts.isNotEmpty()) {
+                                        "（" + nameSuffixParts.joinToString(" | ") + "）"
+                                    } else ""
                                     Text(
-                                        text = "${item.name} x${item.qty}",
+                                        text = "${item.name} x${item.qty}$nameSuffix",
                                         color = rarityColor(item.rarity)
                                     )
-                                    Text(itemTypeLabel(item.type))
+                                    if (isEquip) {
+                                        val element = elementAtkFromEffects(item.effects)
+                                        Text("${slotLabel(item.slot)}${if (element > 0) " 元素+$element" else ""}")
+                                    } else {
+                                        Text(itemTypeLabel(item.type))
+                                    }
                                 }
                             }
                         }
@@ -1096,8 +1110,6 @@ private fun formatEffectText(effects: JsonObject?): String {
 private fun formatEffectInline(effects: JsonObject?): String {
     if (effects == null) return ""
     val parts = mutableListOf<String>()
-    val elementAtk = effects["elementAtk"]?.jsonPrimitive?.doubleOrNull ?: 0.0
-    if (elementAtk > 0) parts.add("元素+${elementAtk.toInt()}")
     val keys = effects.keys.filter { it != "elementAtk" }
     if (keys.isNotEmpty()) {
         parts.add(keys.joinToString("、") { effectLabel(it) })

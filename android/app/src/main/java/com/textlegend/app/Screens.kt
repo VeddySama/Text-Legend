@@ -16,6 +16,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -492,36 +493,47 @@ private fun TopStatus(state: GameState?) {
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            Text(text = player?.name ?: "未连接", style = MaterialTheme.typography.titleMedium)
-            Text(text = "${classLabel(player?.classId ?: "")} Lv${player?.level ?: 0} | 金币 ${stats?.gold ?: 0}")
-            Spacer(modifier = Modifier.height(6.dp))
-            LinearProgressIndicator(
-                progress = if (stats != null && stats.maxHp > 0) stats.hp.toFloat() / stats.maxHp else 0f,
-                modifier = Modifier.fillMaxWidth().height(8.dp),
-                color = Color(0xFFE06B6B),
-                trackColor = MaterialTheme.colorScheme.surfaceVariant
-            )
-            Text(text = "HP ${stats?.hp ?: 0}/${stats?.maxHp ?: 0}")
-            Spacer(modifier = Modifier.height(4.dp))
-            LinearProgressIndicator(
-                progress = if (stats != null && stats.maxMp > 0) stats.mp.toFloat() / stats.maxMp else 0f,
-                modifier = Modifier.fillMaxWidth().height(8.dp),
-                color = Color(0xFF6CA8E0),
-                trackColor = MaterialTheme.colorScheme.surfaceVariant
-            )
-            Text(text = "MP ${stats?.mp ?: 0}/${stats?.maxMp ?: 0}")
-            Spacer(modifier = Modifier.height(4.dp))
-            LinearProgressIndicator(
-                progress = if (stats != null && stats.expNext > 0) stats.exp.toFloat() / stats.expNext else 0f,
-                modifier = Modifier.fillMaxWidth().height(8.dp),
-                color = Color(0xFFE0B25C),
-                trackColor = MaterialTheme.colorScheme.surfaceVariant
-            )
-            Text(text = "EXP ${stats?.exp ?: 0}/${stats?.expNext ?: 0}")
-            if (state?.room != null) {
+        Row(modifier = Modifier.padding(12.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(text = player?.name ?: "未连接", style = MaterialTheme.typography.titleMedium)
+                Text(text = "${classLabel(player?.classId ?: "")} Lv${player?.level ?: 0} | 金币 ${stats?.gold ?: 0}")
                 Spacer(modifier = Modifier.height(6.dp))
-                Text(text = "${state.room.zone} - ${state.room.name}")
+                val hpProgress by animateFloatAsState(
+                    targetValue = if (stats != null && stats.maxHp > 0) stats.hp.toFloat() / stats.maxHp else 0f,
+                    label = "top_hp"
+                )
+                LinearProgressIndicator(
+                    progress = hpProgress,
+                    modifier = Modifier.fillMaxWidth().height(8.dp),
+                    color = Color(0xFFE06B6B),
+                    trackColor = MaterialTheme.colorScheme.surfaceVariant
+                )
+                Text(text = "HP ${stats?.hp ?: 0}/${stats?.maxHp ?: 0}")
+                Spacer(modifier = Modifier.height(4.dp))
+                val expProgress by animateFloatAsState(
+                    targetValue = if (stats != null && stats.expNext > 0) stats.exp.toFloat() / stats.expNext else 0f,
+                    label = "top_exp"
+                )
+                LinearProgressIndicator(
+                    progress = expProgress,
+                    modifier = Modifier.fillMaxWidth().height(8.dp),
+                    color = Color(0xFFE0B25C),
+                    trackColor = MaterialTheme.colorScheme.surfaceVariant
+                )
+                Text(text = "EXP ${stats?.exp ?: 0}/${stats?.expNext ?: 0}")
+                if (state?.room != null) {
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(text = "当前位置：${state.room.zone} - ${state.room.name}")
+                }
+            }
+            Spacer(modifier = Modifier.width(12.dp))
+            Column(horizontalAlignment = Alignment.End) {
+                Text(text = "攻击 ${stats?.atk ?: 0}")
+                Text(text = "魔法 ${stats?.mag ?: 0}")
+                Text(text = "道术 ${stats?.spirit ?: 0}")
+                Text(text = "防御 ${stats?.def ?: 0}")
+                Text(text = "魔御 ${stats?.mdef ?: 0}")
+                Text(text = "闪避 ${stats?.dodge ?: 0}%")
             }
         }
     }
@@ -541,6 +553,10 @@ private fun BattleTab(
     val panelBorder = Color(0xFF6E4B2D)
     val accent = Color(0xFFD79A4E)
     val textMain = Color(0xFFF4E8D6)
+    var showPlayer by rememberSaveable { mutableStateOf(false) }
+    var showSkills by rememberSaveable { mutableStateOf(false) }
+    var showMobs by rememberSaveable { mutableStateOf(false) }
+    var showExits by rememberSaveable { mutableStateOf(false) }
 
     Column(modifier = Modifier.fillMaxSize().verticalScroll(scrollState)) {
         Row(
@@ -552,7 +568,14 @@ private fun BattleTab(
         }
         Spacer(modifier = Modifier.height(12.dp))
 
-        BattleSectionCard(title = "玩家", panelBg = panelBg, panelBorder = panelBorder, textMain = textMain) {
+        BattleSectionCard(
+            title = "玩家",
+            expanded = showPlayer,
+            onToggle = { showPlayer = !showPlayer },
+            panelBg = panelBg,
+            panelBorder = panelBorder,
+            textMain = textMain
+        ) {
             val player = state?.player
             val stats = state?.stats
             if (player == null || stats == null) {
@@ -566,7 +589,8 @@ private fun BattleTab(
                 BattleHpBar(
                     current = stats.hp,
                     max = stats.maxHp,
-                    accent = accent
+                    accent = accent,
+                    animate = true
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text("HP ${stats.hp}/${stats.maxHp}", color = textMain)
@@ -584,7 +608,14 @@ private fun BattleTab(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        BattleSectionCard(title = "技能", panelBg = panelBg, panelBorder = panelBorder, textMain = textMain) {
+        BattleSectionCard(
+            title = "技能",
+            expanded = showSkills,
+            onToggle = { showSkills = !showSkills },
+            panelBg = panelBg,
+            panelBorder = panelBorder,
+            textMain = textMain
+        ) {
             val skills = state?.skills.orEmpty()
             if (skills.isEmpty()) {
                 Text("暂无技能", color = textMain)
@@ -597,7 +628,14 @@ private fun BattleTab(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        BattleSectionCard(title = "怪物", panelBg = panelBg, panelBorder = panelBorder, textMain = textMain) {
+        BattleSectionCard(
+            title = "怪物",
+            expanded = showMobs,
+            onToggle = { showMobs = !showMobs },
+            panelBg = panelBg,
+            panelBorder = panelBorder,
+            textMain = textMain
+        ) {
             val mobs = state?.mobs.orEmpty()
             if (mobs.isEmpty()) {
                 Text("暂无怪物", color = textMain)
@@ -623,7 +661,14 @@ private fun BattleTab(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        BattleSectionCard(title = "方向", panelBg = panelBg, panelBorder = panelBorder, textMain = textMain) {
+        BattleSectionCard(
+            title = "方向",
+            expanded = showExits,
+            onToggle = { showExits = !showExits },
+            panelBg = panelBg,
+            panelBorder = panelBorder,
+            textMain = textMain
+        ) {
             val exits = state?.exits.orEmpty().map { it.label to it.dir }
             if (exits.isEmpty()) {
                 Text("暂无出口", color = textMain)
@@ -639,29 +684,48 @@ private fun BattleTab(
 @Composable
 private fun BattleSectionCard(
     title: String,
+    expanded: Boolean,
+    onToggle: () -> Unit,
     panelBg: Color,
     panelBorder: Color,
     textMain: Color,
     content: @Composable ColumnScope.() -> Unit
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
-        Text(title, style = MaterialTheme.typography.titleSmall, color = textMain)
-        Spacer(modifier = Modifier.height(6.dp))
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp),
-            color = panelBg,
-            border = BorderStroke(1.dp, panelBorder),
-            tonalElevation = 2.dp
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { onToggle() },
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Column(modifier = Modifier.padding(12.dp), content = content)
+            Text(title, style = MaterialTheme.typography.titleSmall, color = textMain)
+            Text(if (expanded) "收起" else "展开", color = textMain)
+        }
+        if (expanded) {
+            Spacer(modifier = Modifier.height(6.dp))
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                color = panelBg,
+                border = BorderStroke(1.dp, panelBorder),
+                tonalElevation = 2.dp
+            ) {
+                Column(modifier = Modifier.padding(12.dp), content = content)
+            }
         }
     }
 }
 
 @Composable
-private fun BattleHpBar(current: Int, max: Int, accent: Color) {
-    val progress = if (max > 0) current.toFloat() / max else 0f
+private fun BattleHpBar(current: Int, max: Int, accent: Color, animate: Boolean = true) {
+    val rawProgress = if (max > 0) current.toFloat() / max else 0f
+    val progress = if (animate) {
+        val animated by animateFloatAsState(targetValue = rawProgress, label = "battle_hp")
+        animated
+    } else {
+        rawProgress
+    }
     LinearProgressIndicator(
         progress = progress,
         modifier = Modifier

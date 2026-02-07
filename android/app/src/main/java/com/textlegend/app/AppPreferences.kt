@@ -50,6 +50,14 @@ class AppPreferences(private val context: Context) {
         prefs.edit().putString(KEY_THEME_MODE, mode).apply()
     }
 
+    fun getBattlePanelExpanded(key: String, defaultValue: Boolean = false): Boolean {
+        return prefs.getBoolean("${KEY_BATTLE_PANEL_PREFIX}$key", defaultValue)
+    }
+
+    fun setBattlePanelExpanded(key: String, expanded: Boolean) {
+        prefs.edit().putBoolean("${KEY_BATTLE_PANEL_PREFIX}$key", expanded).apply()
+    }
+
     companion object {
         private const val KEY_SERVER_URL = "server_url"
         private const val KEY_TOKEN = "token"
@@ -58,5 +66,6 @@ class AppPreferences(private val context: Context) {
         private const val KEY_DEVICE_ID = "device_id"
         private const val KEY_PENDING_DOWNLOAD_ID = "pending_download_id"
         private const val KEY_THEME_MODE = "theme_mode"
+        private const val KEY_BATTLE_PANEL_PREFIX = "battle_panel_"
     }
 }

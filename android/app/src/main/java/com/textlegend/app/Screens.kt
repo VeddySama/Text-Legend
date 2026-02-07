@@ -29,6 +29,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -576,38 +577,25 @@ private fun TopStatus(state: GameState?) {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(
                             text = "沙巴克加成 ${if (stats?.sabak_bonus == true) "有" else "无"}",
-                            style = MaterialTheme.typography.bodySmall,
+                            style = MaterialTheme.typography.bodyMedium,
                             modifier = Modifier.weight(1f),
                             textAlign = TextAlign.Start
                         )
                         Text(
                             text = "套装加成 ${if (stats?.set_bonus == true) "有" else "无"}",
-                            style = MaterialTheme.typography.bodySmall,
+                            style = MaterialTheme.typography.bodyMedium,
                             modifier = Modifier.weight(1f),
                             textAlign = TextAlign.Start
                         )
                         Text(
                             text = "在线人数 ${state?.online?.count ?: 0}",
-                            style = MaterialTheme.typography.bodySmall,
+                            style = MaterialTheme.typography.bodyMedium,
                             modifier = Modifier.weight(1f),
                             textAlign = TextAlign.Start
                         )
                     }
                     Spacer(modifier = Modifier.height(2.dp))
-                    Text(text = vipStatusText(stats), style = MaterialTheme.typography.bodySmall)
-                    val party = state?.party
-                    if (party == null || party.members.isEmpty()) {
-                        Text(text = "队伍 未加入", style = MaterialTheme.typography.bodySmall)
-                    } else {
-                        Text(
-                            text = "队伍 ${party.size}人 队长 ${party.leader}",
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                        Text(
-                            text = "成员 ${partyMembersText(party)}",
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                    }
+                    Text(text = vipStatusText(stats), style = MaterialTheme.typography.bodyMedium)
                 }
             }
         }
@@ -623,15 +611,25 @@ private fun BattleTab(
     onAttack: (String) -> Unit,
     onCast: (SkillInfo, MobInfo?) -> Unit
 ) {
+    val context = LocalContext.current
+    val prefs = remember { AppPreferences(context) }
     val scrollState: ScrollState = rememberScrollState()
     val panelBg = Color(0xFF2C2622)
     val panelBorder = Color(0xFF6E4B2D)
     val accent = Color(0xFFD79A4E)
     val textMain = Color(0xFFF4E8D6)
-    var showPlayer by rememberSaveable { mutableStateOf(false) }
-    var showSkills by rememberSaveable { mutableStateOf(false) }
-    var showMobs by rememberSaveable { mutableStateOf(false) }
-    var showExits by rememberSaveable { mutableStateOf(false) }
+    var showPlayer by rememberSaveable {
+        mutableStateOf(prefs.getBattlePanelExpanded("player", false))
+    }
+    var showSkills by rememberSaveable {
+        mutableStateOf(prefs.getBattlePanelExpanded("skills", false))
+    }
+    var showMobs by rememberSaveable {
+        mutableStateOf(prefs.getBattlePanelExpanded("mobs", false))
+    }
+    var showExits by rememberSaveable {
+        mutableStateOf(prefs.getBattlePanelExpanded("exits", false))
+    }
 
     Column(modifier = Modifier.fillMaxSize().verticalScroll(scrollState)) {
         Row(
@@ -646,7 +644,11 @@ private fun BattleTab(
         BattleSectionCard(
             title = "玩家",
             expanded = showPlayer,
-            onToggle = { showPlayer = !showPlayer },
+            onToggle = {
+                val next = !showPlayer
+                showPlayer = next
+                prefs.setBattlePanelExpanded("player", next)
+            },
             summary = run {
                 val p = state?.player
                 if (p == null) "未连接" else "附近玩家 ${state?.players?.size ?: 0}"
@@ -690,7 +692,11 @@ private fun BattleTab(
         BattleSectionCard(
             title = "技能",
             expanded = showSkills,
-            onToggle = { showSkills = !showSkills },
+            onToggle = {
+                val next = !showSkills
+                showSkills = next
+                prefs.setBattlePanelExpanded("skills", next)
+            },
             summary = "技能数量 ${state?.skills?.size ?: 0}",
             panelBg = panelBg,
             panelBorder = panelBorder,
@@ -711,7 +717,11 @@ private fun BattleTab(
         BattleSectionCard(
             title = "怪物",
             expanded = showMobs,
-            onToggle = { showMobs = !showMobs },
+            onToggle = {
+                val next = !showMobs
+                showMobs = next
+                prefs.setBattlePanelExpanded("mobs", next)
+            },
             summary = "怪物数量 ${state?.mobs?.size ?: 0}",
             panelBg = panelBg,
             panelBorder = panelBorder,
@@ -745,7 +755,11 @@ private fun BattleTab(
         BattleSectionCard(
             title = "方向",
             expanded = showExits,
-            onToggle = { showExits = !showExits },
+            onToggle = {
+                val next = !showExits
+                showExits = next
+                prefs.setBattlePanelExpanded("exits", next)
+            },
             summary = "出口数量 ${state?.exits?.size ?: 0}",
             panelBg = panelBg,
             panelBorder = panelBorder,
@@ -951,7 +965,7 @@ private fun InventoryTab(state: GameState?, onUse: (ItemInfo) -> Unit) {
                                                 horizontalArrangement = Arrangement.SpaceBetween
                                             ) {
                                                 Text("锻造 +$refine")
-                                                Text("元素 $element")
+                                                Text("元素 +$element")
                                             }
                                             Text("耐久 ${eq.durability ?: 0}/${eq.max_durability ?: 0}")
                                         } else {
@@ -1145,14 +1159,30 @@ private fun ChatTab(
             items(outputs) { line ->
                 ChatLine(
                     output = line,
-                    onNameClick = { name -> selectedName = name }
+                    onNameClick = { name -> selectedName = name },
+                    onLocationClick = { label ->
+                        if (label.isNotBlank()) onCommand("move $label")
+                    }
                 )
                 Divider()
             }
         }
         Spacer(modifier = Modifier.height(8.dp))
-        Row {
+        Row(verticalAlignment = Alignment.CenterVertically) {
             OutlinedTextField(value = input, onValueChange = onInputChange, modifier = Modifier.weight(1f))
+            Spacer(modifier = Modifier.width(8.dp))
+            val roomLabel = state?.room?.let { "${it.zone} - ${it.name}" }
+            OutlinedButton(
+                onClick = {
+                    if (!roomLabel.isNullOrBlank()) {
+                        onCommand("say 我在 $roomLabel")
+                        onInputChange("")
+                    }
+                },
+                enabled = !roomLabel.isNullOrBlank()
+            ) {
+                Text("位置")
+            }
             Spacer(modifier = Modifier.width(8.dp))
             Button(onClick = onSend) { Text("发送") }
         }
@@ -1170,7 +1200,11 @@ private fun ChatTab(
 }
 
 @Composable
-private fun ChatLine(output: OutputPayload, onNameClick: (String) -> Unit) {
+private fun ChatLine(
+    output: OutputPayload,
+    onNameClick: (String) -> Unit,
+    onLocationClick: (String) -> Unit
+) {
     val prefix = output.prefix?.trim().orEmpty()
     val prefixColor = output.prefixColor?.trim().orEmpty()
     val color = output.color?.trim().orEmpty()
@@ -1178,7 +1212,17 @@ private fun ChatLine(output: OutputPayload, onNameClick: (String) -> Unit) {
     val isAnnounce = prefix == "公告" || prefixColor == "announce" || color == "announce"
 
     if (isAnnounce) {
-        Text(text = text, color = Color(0xFFE0B25C), fontWeight = FontWeight.SemiBold)
+        if (output.location?.label?.isNotBlank() == true) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(text = text, color = Color(0xFFE0B25C), fontWeight = FontWeight.SemiBold)
+                Spacer(modifier = Modifier.width(6.dp))
+                LocationChip(label = output.location.label) {
+                    onLocationClick(output.location.label)
+                }
+            }
+        } else {
+            Text(text = text, color = Color(0xFFE0B25C), fontWeight = FontWeight.SemiBold)
+        }
         return
     }
 
@@ -1197,6 +1241,12 @@ private fun ChatLine(output: OutputPayload, onNameClick: (String) -> Unit) {
             )
             ChatTitleBadge(title = output.rankTitle)
             Text(" $msg")
+            if (output.location?.label?.isNotBlank() == true) {
+                Spacer(modifier = Modifier.width(6.dp))
+                LocationChip(label = output.location.label) {
+                    onLocationClick(output.location.label)
+                }
+            }
         }
         return
     }
@@ -1212,11 +1262,43 @@ private fun ChatLine(output: OutputPayload, onNameClick: (String) -> Unit) {
             )
             ChatTitleBadge(title = output.rankTitle)
             Text(" $msg")
+            if (output.location?.label?.isNotBlank() == true) {
+                Spacer(modifier = Modifier.width(6.dp))
+                LocationChip(label = output.location.label) {
+                    onLocationClick(output.location.label)
+                }
+            }
         }
         return
     }
 
-    Text(text)
+    if (output.location?.label?.isNotBlank() == true) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(text)
+            Spacer(modifier = Modifier.width(6.dp))
+            LocationChip(label = output.location.label) {
+                onLocationClick(output.location.label)
+            }
+        }
+    } else {
+        Text(text)
+    }
+}
+
+@Composable
+private fun LocationChip(label: String, onClick: () -> Unit) {
+    Surface(
+        shape = RoundedCornerShape(999.dp),
+        color = Color(0xFF3B2E25),
+        border = BorderStroke(1.dp, Color(0xFF7C5A32)),
+        modifier = Modifier.clickable { onClick() }
+    ) {
+        Text(
+            text = label,
+            color = Color(0xFFE8D6B8),
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+        )
+    }
 }
 
 @Composable

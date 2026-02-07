@@ -459,5 +459,13 @@ data class OutputPayload(
     val prefix: String? = null,
     val color: String? = null,
     val prefixColor: String? = null,
-    val rankTitle: String? = null
+    val rankTitle: String? = null,
+    val location: ChatLocation? = null
+)
+
+@Serializable
+data class ChatLocation(
+    val label: String = "",
+    val zoneId: String? = null,
+    val roomId: String? = null
 )

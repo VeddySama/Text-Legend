@@ -1232,7 +1232,7 @@ private fun AfkDialog(vm: GameViewModel, state: GameState?, onDismiss: () -> Uni
                 if (selected.isEmpty()) {
                     vm.sendCmd("autoskill off")
                 } else {
-                    vm.sendCmd("autoskill set ${selected.joinToString(\",\")}")
+                    vm.sendCmd("autoskill set ${selected.joinToString(",")}")
                 }
                 onDismiss()
             }) { Text("保存") }

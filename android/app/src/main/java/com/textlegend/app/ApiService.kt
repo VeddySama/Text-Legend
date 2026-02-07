@@ -4,14 +4,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
-import kotlinx.serialization.json.parseToJsonElement
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
+import org.json.JSONArray
 
 class ApiService(private val json: Json) {
     private val client = OkHttpClient()
@@ -95,12 +93,12 @@ class ApiService(private val json: Json) {
         client.newCall(req).execute().use { res ->
             val body = res.body?.string().orEmpty()
             if (!res.isSuccessful) throw RuntimeException("characters failed")
-            val parsed = json.parseToJsonElement(body).jsonObject
-            val ok = parsed["ok"]?.toString()?.contains("true") == true
-            if (!ok) throw RuntimeException(parsed["error"]?.toString() ?: "characters failed")
-            val charsJson = parsed["characters"]?.toString().orEmpty()
-            if (charsJson.isBlank()) return@use emptyList<CharacterBrief>()
-            json.decodeFromString(ListSerializer(CharacterBrief.serializer()), charsJson)
+            val obj = JSONObject(body)
+            val ok = obj.optBoolean("ok", false)
+            if (!ok) throw RuntimeException(obj.optString("error", "characters failed"))
+            val charsJson = obj.optJSONArray("characters") ?: JSONArray()
+            if (charsJson.length() == 0) return@use emptyList<CharacterBrief>()
+            json.decodeFromString(ListSerializer(CharacterBrief.serializer()), charsJson.toString())
         }
     }
 
@@ -151,8 +149,7 @@ class ApiService(private val json: Json) {
 
     private fun extractError(body: String): String {
         return try {
-            val jsonObj = json.parseToJsonElement(body).jsonObject
-            jsonObj["error"]?.toString()?.trim('"') ?: "请求失败"
+            JSONObject(body).optString("error", "请求失败")
         } catch (_: Exception) {
             "请求失败"
         }

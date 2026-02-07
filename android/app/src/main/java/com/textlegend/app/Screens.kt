@@ -23,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -263,6 +264,7 @@ fun GameScreen(vm: GameViewModel, onExit: () -> Unit) {
     var tabIndex by remember { mutableStateOf(0) }
     var chatInput by remember { mutableStateOf("") }
     var selectedMob by remember { mutableStateOf<MobInfo?>(null) }
+    var quickTargetName by remember { mutableStateOf<String?>(null) }
 
     val innerNav = rememberNavController()
 
@@ -367,13 +369,31 @@ fun GameScreen(vm: GameViewModel, onExit: () -> Unit) {
                                 vm.sendCmd("equip $key")
                             }
                         })
-                        2 -> ChatTab(state = state, outputs = outputs, onCommand = vm::sendCmd, input = chatInput, onInputChange = { chatInput = it }, onSend = {
+                        2 -> ChatTab(
+                            state = state,
+                            outputs = outputs,
+                            onCommand = vm::sendCmd,
+                            onOpenModule = { module, name ->
+                                if (!name.isNullOrBlank()) {
+                                    quickTargetName = name
+                                }
+                                when (module) {
+                                    "trade" -> innerNav.navigate("trade")
+                                    "party" -> innerNav.navigate("party")
+                                    "guild" -> innerNav.navigate("guild")
+                                    "mail" -> innerNav.navigate("mail")
+                                }
+                            },
+                            input = chatInput,
+                            onInputChange = { chatInput = it },
+                            onSend = {
                             val msg = chatInput.trim()
                             if (msg.isNotEmpty()) {
                                 vm.sendCmd("say $msg")
                                 chatInput = ""
                             }
-                        })
+                        }
+                        )
                         3 -> ActionsTab(
                             state = state,
                             onAction = { action ->
@@ -417,10 +437,10 @@ fun GameScreen(vm: GameViewModel, onExit: () -> Unit) {
             }
 
             composable("stats") { StatsDialog(state = state, onDismiss = { innerNav.popBackStack() }) }
-            composable("party") { PartyDialog(vm = vm, state = state, onDismiss = { innerNav.popBackStack() }) }
-            composable("guild") { GuildDialog(vm = vm, onDismiss = { innerNav.popBackStack() }) }
-            composable("mail") { MailDialog(vm = vm, onDismiss = { innerNav.popBackStack() }) }
-            composable("trade") { TradeDialog(vm = vm, state = state, onDismiss = { innerNav.popBackStack() }) }
+            composable("party") { PartyDialog(vm = vm, state = state, prefillName = quickTargetName, onDismiss = { quickTargetName = null; innerNav.popBackStack() }) }
+            composable("guild") { GuildDialog(vm = vm, prefillName = quickTargetName, onDismiss = { quickTargetName = null; innerNav.popBackStack() }) }
+            composable("mail") { MailDialog(vm = vm, prefillName = quickTargetName, onDismiss = { quickTargetName = null; innerNav.popBackStack() }) }
+            composable("trade") { TradeDialog(vm = vm, state = state, prefillName = quickTargetName, onDismiss = { quickTargetName = null; innerNav.popBackStack() }) }
             composable("consign") { ConsignDialog(vm = vm, state = state, onDismiss = { innerNav.popBackStack() }) }
             composable("sabak") { SabakDialog(vm = vm, onDismiss = { innerNav.popBackStack() }) }
             composable("shop") { ShopDialog(vm = vm, state = state, onDismiss = { innerNav.popBackStack() }) }
@@ -528,13 +548,22 @@ private fun TopStatus(state: GameState?) {
                 }
             }
             Spacer(modifier = Modifier.width(12.dp))
-            Column(horizontalAlignment = Alignment.End) {
-                Text(text = "攻击 ${stats?.atk ?: 0}")
-                Text(text = "魔法 ${stats?.mag ?: 0}")
-                Text(text = "道术 ${stats?.spirit ?: 0}")
-                Text(text = "防御 ${stats?.def ?: 0}")
-                Text(text = "魔御 ${stats?.mdef ?: 0}")
-                Text(text = "闪避 ${stats?.dodge ?: 0}%")
+            Column(
+                modifier = Modifier.weight(1f),
+                horizontalAlignment = Alignment.End
+            ) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text(text = "攻击 ${stats?.atk ?: 0}")
+                    Text(text = "魔法 ${stats?.mag ?: 0}")
+                }
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text(text = "道术 ${stats?.spirit ?: 0}")
+                    Text(text = "防御 ${stats?.def ?: 0}")
+                }
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text(text = "魔御 ${stats?.mdef ?: 0}")
+                    Text(text = "闪避 ${stats?.dodge ?: 0}%")
+                }
             }
         }
     }
@@ -573,6 +602,10 @@ private fun BattleTab(
             title = "玩家",
             expanded = showPlayer,
             onToggle = { showPlayer = !showPlayer },
+            summary = run {
+                val p = state?.player
+                if (p == null) "未连接" else "附近玩家 ${state?.players?.size ?: 0}"
+            },
             panelBg = panelBg,
             panelBorder = panelBorder,
             textMain = textMain
@@ -613,6 +646,7 @@ private fun BattleTab(
             title = "技能",
             expanded = showSkills,
             onToggle = { showSkills = !showSkills },
+            summary = "技能数量 ${state?.skills?.size ?: 0}",
             panelBg = panelBg,
             panelBorder = panelBorder,
             textMain = textMain
@@ -633,6 +667,7 @@ private fun BattleTab(
             title = "怪物",
             expanded = showMobs,
             onToggle = { showMobs = !showMobs },
+            summary = "怪物数量 ${state?.mobs?.size ?: 0}",
             panelBg = panelBg,
             panelBorder = panelBorder,
             textMain = textMain
@@ -666,6 +701,7 @@ private fun BattleTab(
             title = "方向",
             expanded = showExits,
             onToggle = { showExits = !showExits },
+            summary = "出口数量 ${state?.exits?.size ?: 0}",
             panelBg = panelBg,
             panelBorder = panelBorder,
             textMain = textMain
@@ -687,23 +723,57 @@ private fun BattleSectionCard(
     title: String,
     expanded: Boolean,
     onToggle: () -> Unit,
+    summary: String,
     panelBg: Color,
     panelBorder: Color,
     textMain: Color,
     content: @Composable ColumnScope.() -> Unit
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
-        Row(
+        Surface(
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable { onToggle() },
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+            shape = RoundedCornerShape(10.dp),
+            color = Color(0xFF2A221D),
+            border = BorderStroke(1.dp, panelBorder)
         ) {
-            Text(title, style = MaterialTheme.typography.titleSmall, color = textMain)
-            Text(if (expanded) "收起" else "展开", color = textMain)
+            Row(
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(6.dp)
+                            .background(panelBorder, RoundedCornerShape(3.dp))
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(title, style = MaterialTheme.typography.titleSmall, color = textMain)
+                }
+                Surface(
+                    shape = RoundedCornerShape(999.dp),
+                    color = Color(0xFF1F1A16),
+                    border = BorderStroke(1.dp, panelBorder)
+                ) {
+                    Text(
+                        if (expanded) "收起" else "展开",
+                        color = textMain,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 2.dp)
+                    )
+                }
+            }
         }
-        if (expanded) {
+
+        if (!expanded) {
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = summary,
+                color = Color(0xFFB7A189),
+                modifier = Modifier.padding(horizontal = 6.dp)
+            )
+        } else {
             Spacer(modifier = Modifier.height(6.dp))
             Surface(
                 modifier = Modifier.fillMaxWidth(),
@@ -894,6 +964,7 @@ private fun ChatTab(
     state: GameState?,
     outputs: List<OutputPayload>,
     onCommand: (String) -> Unit,
+    onOpenModule: (String, String?) -> Unit,
     input: String,
     onInputChange: (String) -> Unit,
     onSend: () -> Unit
@@ -923,7 +994,8 @@ private fun ChatTab(
             name = selectedName ?: "",
             player = selectedPlayer,
             onDismiss = { selectedName = null },
-            onCommand = onCommand
+            onCommand = onCommand,
+            onOpenModule = onOpenModule
         )
     }
 }
@@ -1000,40 +1072,76 @@ private fun PlayerInfoDialog(
     name: String,
     player: PlayerBrief?,
     onDismiss: () -> Unit,
-    onCommand: (String) -> Unit
+    onCommand: (String) -> Unit,
+    onOpenModule: (String, String?) -> Unit
 ) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("玩家信息") },
-        text = {
-            Column {
-                Text(name, fontWeight = FontWeight.SemiBold)
-                if (player != null) {
-                    Text("等级 Lv${player.level} ${classLabel(player.classId)}")
-                    if (!player.guild.isNullOrBlank()) Text("行会 ${player.guild}")
-                    Text("血量 ${player.hp}/${player.maxHp}")
-                    Text("PK ${player.pk}")
-                } else {
-                    Text("暂无玩家详细信息")
-                }
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = RoundedCornerShape(20.dp),
+            color = Color(0xFF4A3429),
+            tonalElevation = 4.dp,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
+        ) {
+            Column(modifier = Modifier.padding(20.dp)) {
+                Text("玩家信息", style = MaterialTheme.typography.titleMedium, color = Color(0xFFF4E8D6))
                 Spacer(modifier = Modifier.height(10.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(onClick = { onCommand("attack $name"); onDismiss() }) { Text("攻击") }
-                    Button(onClick = { onCommand("observe $name"); onDismiss() }) { Text("观察") }
+                Text(name, fontWeight = FontWeight.SemiBold, color = Color(0xFFE8D6B8))
+                if (player != null) {
+                    Text("等级 Lv${player.level} ${classLabel(player.classId)}", color = Color(0xFFE8D6B8))
+                    if (!player.guild.isNullOrBlank()) Text("行会 ${player.guild}", color = Color(0xFFE8D6B8))
+                    Text("血量 ${player.hp}/${player.maxHp}", color = Color(0xFFE8D6B8))
+                    Text("PK ${player.pk}", color = Color(0xFFE8D6B8))
+                } else {
+                    Text("暂无玩家详细信息", color = Color(0xFFE8D6B8))
                 }
-                Spacer(modifier = Modifier.height(6.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(onClick = { onCommand("trade request $name"); onDismiss() }) { Text("交易") }
-                    Button(onClick = { onCommand("party invite $name"); onDismiss() }) { Text("组队") }
-                }
-                Spacer(modifier = Modifier.height(6.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(onClick = { onCommand("guild invite $name"); onDismiss() }) { Text("行会") }
+
+                Spacer(modifier = Modifier.height(16.dp))
+                PlayerActionRow(
+                    left = "攻击" to { onCommand("attack $name"); onDismiss() },
+                    right = "观察" to { onCommand("observe $name"); onDismiss() }
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+                PlayerActionRow(
+                    left = "交易" to { onOpenModule("trade", name); onDismiss() },
+                    right = "组队" to { onOpenModule("party", name); onDismiss() }
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+                PlayerActionRow(
+                    left = "行会" to { onOpenModule("guild", name); onDismiss() },
+                    right = "邮件" to { onOpenModule("mail", name); onDismiss() }
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                    TextButton(onClick = onDismiss) { Text("关闭", color = Color(0xFFE8D6B8)) }
                 }
             }
-        },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("关闭") } }
-    )
+        }
+    }
+}
+
+@Composable
+private fun PlayerActionRow(
+    left: Pair<String, () -> Unit>,
+    right: Pair<String, () -> Unit>
+) {
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        PlayerActionButton(label = left.first, onClick = left.second, modifier = Modifier.weight(1f))
+        PlayerActionButton(label = right.first, onClick = right.second, modifier = Modifier.weight(1f))
+    }
+}
+
+@Composable
+private fun PlayerActionButton(label: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    Surface(
+        modifier = modifier.height(40.dp).clickable { onClick() },
+        shape = RoundedCornerShape(999.dp),
+        color = Color(0xFFED9F76)
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Text(label, color = Color(0xFF3B2A21), fontWeight = FontWeight.SemiBold)
+        }
+    }
 }
 
 @Composable
@@ -1301,8 +1409,11 @@ private fun StatsDialog(state: GameState?, onDismiss: () -> Unit) {
 }
 
 @Composable
-private fun PartyDialog(vm: GameViewModel, state: GameState?, onDismiss: () -> Unit) {
-    var inviteName by remember { mutableStateOf("") }
+private fun PartyDialog(vm: GameViewModel, state: GameState?, prefillName: String?, onDismiss: () -> Unit) {
+    var inviteName by remember { mutableStateOf(prefillName ?: "") }
+    LaunchedEffect(prefillName) {
+        if (!prefillName.isNullOrBlank()) inviteName = prefillName
+    }
     val party = state?.party
     ScreenScaffold(title = "队伍", onBack = onDismiss) {
         if (party == null) {
@@ -1325,11 +1436,14 @@ private fun PartyDialog(vm: GameViewModel, state: GameState?, onDismiss: () -> U
 }
 
 @Composable
-private fun GuildDialog(vm: GameViewModel, onDismiss: () -> Unit) {
+private fun GuildDialog(vm: GameViewModel, prefillName: String?, onDismiss: () -> Unit) {
     val members by vm.guildMembers.collectAsState()
     val guildList by vm.guildList.collectAsState()
     var guildId by remember { mutableStateOf("") }
-    var inviteName by remember { mutableStateOf("") }
+    var inviteName by remember { mutableStateOf(prefillName ?: "") }
+    LaunchedEffect(prefillName) {
+        if (!prefillName.isNullOrBlank()) inviteName = prefillName
+    }
 
     LaunchedEffect(Unit) {
         vm.guildMembers()
@@ -1367,9 +1481,9 @@ private fun GuildDialog(vm: GameViewModel, onDismiss: () -> Unit) {
 }
 
 @Composable
-private fun MailDialog(vm: GameViewModel, onDismiss: () -> Unit) {
+private fun MailDialog(vm: GameViewModel, prefillName: String?, onDismiss: () -> Unit) {
     val mailList by vm.mailList.collectAsState()
-    var toName by remember { mutableStateOf("") }
+    var toName by remember { mutableStateOf(prefillName ?: "") }
     var title by remember { mutableStateOf("") }
     var body by remember { mutableStateOf("") }
     var itemKey by remember { mutableStateOf("") }
@@ -1378,6 +1492,9 @@ private fun MailDialog(vm: GameViewModel, onDismiss: () -> Unit) {
 
     LaunchedEffect(Unit) {
         vm.mailListInbox()
+    }
+    LaunchedEffect(prefillName) {
+        if (!prefillName.isNullOrBlank()) toName = prefillName
     }
 
     ScreenScaffold(title = "邮件", onBack = onDismiss) {
@@ -1414,8 +1531,11 @@ private fun MailDialog(vm: GameViewModel, onDismiss: () -> Unit) {
 }
 
 @Composable
-private fun TradeDialog(vm: GameViewModel, state: GameState?, onDismiss: () -> Unit) {
-    var targetName by remember { mutableStateOf("") }
+private fun TradeDialog(vm: GameViewModel, state: GameState?, prefillName: String?, onDismiss: () -> Unit) {
+    var targetName by remember { mutableStateOf(prefillName ?: "") }
+    LaunchedEffect(prefillName) {
+        if (!prefillName.isNullOrBlank()) targetName = prefillName
+    }
     var itemName by remember { mutableStateOf("") }
     var itemQty by remember { mutableStateOf("1") }
     var gold by remember { mutableStateOf("0") }

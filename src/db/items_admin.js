@@ -23,7 +23,8 @@ export async function listItems(page = 1, limit = 20) {
       "WHEN 'epic' THEN 3 " +
       "WHEN 'legendary' THEN 4 " +
       "WHEN 'supreme' THEN 5 " +
-      "ELSE 6 END")
+      "WHEN 'ultimate' THEN 6 " +
+      "ELSE 7 END")
     .orderBy('item_id')
     .limit(limit)
     .offset(offset);
@@ -68,6 +69,7 @@ export async function createItem(data) {
     unconsignable: data.unconsignable || false,
     boss_only: data.boss_only || false,
     world_boss_only: data.world_boss_only || false,
+    cross_world_boss_only: data.cross_world_boss_only || false,
     created_at: knex.fn.now(),
     updated_at: knex.fn.now()
   };
@@ -98,6 +100,7 @@ export async function updateItem(id, data) {
   if (data.unconsignable !== undefined) updateData.unconsignable = data.unconsignable;
   if (data.boss_only !== undefined) updateData.boss_only = data.boss_only;
   if (data.world_boss_only !== undefined) updateData.world_boss_only = data.world_boss_only;
+  if (data.cross_world_boss_only !== undefined) updateData.cross_world_boss_only = data.cross_world_boss_only;
   updateData.updated_at = knex.fn.now();
 
   await knex('items').where({ id }).update(updateData);
@@ -120,6 +123,8 @@ export async function updateItem(id, data) {
       ITEM_TEMPLATES[item.item_id].hp = item.hp;
       ITEM_TEMPLATES[item.item_id].mp = item.mp;
       ITEM_TEMPLATES[item.item_id].price = item.price;
+      ITEM_TEMPLATES[item.item_id].worldBossOnly = item.world_boss_only || false;
+      ITEM_TEMPLATES[item.item_id].crossWorldBossOnly = item.cross_world_boss_only || false;
     }
   }
 
@@ -273,7 +278,8 @@ export async function searchItems(keyword, page = 1, limit = 20) {
       "WHEN 'epic' THEN 3 " +
       "WHEN 'legendary' THEN 4 " +
       "WHEN 'supreme' THEN 5 " +
-      "ELSE 6 END")
+      "WHEN 'ultimate' THEN 6 " +
+      "ELSE 7 END")
     .orderBy('item_id')
     .limit(limit)
     .offset(offset);
@@ -304,7 +310,8 @@ export function getItemTemplates() {
       untradable: template.untradable || false,
       unconsignable: template.unconsignable || false,
       boss_only: template.bossOnly || false,
-      world_boss_only: template.worldBossOnly || false
+      world_boss_only: template.worldBossOnly || false,
+      cross_world_boss_only: template.crossWorldBossOnly || false
     }))
     .filter(item => item.type !== 'currency'); // 排除金币
 }
@@ -367,7 +374,8 @@ export async function importItems(itemIds) {
           untradable: template.untradable || false,
           unconsignable: template.unconsignable || false,
           boss_only: template.bossOnly || false,
-          world_boss_only: template.worldBossOnly || false
+          world_boss_only: template.worldBossOnly || false,
+          cross_world_boss_only: template.crossWorldBossOnly || false
         });
         result = await getItemByItemId(itemId);
         console.log(`Updated item, result.id=${result.id}`);
@@ -399,7 +407,8 @@ export async function importItems(itemIds) {
           untradable: template.untradable || false,
           unconsignable: template.unconsignable || false,
           boss_only: template.bossOnly || false,
-          world_boss_only: template.worldBossOnly || false
+          world_boss_only: template.worldBossOnly || false,
+          cross_world_boss_only: template.crossWorldBossOnly || false
         });
         console.log(`Created new item, result.id=${result.id}`);
       }
@@ -488,6 +497,8 @@ export async function syncItemsToTemplates() {
       ITEM_TEMPLATES[dbItem.item_id].dex = dbItem.dex;
       ITEM_TEMPLATES[dbItem.item_id].hp = dbItem.hp;
       ITEM_TEMPLATES[dbItem.item_id].mp = dbItem.mp;
+      ITEM_TEMPLATES[dbItem.item_id].worldBossOnly = dbItem.world_boss_only || false;
+      ITEM_TEMPLATES[dbItem.item_id].crossWorldBossOnly = dbItem.cross_world_boss_only || false;
     }
   });
 

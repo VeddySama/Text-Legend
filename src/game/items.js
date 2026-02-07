@@ -72,6 +72,9 @@
   sword_rochie: { id: 'sword_rochie', name: '洛奇王者之刃', type: 'weapon', slot: 'weapon', atk: 94, price: 600000, rarity: 'supreme', worldBossOnly: true },
   staff_rochie: { id: 'staff_rochie', name: '洛奇王者权杖', type: 'weapon', slot: 'weapon', mag: 66, price: 600000, rarity: 'supreme', worldBossOnly: true },
   sword_rochie_tao: { id: 'sword_rochie_tao', name: '洛奇王者之剑', type: 'weapon', slot: 'weapon', spirit: 66, price: 600000, rarity: 'supreme', worldBossOnly: true },
+  sword_caiya: { id: 'sword_caiya', name: '菜芽王者之刃', type: 'weapon', slot: 'weapon', atk: 376, price: 1200000, rarity: 'ultimate', crossWorldBossOnly: true },
+  staff_caiya: { id: 'staff_caiya', name: '菜芽王者权杖', type: 'weapon', slot: 'weapon', mag: 264, price: 1200000, rarity: 'ultimate', crossWorldBossOnly: true },
+  sword_caiya_tao: { id: 'sword_caiya_tao', name: '菜芽王者之剑', type: 'weapon', slot: 'weapon', spirit: 264, price: 1200000, rarity: 'ultimate', crossWorldBossOnly: true },
 
   // Mage weapons
   staff_apprentice: { id: 'staff_apprentice', name: '学徒法杖', type: 'weapon', slot: 'weapon', atk: 2, mag: 4, price: 380, rarity: 'common' },
@@ -112,6 +115,9 @@
   armor_rochie_war: { id: 'armor_rochie_war', name: '洛奇战甲', type: 'armor', slot: 'chest', def: 44, atk: 6, price: 150000, rarity: 'supreme', worldBossOnly: true },
   armor_rochie_mage: { id: 'armor_rochie_mage', name: '洛奇法袍', type: 'armor', slot: 'chest', def: 38, dex: 6, mag: 18, price: 150000, rarity: 'supreme', worldBossOnly: true },
   armor_rochie_tao: { id: 'armor_rochie_tao', name: '洛奇道袍', type: 'armor', slot: 'chest', def: 42, dex: 6, spirit: 12, price: 150000, rarity: 'supreme', worldBossOnly: true },
+  armor_caiya_war: { id: 'armor_caiya_war', name: '菜芽战甲', type: 'armor', slot: 'chest', def: 176, atk: 24, price: 300000, rarity: 'ultimate', crossWorldBossOnly: true },
+  armor_caiya_mage: { id: 'armor_caiya_mage', name: '菜芽法袍', type: 'armor', slot: 'chest', def: 152, dex: 24, mag: 72, price: 300000, rarity: 'ultimate', crossWorldBossOnly: true },
+  armor_caiya_tao: { id: 'armor_caiya_tao', name: '菜芽道袍', type: 'armor', slot: 'chest', def: 168, dex: 24, spirit: 48, price: 300000, rarity: 'ultimate', crossWorldBossOnly: true },
   armor_molong: { id: 'armor_molong', name: '魔龙战甲', type: 'armor', slot: 'chest', def: 24, atk: 2, price: 42000, rarity: 'epic' },
 
   // Helms
@@ -128,6 +134,9 @@
   helm_rochie_war: { id: 'helm_rochie_war', name: '洛奇头盔(战士)', type: 'armor', slot: 'head', def: 22, atk: 4, price: 150000, rarity: 'supreme', worldBossOnly: true },
   helm_rochie_mage: { id: 'helm_rochie_mage', name: '洛奇头盔(法师)', type: 'armor', slot: 'head', def: 18, dex: 4, mag: 6, price: 150000, rarity: 'supreme', worldBossOnly: true },
   helm_rochie_tao: { id: 'helm_rochie_tao', name: '洛奇头盔(道士)', type: 'armor', slot: 'head', def: 18, dex: 4, spirit: 6, price: 150000, rarity: 'supreme', worldBossOnly: true },
+  helm_caiya_war: { id: 'helm_caiya_war', name: '菜芽头盔(战士)', type: 'armor', slot: 'head', def: 88, atk: 16, price: 300000, rarity: 'ultimate', crossWorldBossOnly: true },
+  helm_caiya_mage: { id: 'helm_caiya_mage', name: '菜芽头盔(法师)', type: 'armor', slot: 'head', def: 72, dex: 16, mag: 24, price: 300000, rarity: 'ultimate', crossWorldBossOnly: true },
+  helm_caiya_tao: { id: 'helm_caiya_tao', name: '菜芽头盔(道士)', type: 'armor', slot: 'head', def: 72, dex: 16, spirit: 24, price: 300000, rarity: 'ultimate', crossWorldBossOnly: true },
   helm_holy: { id: 'helm_holy', name: '圣战头盔(套)', type: 'armor', slot: 'head', def: 7, atk: 1, price: 12000, rarity: 'rare', bossOnly: true },
   helm_wargod: { id: 'helm_wargod', name: '战神头盔(套)', type: 'armor', slot: 'head', def: 11, atk: 2, price: 18000, rarity: 'legendary', bossOnly: true },
 
@@ -142,6 +151,9 @@
   boots_rochie_war: { id: 'boots_rochie_war', name: '洛奇靴子(战士)', type: 'armor', slot: 'feet', def: 22, atk: 4, price: 150000, rarity: 'supreme', worldBossOnly: true },
   boots_rochie_mage: { id: 'boots_rochie_mage', name: '洛奇靴子(法师)', type: 'armor', slot: 'feet', def: 18, dex: 4, mag: 6, price: 150000, rarity: 'supreme', worldBossOnly: true },
   boots_rochie_tao: { id: 'boots_rochie_tao', name: '洛奇靴子(道士)', type: 'armor', slot: 'feet', def: 18, dex: 4, spirit: 6, price: 150000, rarity: 'supreme', worldBossOnly: true },
+  boots_caiya_war: { id: 'boots_caiya_war', name: '菜芽靴子(战士)', type: 'armor', slot: 'feet', def: 88, atk: 16, price: 300000, rarity: 'ultimate', crossWorldBossOnly: true },
+  boots_caiya_mage: { id: 'boots_caiya_mage', name: '菜芽靴子(法师)', type: 'armor', slot: 'feet', def: 72, dex: 16, mag: 24, price: 300000, rarity: 'ultimate', crossWorldBossOnly: true },
+  boots_caiya_tao: { id: 'boots_caiya_tao', name: '菜芽靴子(道士)', type: 'armor', slot: 'feet', def: 72, dex: 16, spirit: 24, price: 300000, rarity: 'ultimate', crossWorldBossOnly: true },
   boots_holy: { id: 'boots_holy', name: '圣战靴(套)', type: 'armor', slot: 'feet', def: 7, atk: 1, price: 12000, rarity: 'rare', bossOnly: true },
   boots_wargod: { id: 'boots_wargod', name: '战神靴子(套)', type: 'armor', slot: 'feet', def: 11, atk: 2, price: 18000, rarity: 'legendary', bossOnly: true },
 
@@ -156,6 +168,9 @@
   belt_rochie_war: { id: 'belt_rochie_war', name: '洛奇腰带(战士)', type: 'armor', slot: 'waist', def: 22, atk: 4, price: 150000, rarity: 'supreme', worldBossOnly: true },
   belt_rochie_mage: { id: 'belt_rochie_mage', name: '洛奇腰带(法师)', type: 'armor', slot: 'waist', def: 18, dex: 4, mag: 6, price: 150000, rarity: 'supreme', worldBossOnly: true },
   belt_rochie_tao: { id: 'belt_rochie_tao', name: '洛奇腰带(道士)', type: 'armor', slot: 'waist', def: 18, dex: 4, spirit: 6, price: 150000, rarity: 'supreme', worldBossOnly: true },
+  belt_caiya_war: { id: 'belt_caiya_war', name: '菜芽腰带(战士)', type: 'armor', slot: 'waist', def: 88, atk: 16, price: 300000, rarity: 'ultimate', crossWorldBossOnly: true },
+  belt_caiya_mage: { id: 'belt_caiya_mage', name: '菜芽腰带(法师)', type: 'armor', slot: 'waist', def: 72, dex: 16, mag: 24, price: 300000, rarity: 'ultimate', crossWorldBossOnly: true },
+  belt_caiya_tao: { id: 'belt_caiya_tao', name: '菜芽腰带(道士)', type: 'armor', slot: 'waist', def: 72, dex: 16, spirit: 24, price: 300000, rarity: 'ultimate', crossWorldBossOnly: true },
   belt_holy: { id: 'belt_holy', name: '圣战腰带(套)', type: 'armor', slot: 'waist', def: 7, atk: 1, price: 12000, rarity: 'rare', bossOnly: true },
   belt_wargod: { id: 'belt_wargod', name: '战神腰带(套)', type: 'armor', slot: 'waist', def: 11, atk: 2, price: 18000, rarity: 'legendary', bossOnly: true },
 
@@ -178,6 +193,9 @@
   ring_rochie_war: { id: 'ring_rochie_war', name: '洛奇戒指(战士)', type: 'accessory', slot: 'ring', atk: 24, price: 150000, rarity: 'supreme', worldBossOnly: true },
   ring_rochie_mage: { id: 'ring_rochie_mage', name: '洛奇戒指(法师)', type: 'accessory', slot: 'ring', mag: 24, dex: 4, price: 150000, rarity: 'supreme', worldBossOnly: true },
   ring_rochie_tao: { id: 'ring_rochie_tao', name: '洛奇戒指(道士)', type: 'accessory', slot: 'ring', spirit: 24, dex: 4, price: 150000, rarity: 'supreme', worldBossOnly: true },
+  ring_caiya_war: { id: 'ring_caiya_war', name: '菜芽戒指(战士)', type: 'accessory', slot: 'ring', atk: 96, price: 300000, rarity: 'ultimate', crossWorldBossOnly: true },
+  ring_caiya_mage: { id: 'ring_caiya_mage', name: '菜芽戒指(法师)', type: 'accessory', slot: 'ring', mag: 96, dex: 16, price: 300000, rarity: 'ultimate', crossWorldBossOnly: true },
+  ring_caiya_tao: { id: 'ring_caiya_tao', name: '菜芽戒指(道士)', type: 'accessory', slot: 'ring', spirit: 96, dex: 16, price: 300000, rarity: 'ultimate', crossWorldBossOnly: true },
   ring_def: { id: 'ring_def', name: '防御戒指', type: 'accessory', slot: 'ring', def: 4, price: 22000, rarity: 'epic' },
   ring_fire: { id: 'ring_fire', name: '吸血戒指', type: 'accessory', slot: 'ring', mag: 4, price: 24000, rarity: 'epic' },
   ring_heal: { id: 'ring_heal', name: '治愈戒指', type: 'accessory', slot: 'ring', spirit: 4, price: 24000, rarity: 'epic' },
@@ -206,6 +224,9 @@
   necklace_rochie_war: { id: 'necklace_rochie_war', name: '洛奇项链(战士)', type: 'accessory', slot: 'neck', atk: 18, price: 150000, rarity: 'supreme', worldBossOnly: true },
   necklace_rochie_mage: { id: 'necklace_rochie_mage', name: '洛奇项链(法师)', type: 'accessory', slot: 'neck', def: 4, dex: 4, mag: 18, price: 150000, rarity: 'supreme', worldBossOnly: true },
   necklace_rochie_tao: { id: 'necklace_rochie_tao', name: '洛奇项链(道士)', type: 'accessory', slot: 'neck', def: 4, dex: 4, spirit: 18, price: 150000, rarity: 'supreme', worldBossOnly: true },
+  necklace_caiya_war: { id: 'necklace_caiya_war', name: '菜芽项链(战士)', type: 'accessory', slot: 'neck', atk: 72, price: 300000, rarity: 'ultimate', crossWorldBossOnly: true },
+  necklace_caiya_mage: { id: 'necklace_caiya_mage', name: '菜芽项链(法师)', type: 'accessory', slot: 'neck', def: 16, dex: 16, mag: 72, price: 300000, rarity: 'ultimate', crossWorldBossOnly: true },
+  necklace_caiya_tao: { id: 'necklace_caiya_tao', name: '菜芽项链(道士)', type: 'accessory', slot: 'neck', def: 16, dex: 16, spirit: 72, price: 300000, rarity: 'ultimate', crossWorldBossOnly: true },
   necklace_luck: { id: 'necklace_luck', name: '幸运项链', type: 'accessory', slot: 'neck', dex: 3, price: 26000, rarity: 'epic' },
 
   // Bracelets
@@ -224,7 +245,10 @@
   bracelet_true: { id: 'bracelet_true', name: '真魂手镯(套)', type: 'accessory', slot: 'bracelet', def: 2, dex: 2, spirit: 9, price: 72000, rarity: 'legendary', bossOnly: true },
   bracelet_rochie_war: { id: 'bracelet_rochie_war', name: '洛奇手镯(战士)', type: 'accessory', slot: 'bracelet', atk: 18, price: 150000, rarity: 'supreme', worldBossOnly: true },
   bracelet_rochie_mage: { id: 'bracelet_rochie_mage', name: '洛奇手镯(法师)', type: 'accessory', slot: 'bracelet', def: 4, dex: 4, mag: 18, price: 150000, rarity: 'supreme', worldBossOnly: true },
-  bracelet_rochie_tao: { id: 'bracelet_rochie_tao', name: '洛奇手镯(道士)', type: 'accessory', slot: 'bracelet', def: 4, dex: 4, spirit: 18, price: 150000, rarity: 'supreme', worldBossOnly: true }
+  bracelet_rochie_tao: { id: 'bracelet_rochie_tao', name: '洛奇手镯(道士)', type: 'accessory', slot: 'bracelet', def: 4, dex: 4, spirit: 18, price: 150000, rarity: 'supreme', worldBossOnly: true },
+  bracelet_caiya_war: { id: 'bracelet_caiya_war', name: '菜芽手镯(战士)', type: 'accessory', slot: 'bracelet', atk: 72, price: 300000, rarity: 'ultimate', crossWorldBossOnly: true },
+  bracelet_caiya_mage: { id: 'bracelet_caiya_mage', name: '菜芽手镯(法师)', type: 'accessory', slot: 'bracelet', def: 16, dex: 16, mag: 72, price: 300000, rarity: 'ultimate', crossWorldBossOnly: true },
+  bracelet_caiya_tao: { id: 'bracelet_caiya_tao', name: '菜芽手镯(道士)', type: 'accessory', slot: 'bracelet', def: 16, dex: 16, spirit: 72, price: 300000, rarity: 'ultimate', crossWorldBossOnly: true }
 };
 
 export const SHOP_STOCKS = {

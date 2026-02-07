@@ -5294,7 +5294,8 @@ function getRarityName(rarity) {
     rare: '稀有',
     epic: '史诗',
     legendary: '传说',
-    supreme: '至尊'
+    supreme: '至尊',
+    ultimate: '终极'
   };
   return rarityNames[rarity] || rarity;
 }
@@ -5451,6 +5452,7 @@ function openItemEditModal(item = null) {
     document.getElementById('item-edit-unconsignable').checked = item.unconsignable;
     document.getElementById('item-edit-boss-only').checked = item.boss_only;
     document.getElementById('item-edit-world-boss-only').checked = item.world_boss_only;
+    document.getElementById('item-edit-cross-world-boss-only').checked = item.cross_world_boss_only;
     itemsCurrentItemId = item.id;
     loadItemDrops(item.id);
   } else {
@@ -5474,6 +5476,7 @@ function openItemEditModal(item = null) {
     document.getElementById('item-edit-unconsignable').checked = false;
     document.getElementById('item-edit-boss-only').checked = false;
     document.getElementById('item-edit-world-boss-only').checked = false;
+    document.getElementById('item-edit-cross-world-boss-only').checked = false;
     itemsCurrentItemId = null;
     itemDropsCache = [];
     renderItemDrops();
@@ -5540,7 +5543,8 @@ const RARITY_CN_TO_EN = {
   '稀有': 'rare',
   '史诗': 'epic',
   '传说': 'legendary',
-  '至尊': 'supreme'
+  '至尊': 'supreme',
+  '终极': 'ultimate'
 };
 
 async function saveItem() {
@@ -5600,6 +5604,7 @@ async function saveItem() {
   const unconsignable = document.getElementById('item-edit-unconsignable').checked;
   const boss_only = document.getElementById('item-edit-boss-only').checked;
   const world_boss_only = document.getElementById('item-edit-world-boss-only').checked;
+  const cross_world_boss_only = document.getElementById('item-edit-cross-world-boss-only').checked;
 
   if (!itemId || !name) {
     await customAlert('错误', '装备ID和名称不能为空');
@@ -5623,7 +5628,8 @@ async function saveItem() {
     untradable,
     unconsignable,
     boss_only,
-    world_boss_only
+    world_boss_only,
+    cross_world_boss_only
   };
 
   let res;

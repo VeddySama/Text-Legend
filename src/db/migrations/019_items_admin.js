@@ -6,7 +6,7 @@ export async function up(knex) {
     t.string('name', 128).notNullable();
     t.string('type', 32).notNullable(); // weapon, armor, helmet, boots, belt, necklace, ring, bracelet, consumable, book, material
     t.string('slot', 32).nullable(); // weapon, chest, head, feet, waist, neck, ring_left, ring_right, bracelet_left, bracelet_right
-    t.string('rarity', 32).defaultTo('common'); // common, uncommon, rare, epic, legendary, supreme
+    t.string('rarity', 32).defaultTo('common'); // common, uncommon, rare, epic, legendary, supreme, ultimate
     t.integer('atk').defaultTo(0);
     t.integer('def').defaultTo(0);
     t.integer('mag').defaultTo(0);

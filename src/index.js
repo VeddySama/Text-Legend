@@ -2559,8 +2559,9 @@ function emitAnnouncement(text, color, location, realmId = null) {
   io.emit('chat', payload);
 }
 
-const RARITY_ORDER = ['supreme', 'legendary', 'epic', 'rare', 'uncommon', 'common'];
+const RARITY_ORDER = ['ultimate', 'supreme', 'legendary', 'epic', 'rare', 'uncommon', 'common'];
 const RARITY_NORMAL = {
+  ultimate: 0,
   supreme: 0.0005,
   legendary: 0.001,
   epic: 0.005,
@@ -2569,6 +2570,7 @@ const RARITY_NORMAL = {
   common: 0.15
 };
 const RARITY_BOSS = {
+  ultimate: 0,
   supreme: 0.003,
   legendary: 0.007,
   epic: 0.03,
@@ -2577,6 +2579,7 @@ const RARITY_BOSS = {
   common: 0.35
 };
 const RARITY_LABELS = {
+  ultimate: '终极',
   supreme: '至尊',
   legendary: '传说',
   epic: '史诗',
@@ -2596,7 +2599,7 @@ function rarityByPrice(item) {
 }
 
 const ITEM_POOLS = (() => {
-  const pools = { common: [], uncommon: [], rare: [], epic: [], legendary: [], supreme: [] };
+  const pools = { common: [], uncommon: [], rare: [], epic: [], legendary: [], supreme: [], ultimate: [] };
   Object.values(ITEM_TEMPLATES).forEach((item) => {
     if (item.type === 'currency') return;
     if (!['weapon', 'armor', 'accessory', 'book', 'material', 'consumable'].includes(item.type)) return;
@@ -2607,7 +2610,7 @@ const ITEM_POOLS = (() => {
 })();
 
 const EQUIPMENT_POOLS = (() => {
-  const pools = { common: [], uncommon: [], rare: [], epic: [], legendary: [], supreme: [] };
+  const pools = { common: [], uncommon: [], rare: [], epic: [], legendary: [], supreme: [], ultimate: [] };
   Object.entries(ITEM_POOLS).forEach(([rarity, ids]) => {
     pools[rarity] = ids.filter((id) => {
       const item = ITEM_TEMPLATES[id];
@@ -2780,6 +2783,7 @@ function formatItemLabel(itemId, effects = null) {
 }
 
 function formatLegendaryAnnouncement(text, rarity) {
+  if (rarity === 'ultimate') return `终极掉落：${text}`;
   if (rarity === 'supreme') return `至尊掉落：${text}`;
   if (rarity === 'legendary') return `传说掉落：${text}`;
   return text;
@@ -3036,7 +3040,8 @@ function rollRarityDrop(mobTemplate, bonus = 1) {
   const table = RARITY_BOSS;
   const allowSet = true;
   for (const rarity of RARITY_ORDER) {
-    if (!mobTemplate?.worldBoss && rarity === 'supreme') continue;
+    if (!mobTemplate?.worldBoss && (rarity === 'supreme' || rarity === 'ultimate')) continue;
+    if (rarity === 'ultimate' && mobTemplate?.id !== 'cross_world_boss') continue;
     if (Math.random() <= Math.min(1, table[rarity] * bonus)) {
       const pool = allowSet
         ? ITEM_POOLS[rarity]
@@ -3046,6 +3051,7 @@ function rollRarityDrop(mobTemplate, bonus = 1) {
         const item = ITEM_TEMPLATES[id];
         if (item?.bossOnly) return false;
         if (item?.worldBossOnly && !mobTemplate.worldBoss) return false;
+        if (item?.crossWorldBossOnly && mobTemplate?.id !== 'cross_world_boss') return false;
         return true;
       });
       if (!filteredPool.length) return null;
@@ -3060,7 +3066,8 @@ function rollRarityEquipmentDrop(mobTemplate, bonus = 1) {
   const table = RARITY_BOSS;
   const allowSet = true;
   for (const rarity of RARITY_ORDER) {
-    if (!mobTemplate?.worldBoss && rarity === 'supreme') continue;
+    if (!mobTemplate?.worldBoss && (rarity === 'supreme' || rarity === 'ultimate')) continue;
+    if (rarity === 'ultimate' && mobTemplate?.id !== 'cross_world_boss') continue;
     if (Math.random() <= Math.min(1, table[rarity] * bonus)) {
       const pool = allowSet
         ? ITEM_POOLS[rarity]
@@ -3074,6 +3081,7 @@ function rollRarityEquipmentDrop(mobTemplate, bonus = 1) {
         const item = ITEM_TEMPLATES[id];
         if (item?.bossOnly) return false;
         if (item?.worldBossOnly && !mobTemplate.worldBoss) return false;
+        if (item?.crossWorldBossOnly && mobTemplate?.id !== 'cross_world_boss') return false;
         return true;
       });
       if (!filteredPool.length) return null;
@@ -3120,7 +3128,16 @@ async function applyWorldBossSettings() {
     const baseGold = await getWorldBossBaseGold();
     crossWorldBossTemplate.gold = [baseGold, Math.floor(baseGold * 1.6)];
     if (worldBossTemplate?.drops) {
-      crossWorldBossTemplate.drops = worldBossTemplate.drops;
+      const baseDrops = Array.isArray(worldBossTemplate.drops) ? worldBossTemplate.drops : [];
+      const extraDrops = Array.isArray(crossWorldBossTemplate.drops) ? crossWorldBossTemplate.drops : [];
+      const dropMap = new Map();
+      baseDrops.forEach((drop) => {
+        if (drop && drop.id) dropMap.set(drop.id, drop);
+      });
+      extraDrops.forEach((drop) => {
+        if (drop && drop.id) dropMap.set(drop.id, drop);
+      });
+      crossWorldBossTemplate.drops = Array.from(dropMap.values());
     }
   }
 
@@ -3259,10 +3276,11 @@ function dropLoot(mobTemplate, bonus = 1) {
       const dropItem = ITEM_TEMPLATES[drop.id];
       if (dropItem?.bossOnly && !isBossMob(mobTemplate)) return;
       if (dropItem?.worldBossOnly && !mobTemplate.worldBoss) return;
+      if (dropItem?.crossWorldBossOnly && mobTemplate?.id !== 'cross_world_boss') return;
       // 史诗和传说级别的bossOnly装备只能在魔龙教主、世界BOSS、沙巴克BOSS掉落
       if (dropItem?.bossOnly) {
         const rarity = rarityByPrice(dropItem);
-        if ((rarity === 'epic' || rarity === 'legendary') && !isSpecialBoss(mobTemplate)) {
+        if ((rarity === 'epic' || rarity === 'legendary' || rarity === 'ultimate') && !isSpecialBoss(mobTemplate)) {
           return;
         }
       }
@@ -3952,9 +3970,10 @@ function distributeLootWithBonus(party, partyMembers, mobTemplate, bonusResolver
       const dropItem = ITEM_TEMPLATES[drop.id];
       if (dropItem?.bossOnly && !isBossMob(mobTemplate)) return;
       if (dropItem?.worldBossOnly && !mobTemplate.worldBoss) return;
+      if (dropItem?.crossWorldBossOnly && mobTemplate?.id !== 'cross_world_boss') return;
       if (dropItem?.bossOnly) {
         const rarity = rarityByPrice(dropItem);
-        if ((rarity === 'epic' || rarity === 'legendary') && !isSpecialBoss(mobTemplate)) {
+        if ((rarity === 'epic' || rarity === 'legendary' || rarity === 'ultimate') && !isSpecialBoss(mobTemplate)) {
           return;
         }
       }
@@ -7544,6 +7563,7 @@ async function processMobDeath(player, mob, online) {
   // 追踪传说和至尊装备掉落数量
   let legendaryDropCount = 0;
   let supremeDropCount = 0;
+  let ultimateDropCount = 0;
 
     let sabakTaxExp = 0;
     let sabakTaxGold = 0;
@@ -7618,11 +7638,13 @@ async function processMobDeath(player, mob, online) {
     }
   }
 
-  const legendaryClassAwarded = new Set();
-  const supremeClassAwarded = new Set();
-  // Prevent a player from receiving multiple legendary/supreme drops in the same boss settlement
-  const legendaryPlayerAwarded = new Set();
-  const supremePlayerAwarded = new Set();
+    const legendaryClassAwarded = new Set();
+    const supremeClassAwarded = new Set();
+    const ultimateClassAwarded = new Set();
+    // Prevent a player from receiving multiple legendary/supreme/ultimate drops in the same boss settlement
+    const legendaryPlayerAwarded = new Set();
+    const supremePlayerAwarded = new Set();
+    const ultimatePlayerAwarded = new Set();
 
     if (isSpecialBoss && entries.length) {
       classRanks = classRanks || buildBossClassRank(mob, entries, roomRealmId);
@@ -7652,10 +7674,14 @@ async function processMobDeath(player, mob, online) {
         if (!topPlayer) return;
         let forcedId = rollRarityEquipmentDrop(template, 1);
         if (!forcedId) {
-          const equipPool = Object.values(ITEM_TEMPLATES)
-            .filter((i) => i && ['weapon', 'armor', 'accessory'].includes(i.type))
-            .filter((i) => template?.worldBoss || rarityByPrice(i) !== 'supreme')
-            .map((i) => i.id);
+            const equipPool = Object.values(ITEM_TEMPLATES)
+              .filter((i) => i && ['weapon', 'armor', 'accessory'].includes(i.type))
+              .filter((i) => {
+                if (template?.worldBoss) return true;
+                const rarity = rarityByPrice(i);
+                return rarity !== 'supreme' && rarity !== 'ultimate';
+              })
+              .map((i) => i.id);
           if (equipPool.length) {
             forcedId = equipPool[randInt(0, equipPool.length - 1)];
           }
@@ -7667,11 +7693,12 @@ async function processMobDeath(player, mob, online) {
         const forcedItem = ITEM_TEMPLATES[forcedId];
         if (forcedItem) {
           const forcedRarity = rarityByPrice(forcedItem);
-          if (forcedRarity === 'legendary') legendaryPlayerAwarded.add(topPlayer.name);
-          if (forcedRarity === 'supreme') supremePlayerAwarded.add(topPlayer.name);
-          if (['legendary', 'supreme'].includes(forcedRarity)) {
-            emitAnnouncement(`${topPlayer.name}（${cls.name}）获得伤害第一奖励 ${formatItemLabel(forcedId, forcedEffects)}！`, forcedRarity, null, announcementRealmId);
-          }
+            if (forcedRarity === 'legendary') legendaryPlayerAwarded.add(topPlayer.name);
+            if (forcedRarity === 'supreme') supremePlayerAwarded.add(topPlayer.name);
+            if (forcedRarity === 'ultimate') ultimatePlayerAwarded.add(topPlayer.name);
+            if (['legendary', 'supreme', 'ultimate'].includes(forcedRarity)) {
+              emitAnnouncement(`${topPlayer.name}（${cls.name}）获得伤害第一奖励 ${formatItemLabel(forcedId, forcedEffects)}！`, forcedRarity, null, announcementRealmId);
+            }
           if (isEquipmentItem(forcedItem) && hasSpecialEffects(forcedEffects)) {
             emitAnnouncement(`${topPlayer.name}（${cls.name}）获得特效装备 ${formatItemLabel(forcedId, forcedEffects)}！`, 'announce', null, announcementRealmId);
           }
@@ -7697,10 +7724,10 @@ async function processMobDeath(player, mob, online) {
           if (!item) return;
           logLoot(`[loot][party] ${target.name} <- ${id} (${template.id})`);
           const rarity = rarityByPrice(item);
-          if (['legendary', 'supreme'].includes(rarity)) {
-            const text = `${target.name} 击败 ${template.name} 获得${RARITY_LABELS[rarity] || '稀有'}装备 ${formatItemLabel(id, effects)}！`;
-            emitAnnouncement(formatLegendaryAnnouncement(text, rarity), rarity, null, announcementRealmId);
-          }
+            if (['legendary', 'supreme', 'ultimate'].includes(rarity)) {
+              const text = `${target.name} 击败 ${template.name} 获得${RARITY_LABELS[rarity] || '稀有'}装备 ${formatItemLabel(id, effects)}！`;
+              emitAnnouncement(formatLegendaryAnnouncement(text, rarity), rarity, null, announcementRealmId);
+            }
           if (isEquipmentItem(item) && hasSpecialEffects(effects)) {
             emitAnnouncement(`${target.name} 获得特效装备 ${formatItemLabel(id, effects)}！`, 'announce', null, announcementRealmId);
           }
@@ -7720,7 +7747,7 @@ async function processMobDeath(player, mob, online) {
           const item = ITEM_TEMPLATES[entry.id];
           if (item) {
             const rarity = rarityByPrice(item);
-            if ((rarity === 'legendary' || rarity === 'supreme') && classRank > 3) {
+            if ((rarity === 'legendary' || rarity === 'supreme' || rarity === 'ultimate') && classRank > 3) {
               logLoot(`[loot][special][skip] ${owner.name} ${entry.id} (classRank:${classRank})`);
               return;
             }
@@ -7772,6 +7799,30 @@ async function processMobDeath(player, mob, online) {
               }
               if (owner.classId) supremeClassAwarded.add(owner.classId);
             }
+            if (rarity === 'ultimate') {
+              if (owner.classId && ultimateClassAwarded.has(owner.classId)) {
+                logLoot(`[loot][special][skip] ${owner.name} ${entry.id} (ultimate class limit)`);
+                return;
+              }
+              if (ultimatePlayerAwarded.has(owner.name)) {
+                logLoot(`[loot][special][skip] ${owner.name} ${entry.id} (ultimate already awarded in class reward)`);
+                return;
+              }
+              // 检查该玩家是否已经获得过终极装备
+              if (actualDrops.some(d => {
+                const dItem = ITEM_TEMPLATES[d.id];
+                return dItem && rarityByPrice(dItem) === 'ultimate';
+              })) {
+                logLoot(`[loot][special][skip] ${owner.name} ${entry.id} (player already has ultimate)`);
+                return;
+              }
+              // 检查全服是否已掉落3件终极装备
+              if (ultimateDropCount >= 3) {
+                logLoot(`[loot][special][skip] ${owner.name} ${entry.id} (ultimate limit reached)`);
+                return;
+              }
+              if (owner.classId) ultimateClassAwarded.add(owner.classId);
+            }
           }
 
           addItem(owner, entry.id, 1, entry.effects);
@@ -7781,18 +7832,20 @@ async function processMobDeath(player, mob, online) {
           if (owner?.userId) lootOwnersToSave.add(owner);
           if (item) {
             const rarity = rarityByPrice(item);
-            if (rarity === 'legendary') {
-              legendaryDropCount++;
-            } else if (rarity === 'supreme') {
-              supremeDropCount++;
+              if (rarity === 'legendary') {
+                legendaryDropCount++;
+              } else if (rarity === 'supreme') {
+                supremeDropCount++;
+              } else if (rarity === 'ultimate') {
+                ultimateDropCount++;
+              }
             }
-          }
-          if (!item) return;
-          const rarity = rarityByPrice(item);
-          if (['legendary', 'supreme'].includes(rarity)) {
-            const text = `${owner.name} 击败 ${template.name} 获得${RARITY_LABELS[rarity] || '稀有'}装备 ${formatItemLabel(entry.id, entry.effects)}！`;
-            emitAnnouncement(formatLegendaryAnnouncement(text, rarity), rarity, null, announcementRealmId);
-          }
+            if (!item) return;
+            const rarity = rarityByPrice(item);
+            if (['legendary', 'supreme', 'ultimate'].includes(rarity)) {
+              const text = `${owner.name} 击败 ${template.name} 获得${RARITY_LABELS[rarity] || '稀有'}装备 ${formatItemLabel(entry.id, entry.effects)}！`;
+              emitAnnouncement(formatLegendaryAnnouncement(text, rarity), rarity, null, announcementRealmId);
+            }
           if (isEquipmentItem(item) && hasSpecialEffects(entry.effects)) {
             emitAnnouncement(`${owner.name} 获得特效装备 ${formatItemLabel(entry.id, entry.effects)}！`, 'announce', null, announcementRealmId);
           }
@@ -7814,10 +7867,10 @@ async function processMobDeath(player, mob, online) {
           const item = ITEM_TEMPLATES[entry.id];
           if (!item) return;
           const rarity = rarityByPrice(item);
-          if (['legendary', 'supreme'].includes(rarity)) {
-            const text = `${owner.name} 击败 ${template.name} 获得${RARITY_LABELS[rarity] || '稀有'}装备 ${formatItemLabel(entry.id, entry.effects)}！`;
-            emitAnnouncement(formatLegendaryAnnouncement(text, rarity), rarity, null, announcementRealmId);
-          }
+            if (['legendary', 'supreme', 'ultimate'].includes(rarity)) {
+              const text = `${owner.name} 击败 ${template.name} 获得${RARITY_LABELS[rarity] || '稀有'}装备 ${formatItemLabel(entry.id, entry.effects)}！`;
+              emitAnnouncement(formatLegendaryAnnouncement(text, rarity), rarity, null, announcementRealmId);
+            }
           if (isEquipmentItem(item) && hasSpecialEffects(entry.effects)) {
             emitAnnouncement(`${owner.name} 获得特效装备 ${formatItemLabel(entry.id, entry.effects)}！`, 'announce', null, announcementRealmId);
           }

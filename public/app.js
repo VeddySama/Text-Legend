@@ -2111,7 +2111,7 @@ let refineSelection = null;
 function listForgeSecondaries(itemId, items) {
   return (items || []).filter((item) =>
     item.id === itemId &&
-    ['legendary', 'supreme'].includes(item.rarity) &&
+    ['legendary', 'supreme', 'ultimate'].includes(item.rarity) &&
     (item.qty || 0) > 0 &&
     !(item.effects && item.effects.elementAtk) // 排除带元素属性的物品
   );
@@ -2194,7 +2194,7 @@ function hasSpecialEffects(effects) {
 function renderForgeModal() {
   if (!forgeUi.list || !forgeUi.secondaryList || !forgeUi.main || !forgeUi.secondary || !forgeUi.confirm) return;
   const equipped = (lastState?.equipment || [])
-    .filter((entry) => entry.item && ['legendary', 'supreme'].includes(entry.item.rarity));
+    .filter((entry) => entry.item && ['legendary', 'supreme', 'ultimate'].includes(entry.item.rarity));
   forgeUi.list.innerHTML = '';
   forgeUi.secondaryList.innerHTML = '';
   forgeSelection = null;
@@ -3528,6 +3528,35 @@ const SET_DROPS = {
       { id: 'necklace_rochie_tao', name: '洛奇项链(道士)', drops: [{ mob: '世界BOSS', chance: '0.3%' }] }
     ]
   },
+  caiya: {
+    name: '菜芽套装',
+    items: [
+      { id: 'sword_caiya', name: '菜芽王者之刃', drops: [{ mob: '跨服BOSS', chance: '0.3%' }] },
+      { id: 'staff_caiya', name: '菜芽王者权杖', drops: [{ mob: '跨服BOSS', chance: '0.3%' }] },
+      { id: 'sword_caiya_tao', name: '菜芽王者之剑', drops: [{ mob: '跨服BOSS', chance: '0.3%' }] },
+      { id: 'armor_caiya_war', name: '菜芽战甲', drops: [{ mob: '跨服BOSS', chance: '0.2%' }] },
+      { id: 'armor_caiya_mage', name: '菜芽法袍', drops: [{ mob: '跨服BOSS', chance: '0.2%' }] },
+      { id: 'armor_caiya_tao', name: '菜芽道袍', drops: [{ mob: '跨服BOSS', chance: '0.2%' }] },
+      { id: 'helm_caiya_war', name: '菜芽头盔(战士)', drops: [{ mob: '跨服BOSS', chance: '0.2%' }] },
+      { id: 'helm_caiya_mage', name: '菜芽头盔(法师)', drops: [{ mob: '跨服BOSS', chance: '0.2%' }] },
+      { id: 'helm_caiya_tao', name: '菜芽头盔(道士)', drops: [{ mob: '跨服BOSS', chance: '0.2%' }] },
+      { id: 'boots_caiya_war', name: '菜芽靴子(战士)', drops: [{ mob: '跨服BOSS', chance: '0.2%' }] },
+      { id: 'boots_caiya_mage', name: '菜芽靴子(法师)', drops: [{ mob: '跨服BOSS', chance: '0.2%' }] },
+      { id: 'boots_caiya_tao', name: '菜芽靴子(道士)', drops: [{ mob: '跨服BOSS', chance: '0.2%' }] },
+      { id: 'belt_caiya_war', name: '菜芽腰带(战士)', drops: [{ mob: '跨服BOSS', chance: '0.2%' }] },
+      { id: 'belt_caiya_mage', name: '菜芽腰带(法师)', drops: [{ mob: '跨服BOSS', chance: '0.2%' }] },
+      { id: 'belt_caiya_tao', name: '菜芽腰带(道士)', drops: [{ mob: '跨服BOSS', chance: '0.2%' }] },
+      { id: 'ring_caiya_war', name: '菜芽戒指(战士)', drops: [{ mob: '跨服BOSS', chance: '0.2%' }] },
+      { id: 'ring_caiya_mage', name: '菜芽戒指(法师)', drops: [{ mob: '跨服BOSS', chance: '0.2%' }] },
+      { id: 'ring_caiya_tao', name: '菜芽戒指(道士)', drops: [{ mob: '跨服BOSS', chance: '0.2%' }] },
+      { id: 'bracelet_caiya_war', name: '菜芽手镯(战士)', drops: [{ mob: '跨服BOSS', chance: '0.2%' }] },
+      { id: 'bracelet_caiya_mage', name: '菜芽手镯(法师)', drops: [{ mob: '跨服BOSS', chance: '0.2%' }] },
+      { id: 'bracelet_caiya_tao', name: '菜芽手镯(道士)', drops: [{ mob: '跨服BOSS', chance: '0.2%' }] },
+      { id: 'necklace_caiya_war', name: '菜芽项链(战士)', drops: [{ mob: '跨服BOSS', chance: '0.2%' }] },
+      { id: 'necklace_caiya_mage', name: '菜芽项链(法师)', drops: [{ mob: '跨服BOSS', chance: '0.2%' }] },
+      { id: 'necklace_caiya_tao', name: '菜芽项链(道士)', drops: [{ mob: '跨服BOSS', chance: '0.2%' }] }
+    ]
+  },
   skillbook: {
     name: '技能书',
     items: [
@@ -3881,6 +3910,7 @@ const ITEM_TYPE_LABELS = {
   unknown: '\u672a\u77e5'
 };
 const RARITY_LABELS = {
+  ultimate: '\u7ec8\u6781',
   supreme: '\u81f3\u5c0a',
   legendary: '\u4f20\u8bf4',
   epic: '\u53f2\u8bd7',
@@ -3895,7 +3925,8 @@ const RARITY_ORDER = {
   rare: 2,
   epic: 3,
   legendary: 4,
-  supreme: 5
+  supreme: 5,
+  ultimate: 6
 };
 
 function rarityRank(item) {
@@ -3914,6 +3945,10 @@ function sortByRarityDesc(a, b) {
 
   function repairMultiplier(rarity) {
     switch (rarity) {
+      case 'ultimate':
+        return 7.0;
+      case 'supreme':
+        return 6.0;
       case 'legendary':
         return 5.0;
       case 'epic':
@@ -4362,6 +4397,9 @@ function applyRarityClass(el, item) {
   if (!el || !item || !item.rarity) return;
   const rarityKey = typeof item.rarity === 'string' ? item.rarity.toLowerCase() : item.rarity;
   el.classList.add(`rarity-${rarityKey}`);
+  if (rarityKey === 'ultimate') {
+    el.classList.add('highlight-marquee', 'ultimate-text');
+  }
 }
 
 function findItemByDisplayName(name, extraItems = null) {

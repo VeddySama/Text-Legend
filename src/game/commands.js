@@ -1969,7 +1969,7 @@ export async function handleCommand({ player, players, allCharacters, playersByN
         return send('只能合成装备。');
       }
       const rarity = rarityByPrice(item);
-      if (!['legendary', 'supreme'].includes(rarity)) {
+      if (!['legendary', 'supreme', 'ultimate'].includes(rarity)) {
         return send('仅支持传说及以上装备合成。');
       }
       if (mainEquippedSlot) {

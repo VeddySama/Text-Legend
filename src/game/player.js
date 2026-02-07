@@ -6,6 +6,7 @@ import { getClassLevelBonusConfig as getClassLevelBonusFromConfig, getRefineBonu
 
 function rarityByPrice(item) {
   if (!item) return 'common';
+  if (item.rarity) return item.rarity;
   const price = Number(item.price || 0);
   if (price >= 80000) return 'legendary';
   if (price >= 30000) return 'epic';
@@ -88,17 +89,19 @@ export function getRepairCost(item, missing, player = null) {
   if (!item || missing <= 0) return 0;
   const base = item.type === 'weapon' ? 200 : item.type === 'armor' ? 180 : 160;
   const rarity = rarityByPrice(item);
-  const mult = rarity === 'supreme'
-    ? 6.0
-    : rarity === 'legendary'
-      ? 5.0
-      : rarity === 'epic'
-        ? 4.2
-        : rarity === 'rare'
-          ? 3.4
-          : rarity === 'uncommon'
-            ? 2.6
-            : 2.0;
+  const mult = rarity === 'ultimate'
+    ? 7.0
+    : rarity === 'supreme'
+      ? 6.0
+      : rarity === 'legendary'
+        ? 5.0
+        : rarity === 'epic'
+          ? 4.2
+          : rarity === 'rare'
+            ? 3.4
+            : rarity === 'uncommon'
+              ? 2.6
+              : 2.0;
   let cost = Math.min(50000, Math.max(1, Math.floor(base * mult * missing)));
   const vipExpiresAt = Number(player?.flags?.vipExpiresAt || 0);
   const vipActive = Boolean(player?.flags?.vip) && (!vipExpiresAt || vipExpiresAt > Date.now());
@@ -237,6 +240,7 @@ export function computeDerived(player) {
     {
       id: 'rochie_war',
       bonusRate: 2.0,
+      weapon: 'sword_rochie',
       head: 'helm_rochie_war',
       waist: 'belt_rochie_war',
       feet: 'boots_rochie_war',
@@ -247,6 +251,7 @@ export function computeDerived(player) {
     {
       id: 'rochie_mage',
       bonusRate: 2.0,
+      weapon: 'staff_rochie',
       head: 'helm_rochie_mage',
       waist: 'belt_rochie_mage',
       feet: 'boots_rochie_mage',
@@ -257,12 +262,46 @@ export function computeDerived(player) {
     {
       id: 'rochie_tao',
       bonusRate: 2.0,
+      weapon: 'sword_rochie_tao',
       head: 'helm_rochie_tao',
       waist: 'belt_rochie_tao',
       feet: 'boots_rochie_tao',
       neck: 'necklace_rochie_tao',
       ring: 'ring_rochie_tao',
       bracelet: 'bracelet_rochie_tao'
+    },
+    {
+      id: 'caiya_war',
+      bonusRate: 4.0,
+      weapon: 'sword_caiya',
+      head: 'helm_caiya_war',
+      waist: 'belt_caiya_war',
+      feet: 'boots_caiya_war',
+      neck: 'necklace_caiya_war',
+      ring: 'ring_caiya_war',
+      bracelet: 'bracelet_caiya_war'
+    },
+    {
+      id: 'caiya_mage',
+      bonusRate: 4.0,
+      weapon: 'staff_caiya',
+      head: 'helm_caiya_mage',
+      waist: 'belt_caiya_mage',
+      feet: 'boots_caiya_mage',
+      neck: 'necklace_caiya_mage',
+      ring: 'ring_caiya_mage',
+      bracelet: 'bracelet_caiya_mage'
+    },
+    {
+      id: 'caiya_tao',
+      bonusRate: 4.0,
+      weapon: 'sword_caiya_tao',
+      head: 'helm_caiya_tao',
+      waist: 'belt_caiya_tao',
+      feet: 'boots_caiya_tao',
+      neck: 'necklace_caiya_tao',
+      ring: 'ring_caiya_tao',
+      bracelet: 'bracelet_caiya_tao'
     }
   ];
   const cls = CLASSES[player.classId];
@@ -273,6 +312,7 @@ export function computeDerived(player) {
   const activeSetBonusRates = new Map();
   SET_DEFS.forEach((setDef) => {
     const partialSet =
+      (!setDef.weapon || equipped.weapon?.id === setDef.weapon) &&
       equipped.head?.id === setDef.head &&
       equipped.waist?.id === setDef.waist &&
       equipped.feet?.id === setDef.feet &&
@@ -291,7 +331,11 @@ export function computeDerived(player) {
         setDef.bracelet
       ].forEach((id) => {
         activeSetIds.add(id);
-        activeSetBonusRates.set(id, bonusRate);
+        activeSetBonusRates.set(id, {
+          rate: bonusRate,
+          mode: setDef.bonusMode || 'all',
+          mainStat: setDef.mainStat || null
+        });
       });
     }
   });
@@ -315,13 +359,38 @@ export function computeDerived(player) {
   let healblockEffectCount = 0;
   for (const entry of bonus) {
     const item = entry.item;
-    const setBonus = activeSetIds.has(item.id) ? (activeSetBonusRates.get(item.id) || SET_BONUS_RATE) : 1;
-    let atk = Math.floor((item.atk || 0) * setBonus);
-    let mag = Math.floor((item.mag || 0) * setBonus);
-    let spirit = Math.floor((item.spirit || 0) * setBonus);
-    let def = Math.floor((item.def || 0) * setBonus);
-    let mdef = Math.floor((item.mdef || 0) * setBonus);
-    const dex = Math.floor((item.dex || 0) * setBonus);
+    const setBonus = activeSetIds.has(item.id) ? activeSetBonusRates.get(item.id) : null;
+    const baseAtk = item.atk || 0;
+    const baseMag = item.mag || 0;
+    const baseSpirit = item.spirit || 0;
+    const baseDef = item.def || 0;
+    const baseMdef = item.mdef || 0;
+    const baseDex = item.dex || 0;
+    let atk = baseAtk;
+    let mag = baseMag;
+    let spirit = baseSpirit;
+    let def = baseDef;
+    let mdef = baseMdef;
+    let dex = baseDex;
+    if (setBonus) {
+      if (setBonus.mode === 'mainOnly' && setBonus.mainStat) {
+        const rate = setBonus.rate || SET_BONUS_RATE;
+        if (setBonus.mainStat === 'atk') atk = Math.floor(baseAtk * rate);
+        if (setBonus.mainStat === 'mag') mag = Math.floor(baseMag * rate);
+        if (setBonus.mainStat === 'spirit') spirit = Math.floor(baseSpirit * rate);
+        def = Math.floor(baseDef * rate);
+        mdef = Math.floor(baseMdef * rate);
+        dex = Math.floor(baseDex * rate);
+      } else {
+        const rate = setBonus.rate || SET_BONUS_RATE;
+        atk = Math.floor(baseAtk * rate);
+        mag = Math.floor(baseMag * rate);
+        spirit = Math.floor(baseSpirit * rate);
+        def = Math.floor(baseDef * rate);
+        mdef = Math.floor(baseMdef * rate);
+        dex = Math.floor(baseDex * rate);
+      }
+    }
 
     // 锻造等级加成：每1级锻造提升所有属性（可配置，默认1点）
     const refineBonus = (entry.refine_level || 0) * getRefineBonusPerLevel();

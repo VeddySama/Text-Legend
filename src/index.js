@@ -4679,8 +4679,9 @@ const onlinePlayerRankTitles = new Map();
 function getDisplayTitle(player) {
   const baseTitle = player?.rankTitle || '';
   const luckyTitle = player?.flags?.dailyLuckyTitle || '';
-  if (baseTitle && luckyTitle) return `${baseTitle}·${luckyTitle}`;
-  return luckyTitle || baseTitle || '';
+  const caiyaTitle = player?.flags?.caiyaTitle || '';
+  const parts = [baseTitle, luckyTitle, caiyaTitle].filter((t) => t && String(t).trim());
+  return parts.length ? parts.join('·') : '';
 }
 
 function getStateThrottleKey(player, socket = null) {

@@ -310,6 +310,7 @@ export function computeDerived(player) {
   const equipped = player.equipment || {};
   const activeSetIds = new Set();
   const activeSetBonusRates = new Map();
+  let caiyaSetActive = false;
   SET_DEFS.forEach((setDef) => {
     const partialSet =
       (!setDef.weapon || equipped.weapon?.id === setDef.weapon) &&
@@ -337,8 +338,16 @@ export function computeDerived(player) {
           mainStat: setDef.mainStat || null
         });
       });
+      if (setDef.id && setDef.id.startsWith('caiya')) {
+        caiyaSetActive = true;
+      }
     }
   });
+  if (caiyaSetActive) {
+    player.flags.caiyaTitle = '雄霸天下';
+  } else if (player.flags.caiyaTitle) {
+    delete player.flags.caiyaTitle;
+  }
   player.flags.setBonusActive = activeSetIds.size > 0;
   const bonus = Object.values(player.equipment)
     .filter((equipped) => equipped && equipped.id && (equipped.durability == null || equipped.durability > 0))

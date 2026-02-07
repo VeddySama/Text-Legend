@@ -72,9 +72,9 @@
   sword_rochie: { id: 'sword_rochie', name: '洛奇王者之刃', type: 'weapon', slot: 'weapon', atk: 94, price: 600000, rarity: 'supreme', worldBossOnly: true },
   staff_rochie: { id: 'staff_rochie', name: '洛奇王者权杖', type: 'weapon', slot: 'weapon', mag: 66, price: 600000, rarity: 'supreme', worldBossOnly: true },
   sword_rochie_tao: { id: 'sword_rochie_tao', name: '洛奇王者之剑', type: 'weapon', slot: 'weapon', spirit: 66, price: 600000, rarity: 'supreme', worldBossOnly: true },
-  sword_caiya: { id: 'sword_caiya', name: '菜芽王者之刃', type: 'weapon', slot: 'weapon', atk: 376, price: 1200000, rarity: 'ultimate', crossWorldBossOnly: true },
-  staff_caiya: { id: 'staff_caiya', name: '菜芽王者权杖', type: 'weapon', slot: 'weapon', mag: 264, price: 1200000, rarity: 'ultimate', crossWorldBossOnly: true },
-  sword_caiya_tao: { id: 'sword_caiya_tao', name: '菜芽王者之剑', type: 'weapon', slot: 'weapon', spirit: 264, price: 1200000, rarity: 'ultimate', crossWorldBossOnly: true },
+  sword_caiya: { id: 'sword_caiya', name: '菜芽霸者之刃', type: 'weapon', slot: 'weapon', atk: 376, price: 1200000, rarity: 'ultimate', crossWorldBossOnly: true },
+  staff_caiya: { id: 'staff_caiya', name: '菜芽霸者权杖', type: 'weapon', slot: 'weapon', mag: 264, price: 1200000, rarity: 'ultimate', crossWorldBossOnly: true },
+  sword_caiya_tao: { id: 'sword_caiya_tao', name: '菜芽霸者之剑', type: 'weapon', slot: 'weapon', spirit: 264, price: 1200000, rarity: 'ultimate', crossWorldBossOnly: true },
 
   // Mage weapons
   staff_apprentice: { id: 'staff_apprentice', name: '学徒法杖', type: 'weapon', slot: 'weapon', atk: 2, mag: 4, price: 380, rarity: 'common' },

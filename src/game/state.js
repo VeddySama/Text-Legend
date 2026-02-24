@@ -12,6 +12,7 @@ const BOSS_SCALE = { hp: 1.25, atk: 1.42, def: 1.77 };
 const MOB_HP_SCALE = 2;
 const MOB_STAT_SCALE = 1.69;
 const MOB_DEF_SCALE = 1.5;
+const BOSS_KILL_GROWTH_STEP = 10;
 
 function respawnKey(realmId, zoneId, roomId, slotIndex) {
   return `${realmId}:${zoneId}:${roomId}:${slotIndex}`;
@@ -43,7 +44,7 @@ function scaledStats(tpl, realmId = 1, zoneId, roomId) {
   // 特殊BOSS：仅应用击杀次数成长。
   if (tpl.specialBoss && !tpl.worldBoss && !isPersonalBoss && !isCultivationBoss) {
     const count = specialBossKillCounts.get(realmId) || 0;
-    const growth = 1 + Math.floor(count / 5) * 0.01;
+    const growth = 1 + Math.floor(count / BOSS_KILL_GROWTH_STEP) * 0.01;
     return {
       hp: Math.floor((tpl.hp || 0) * growth),
       atk: Math.floor((tpl.atk || 0) * growth),
@@ -55,7 +56,7 @@ function scaledStats(tpl, realmId = 1, zoneId, roomId) {
   // 世界BOSS：仅应用击杀次数成长。
   if (tpl.worldBoss) {
     const count = worldBossKillCounts.get(realmId) || 0;
-    const growth = 1 + Math.floor(count / 5) * 0.01;
+    const growth = 1 + Math.floor(count / BOSS_KILL_GROWTH_STEP) * 0.01;
     return {
       hp: Math.floor((tpl.hp || 0) * growth),
       atk: Math.floor((tpl.atk || 0) * growth),
@@ -67,7 +68,7 @@ function scaledStats(tpl, realmId = 1, zoneId, roomId) {
   // 修真BOSS：应用击杀次数成长。
   if (isCultivationBoss) {
     const count = cultivationBossKillCounts.get(realmId) || 0;
-    const growth = 1 + Math.floor(count / 5) * 0.01;
+    const growth = 1 + Math.floor(count / BOSS_KILL_GROWTH_STEP) * 0.01;
     return {
       hp: Math.floor((tpl.hp || 0) * growth),
       atk: Math.floor((tpl.atk || 0) * growth),

@@ -4512,10 +4512,11 @@ function adjustWorldBossStatsByPlayerCount(zoneId, roomId, realmId) {
   const template = MOB_TEMPLATES[worldBossMob.templateId] || MOB_TEMPLATES.world_boss;
   if (!template) return;
 
-  const baseHp = template.hp || worldBossMob.max_hp;
-  const baseAtk = template.atk || worldBossMob.atk;
-  const baseDef = template.def || worldBossMob.def;
-  const baseMdef = template.mdef || worldBossMob.mdef;
+  const scalingBaseStats = worldBossMob.status?.scalingBaseStats || worldBossMob.status?.baseStats || null;
+  const baseHp = scalingBaseStats?.max_hp ?? template.hp ?? worldBossMob.max_hp;
+  const baseAtk = scalingBaseStats?.atk ?? template.atk ?? worldBossMob.atk;
+  const baseDef = scalingBaseStats?.def ?? template.def ?? worldBossMob.def;
+  const baseMdef = scalingBaseStats?.mdef ?? template.mdef ?? worldBossMob.mdef;
 
   // 获取人数分段加成配置
   const playerBonusConfig = getWorldBossPlayerBonusConfigSync() || [];
@@ -4542,6 +4543,14 @@ function adjustWorldBossStatsByPlayerCount(zoneId, roomId, realmId) {
     def: worldBossMob.def,
     mdef: worldBossMob.mdef
   };
+  if (!worldBossMob.status.scalingBaseStats) {
+    worldBossMob.status.scalingBaseStats = {
+      max_hp: Math.floor(baseHp),
+      atk: Math.floor(baseAtk),
+      def: Math.floor(baseDef),
+      mdef: Math.floor(baseMdef)
+    };
+  }
 }
 
 // 同步获取设置（避免异步问题）
@@ -11994,10 +12003,11 @@ function updateSpecialBossStatsBasedOnPlayers() {
         const tpl = MOB_TEMPLATES[specialBoss.templateId];
 
         // 始终从模板读取基础属性，避免重复叠加
-        const baseAtk = tpl.atk || 0;
-        const baseDef = tpl.def || 0;
-        const baseMdef = tpl.mdef || 0;
-        const baseMaxHp = tpl.hp || 0;
+        const scalingBaseStats = specialBoss.status?.scalingBaseStats || specialBoss.status?.baseStats || null;
+        const baseAtk = scalingBaseStats?.atk ?? tpl.atk ?? 0;
+        const baseDef = scalingBaseStats?.def ?? tpl.def ?? 0;
+        const baseMdef = scalingBaseStats?.mdef ?? tpl.mdef ?? 0;
+        const baseMaxHp = scalingBaseStats?.max_hp ?? tpl.hp ?? 0;
 
         // 根据BOSS类型选择配置
         const isWorldBoss = specialBoss.templateId === 'world_boss';
@@ -12026,13 +12036,19 @@ function updateSpecialBossStatsBasedOnPlayers() {
           def: specialBoss.def,
           mdef: specialBoss.mdef
         };
+        if (!specialBoss.status.scalingBaseStats) {
+          specialBoss.status.scalingBaseStats = {
+            max_hp: Math.floor(baseMaxHp),
+            atk: Math.floor(baseAtk),
+            def: Math.floor(baseDef),
+            mdef: Math.floor(baseMdef)
+          };
+        }
 
         // 如果有HP加成，应用到max_hp
-        if (hpBonus > 0) {
-          specialBoss.max_hp = Math.floor(baseMaxHp + hpBonus);
-          specialBoss.hp = Math.min(specialBoss.hp, specialBoss.max_hp);
-          specialBoss.status.baseStats.max_hp = specialBoss.max_hp;
-        }
+        specialBoss.max_hp = Math.floor(baseMaxHp + hpBonus);
+        specialBoss.hp = Math.min(specialBoss.hp, specialBoss.max_hp);
+        specialBoss.status.baseStats.max_hp = specialBoss.max_hp;
       });
     });
   });

@@ -231,7 +231,10 @@ export function spawnMobs(zoneId, roomId, realmId = 1) {
             def: scaled.def,
             mdef: scaled.mdef,
             dex: tpl.dex || 6,
-            status: { baseStats: { atk: scaled.atk, def: scaled.def, mdef: scaled.mdef, max_hp: scaled.hp } },
+            status: {
+              baseStats: { atk: scaled.atk, def: scaled.def, mdef: scaled.mdef, max_hp: scaled.hp },
+              scalingBaseStats: { atk: scaled.atk, def: scaled.def, mdef: scaled.mdef, max_hp: scaled.hp }
+            },
             respawnAt: cached.respawnAt,
             justRespawned: false
           };
@@ -266,6 +269,9 @@ export function spawnMobs(zoneId, roomId, realmId = 1) {
         if (!mob.status.baseStats) {
           mob.status.baseStats = { atk: scaled.atk, def: scaled.def, mdef: scaled.mdef, max_hp: scaled.hp };
         }
+        if (!mob.status.scalingBaseStats) {
+          mob.status.scalingBaseStats = { atk: scaled.atk, def: scaled.def, mdef: scaled.mdef, max_hp: scaled.hp };
+        }
         mobList.push(mob);
         return;
       } else if (cached && cached.respawnAt <= now) {
@@ -289,7 +295,10 @@ export function spawnMobs(zoneId, roomId, realmId = 1) {
         def: scaled.def,
         mdef: scaled.mdef,
         dex: tpl.dex || 6,
-        status: { baseStats: { atk: scaled.atk, def: scaled.def, mdef: scaled.mdef, max_hp: scaled.hp } },
+        status: {
+          baseStats: { atk: scaled.atk, def: scaled.def, mdef: scaled.mdef, max_hp: scaled.hp },
+          scalingBaseStats: { atk: scaled.atk, def: scaled.def, mdef: scaled.mdef, max_hp: scaled.hp }
+        },
         respawnAt: null,
         justRespawned: Boolean(tpl.worldBoss || tpl.sabakBoss || tpl.respawnMs)
       };
@@ -310,7 +319,10 @@ export function spawnMobs(zoneId, roomId, realmId = 1) {
         mob.def = scaled.def;
         mob.mdef = scaled.mdef;
         mob.dex = tpl.dex || 6;
-        mob.status = { baseStats: { atk: scaled.atk, def: scaled.def, mdef: scaled.mdef, max_hp: scaled.hp } };
+        mob.status = {
+          baseStats: { atk: scaled.atk, def: scaled.def, mdef: scaled.mdef, max_hp: scaled.hp },
+          scalingBaseStats: { atk: scaled.atk, def: scaled.def, mdef: scaled.mdef, max_hp: scaled.hp }
+        };
         mob.respawnAt = cached.respawnAt;
         mob.justRespawned = false;
         return;
@@ -335,7 +347,10 @@ export function spawnMobs(zoneId, roomId, realmId = 1) {
       mob.def = scaled.def;
       mob.mdef = scaled.mdef;
       mob.dex = tpl.dex || 6;
-      mob.status = { baseStats: { atk: scaled.atk, def: scaled.def, mdef: scaled.mdef, max_hp: scaled.hp } };
+      mob.status = {
+        baseStats: { atk: scaled.atk, def: scaled.def, mdef: scaled.mdef, max_hp: scaled.hp },
+        scalingBaseStats: { atk: scaled.atk, def: scaled.def, mdef: scaled.mdef, max_hp: scaled.hp }
+      };
       mob.respawnAt = null;
       mob.justRespawned = Boolean(tpl.worldBoss || tpl.sabakBoss || tpl.respawnMs);
       RESPAWN_CACHE.delete(respawnKey(realmId, zoneId, roomId, index));

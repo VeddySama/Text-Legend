@@ -11957,6 +11957,8 @@ async function processMobDeath(player, mob, online) {
   const isCrossWorldBoss = template.id === 'cross_world_boss';
   const isSabakBoss = Boolean(template.sabakBoss);
   const isMolongBoss = template.id === 'molong_boss';
+  const isPersonalBoss = template.id === 'vip_personal_boss' || template.id === 'svip_personal_boss';
+  const isCultivationBossMob = Boolean(template.id && template.id.startsWith('cultivation_boss_'));
   const isSpecialBossMob = isWorldBoss || isSabakBoss || isMolongBoss || isSpecialBoss(template);
   if (isCrossWorldBoss) {
     const killer = playersByName(lastHitSnapshot || player?.name, roomRealmId) || player;
@@ -11964,14 +11966,12 @@ async function processMobDeath(player, mob, online) {
       killer.flags.autoFullCrossBossCooldownUntil = Date.now() + AUTO_FULL_CROSS_BOSS_COOLDOWN_MS;
     }
   }
-  if (isWorldBoss) {
+  if (isWorldBoss && !isPersonalBoss) {
     const nextKills = incrementWorldBossKills(1, roomRealmId);
     void setWorldBossKillCount(nextKills, roomRealmId).catch((err) => {
       console.warn('Failed to persist world boss kill count:', err);
     });
   }
-  const isPersonalBoss = template.id === 'vip_personal_boss' || template.id === 'svip_personal_boss';
-  const isCultivationBossMob = Boolean(template.id && template.id.startsWith('cultivation_boss_'));
   if (template.specialBoss && !template.worldBoss && !isPersonalBoss && !isCultivationBossMob) {
     const nextKills = incrementSpecialBossKills(1, roomRealmId);
     void setSpecialBossKillCount(nextKills, roomRealmId).catch((err) => {

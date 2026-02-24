@@ -2554,7 +2554,9 @@ function renderPetModal() {
     });
   }
   if (petUi.synthMain && petUi.synthSub) {
-    const buildPetOptions = (select, allowEmpty = false) => {
+    const prevMainId = String(petUi.synthMain.value || '');
+    const prevSubId = String(petUi.synthSub.value || '');
+    const buildPetOptions = (select, list, allowEmpty = false) => {
       select.innerHTML = '';
       if (allowEmpty) {
         const empty = document.createElement('option');
@@ -2562,16 +2564,26 @@ function renderPetModal() {
         empty.textContent = '请选择';
         select.appendChild(empty);
       }
-      pets.forEach((pet) => {
+      (list || []).forEach((pet) => {
         const opt = document.createElement('option');
         opt.value = pet.id;
         opt.textContent = pet.name;
         select.appendChild(opt);
       });
     };
-    buildPetOptions(petUi.synthMain, true);
-    buildPetOptions(petUi.synthSub, true);
-    if (selectedPetId) petUi.synthMain.value = selectedPetId;
+    buildPetOptions(petUi.synthMain, pets, true);
+    const mainPetId = selectedPetId || prevMainId || '';
+    if (mainPetId && pets.some((pet) => pet.id === mainPetId)) {
+      petUi.synthMain.value = mainPetId;
+    }
+    const currentMainPetId = String(petUi.synthMain.value || '');
+    const subCandidates = pets.filter((pet) => pet.id !== currentMainPetId);
+    buildPetOptions(petUi.synthSub, subCandidates, true);
+    if (prevSubId && prevSubId !== currentMainPetId && subCandidates.some((pet) => pet.id === prevSubId)) {
+      petUi.synthSub.value = prevSubId;
+    }
+    petUi.synthSub.disabled = subCandidates.length <= 0;
+    if (petUi.synthBtn) petUi.synthBtn.disabled = pets.length < 2;
   }
 }
 
@@ -8508,6 +8520,13 @@ if (petUi.synthBtn) {
     });
     if (!confirmed) return;
     sendPetAction('synthesize', { mainPetId, subPetId });
+  });
+}
+if (petUi.synthMain) {
+  petUi.synthMain.addEventListener('change', () => {
+    const petId = String(petUi.synthMain.value || '');
+    if (petId) selectedPetId = petId;
+    renderPetModal();
   });
 }
 if (petUi.close) {

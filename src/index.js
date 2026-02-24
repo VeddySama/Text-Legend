@@ -8321,7 +8321,7 @@ function applyPetSettings(raw, options = {}) {
 
 function getPetSettingsSnapshot() {
   return {
-    maxOwned: PET_MAX_OWNED,
+    maxOwned: 0,
     baseSkillSlots: PET_BASE_SKILL_SLOTS,
     maxSkillSlots: PET_MAX_SKILL_SLOTS,
     comprehendCostGold: PET_COMPREHEND_COST_GOLD,
@@ -8576,7 +8576,6 @@ function normalizePetState(player) {
 
   state.pets = state.pets
     .filter((pet) => pet && typeof pet === 'object')
-    .slice(0, PET_MAX_OWNED)
     .map((pet) => {
       const playerLevel = Math.max(1, Math.floor(Number(player.level || 1)));
       const petLevelCap = getPetLevelCap(player);
@@ -8779,10 +8778,7 @@ function grantPetDropToPlayer(player, pet, mobTemplate) {
   pet.level = Math.max(1, Math.min(petLevelCap, Number.isFinite(petLevelRaw) ? petLevelRaw : playerLevel));
   pet.exp = Math.max(0, Math.floor(Number(pet.exp || 0)));
   const petState = normalizePetState(player);
-  if (!petState || petState.pets.length >= PET_MAX_OWNED) {
-    player.send(`宠物掉落：[${PET_RARITY_LABELS[pet.rarity] || PET_RARITY_LABELS.normal}] ${pet.name}，但宠物栏已满。`);
-    return false;
-  }
+  if (!petState) return false;
   petState.pets.push(pet);
   if (!petState.activePetId) petState.activePetId = pet.id;
   player.send(`宠物掉落：[${PET_RARITY_LABELS[pet.rarity] || PET_RARITY_LABELS.normal}] ${pet.name}（成长 ${pet.growth.toFixed(3)}）。`);
@@ -10709,6 +10705,15 @@ io.on('connection', (socket) => {
         dirty = true;
       }
       emitResult(true, `${pet.name} is now resting`);
+    } else if (action === 'release') {
+      const pet = getPetById(clean?.petId);
+      if (!pet) return fail('pet not found');
+      petState.pets = petState.pets.filter((entry) => entry.id !== pet.id);
+      if (petState.activePetId === pet.id) {
+        petState.activePetId = null;
+      }
+      dirty = true;
+      emitResult(true, `pet released: ${pet.name}`);
     } else if (action === 'rename') {
       const pet = getPetById(clean?.petId);
       if (!pet) return fail('pet not found');

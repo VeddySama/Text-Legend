@@ -567,6 +567,7 @@ const petUi = {
   setActive: document.getElementById('pet-set-active'),
   setRest: document.getElementById('pet-set-rest'),
   rename: document.getElementById('pet-rename'),
+  release: document.getElementById('pet-release'),
   bookList: document.getElementById('pet-book-list'),
   useBook: document.getElementById('pet-use-book'),
   useBookBtn: document.getElementById('pet-use-book-btn'),
@@ -2503,8 +2504,14 @@ function renderPetModal() {
   if (petUi.summary) {
     const active = pets.find((pet) => pet.id === petState?.activePetId);
     const activeName = active ? active.name : '无';
-    petUi.summary.textContent = `宠物: ${pets.length}/${Number(petState?.maxOwned || 0)} | 出战: ${activeName} | 合成:${Number(petState?.synthesisCostGold || 0)}金`;
+    const maxOwned = Number(petState?.maxOwned || 0);
+    const capacityText = maxOwned > 0 ? `${pets.length}/${maxOwned}` : `${pets.length}/∞`;
+    petUi.summary.textContent = `宠物: ${capacityText} | 出战: ${activeName} | 合成:${Number(petState?.synthesisCostGold || 0)}金`;
   }
+  if (petUi.setActive) petUi.setActive.disabled = !selected;
+  if (petUi.setRest) petUi.setRest.disabled = !selected;
+  if (petUi.rename) petUi.rename.disabled = !selected;
+  if (petUi.release) petUi.release.disabled = !selected;
 
   petUi.list.innerHTML = '';
   if (!pets.length) {
@@ -2517,7 +2524,17 @@ function renderPetModal() {
       const row = document.createElement('div');
       row.className = `pet-entry${selectedPetId === pet.id ? ' active' : ''}`;
       const activeMark = petState?.activePetId === pet.id ? ' [出战]' : '';
-      row.textContent = `[${pet.rarityLabel || '-'}] ${pet.name}${activeMark} | 等级:${Number(pet.level || 1)}/${Number(pet.levelCap || 1)} EXP:${Number(pet.exp || 0)}/${Number(pet.expNeed || 0)} | 成长:${Number(pet.growth || 1).toFixed(3)} | 技能:${(pet.skills || []).length}/${pet.skillSlots} | 战力:${pet.power || 0}`;
+      const rarityKey = normalizeRarityKey(pet.rarity);
+      const nameSpan = document.createElement('span');
+      nameSpan.textContent = `[${pet.rarityLabel || '-'}] ${pet.name}${activeMark}`;
+      if (rarityKey) {
+        nameSpan.classList.add(`rarity-${rarityKey}`);
+        if (rarityKey === 'ultimate') nameSpan.classList.add('highlight-marquee', 'ultimate-text');
+      }
+      row.appendChild(nameSpan);
+      row.appendChild(document.createTextNode(
+        ` | 等级:${Number(pet.level || 1)}/${Number(pet.levelCap || 1)} EXP:${Number(pet.exp || 0)}/${Number(pet.expNeed || 0)} | 成长:${Number(pet.growth || 1).toFixed(3)} | 技能:${(pet.skills || []).length}/${pet.skillSlots} | 战力:${pet.power || 0}`
+      ));
       const listEffects = Array.isArray(pet.skillEffects) ? pet.skillEffects.filter((text) => String(text || '').trim()) : [];
       if (listEffects.length) {
         const tooltipText = listEffects.join('\n');
@@ -2537,8 +2554,18 @@ function renderPetModal() {
     petUi.detail.textContent = '请选择一只宠物';
   } else {
     petUi.detail.innerHTML = '';
+    const nameLine = document.createElement('div');
+    nameLine.textContent = '名称: ';
+    const nameSpan = document.createElement('span');
+    nameSpan.textContent = selected.name;
+    const selectedRarityKey = normalizeRarityKey(selected.rarity);
+    if (selectedRarityKey) {
+      nameSpan.classList.add(`rarity-${selectedRarityKey}`);
+      if (selectedRarityKey === 'ultimate') nameSpan.classList.add('highlight-marquee', 'ultimate-text');
+    }
+    nameLine.appendChild(nameSpan);
+    petUi.detail.appendChild(nameLine);
     const lines = [
-      `名称: ${selected.name}`,
       `稀有度: ${selected.rarityLabel || '-'}`,
       `等级: ${Number(selected.level || 1)}/${Number(selected.levelCap || 1)}`,
       `经验: ${Number(selected.exp || 0)}/${Number(selected.expNeed || 0)}`,
@@ -8815,6 +8842,19 @@ if (petUi.rename) {
     });
     if (!name) return;
     sendPetAction('rename', { petId: selectedPetId, name: String(name).trim() });
+  });
+}
+if (petUi.release) {
+  petUi.release.addEventListener('click', async () => {
+    const petId = selectedPetId;
+    const pet = getPetByStateId(petId);
+    if (!pet) return;
+    const ok = await confirmModal({
+      title: '放生宠物',
+      text: `确认放生 ${pet.name} 吗？该操作不可恢复。`
+    });
+    if (!ok) return;
+    sendPetAction('release', { petId });
   });
 }
 if (petUi.useBookBtn) {

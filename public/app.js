@@ -8241,22 +8241,30 @@ if (refineUi.confirm) {
   });
 }
 if (refineUi.batch) {
-  refineUi.batch.addEventListener('click', () => {
+  refineUi.batch.addEventListener('click', async () => {
     if (!socket || !refineSelection || !refineSelection.slot) return;
     const mainItem = refineSelection.fromEquip ? `equip:${refineSelection.slot}` : refineSelection.slot;
-    // 一键锻造：自动消耗所有满足条件的装备
     const materials = countRefineMaterials();
     const batches = Math.floor(materials / refineMaterialCount);
     if (batches <= 0) return;
-
-    for (let i = 0; i < batches; i++) {
-      setTimeout(() => {
-        socket.emit('cmd', {
-          text: `refine ${mainItem}`,
-          source: 'ui'
-        });
-      }, i * 100); // 每次间隔100ms
+    const currentRefineLevel = Math.max(0, Number(refineSelection.refineLevel || 0));
+    const targetText = await promptModal({
+      title: '一键锻造目标',
+      text: `输入自动停止的锻造等级（当前 +${currentRefineLevel}）`,
+      placeholder: '例如 20',
+      value: String(Math.max(currentRefineLevel + 1, Math.ceil((currentRefineLevel + 1) / 10) * 10)),
+      type: 'number'
+    });
+    if (targetText == null) return;
+    const targetLevel = Math.floor(Number(String(targetText).trim()));
+    if (!Number.isFinite(targetLevel) || targetLevel <= currentRefineLevel) {
+      showToast(`请输入大于当前等级的整数（当前 +${currentRefineLevel}）`);
+      return;
     }
+    socket.emit('cmd', {
+      text: `refine ${mainItem} ${targetLevel}`,
+      source: 'ui'
+    });
   });
 }
 if (refineUi.close) {

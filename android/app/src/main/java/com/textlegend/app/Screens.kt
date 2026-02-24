@@ -3132,12 +3132,12 @@ private fun ShopDialog(vm: GameViewModel, state: GameState?, onDismiss: () -> Un
         }
 
         Spacer(modifier = Modifier.height(10.dp))
-        Text("一键锻造(整十级)", style = MaterialTheme.typography.titleMedium)
+        Text("一键锻造(自动停止)", style = MaterialTheme.typography.titleMedium)
         Spacer(modifier = Modifier.height(6.dp))
         OutlinedTextField(
             value = bulkTarget,
             onValueChange = { bulkTarget = it.filter { ch -> ch.isDigit() } },
-            label = { Text("目标等级(10/20/30)") },
+            label = { Text("目标等级(如 20/35)") },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             modifier = Modifier.fillMaxWidth()
         )
@@ -3145,10 +3145,14 @@ private fun ShopDialog(vm: GameViewModel, state: GameState?, onDismiss: () -> Un
         Button(
             onClick = {
                 val target = bulkTarget.toIntOrNull()
-                if (target != null) vm.sendCmd("refine all $target")
+                val current = refineLevel ?: 0
+                if (selection.isBlank()) return@Button
+                if (target == null || target <= current) return@Button
+                vm.sendCmd("refine $selection $target")
             },
+            enabled = selection.isNotBlank(),
             modifier = Modifier.fillMaxWidth()
-        ) { Text("一键锻造到目标等级") }
+        ) { Text("当前装备锻造到目标等级") }
     }
   }
 

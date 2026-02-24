@@ -3240,7 +3240,19 @@ export async function handleCommand({ player, players, allCharacters, playersByN
         send(results.length ? results.join('\n') : '没有可锻造的装备。');
         return;
       }
-      const itemRaw = rawArgs;
+      let itemRaw = rawArgs;
+      let targetLevel = null;
+      if (rawArgs.startsWith('equip:')) {
+        const parts = rawArgs.split(/\s+/).filter(Boolean);
+        if (parts.length >= 2) {
+          const maybeTarget = Number(parts[parts.length - 1]);
+          if (!Number.isFinite(maybeTarget) || maybeTarget <= 0) {
+            return send('目标锻造等级必须是大于0的整数。');
+          }
+          targetLevel = Math.floor(maybeTarget);
+          itemRaw = parts[0];
+        }
+      }
 
       // 解析主件装备
       let mainResolved = null;
@@ -3261,6 +3273,85 @@ export async function handleCommand({ player, players, allCharacters, playersByN
       const item = mainResolved.item;
       if (!item.slot || !['weapon', 'armor', 'accessory'].includes(item.type)) {
         return send('只能锻造装备。');
+      }
+
+      if (targetLevel != null) {
+        if (!mainEquippedSlot) return send('设置自动停止等级仅支持已装备装备。');
+        let current = mainResolved.slot.refine_level || 0;
+        if (current >= targetLevel) {
+          return send(`${item.name} 已达到锻造+${current}。`);
+        }
+        let attempts = 0;
+        const maxAttempts = Math.max(20, (targetLevel - current) * 20);
+        let stopReason = null;
+        while (current < targetLevel && attempts < maxAttempts) {
+          attempts += 1;
+          const currentRefineLevel = mainResolved.slot.refine_level || 0;
+          const nextRefineLevel = currentRefineLevel + 1;
+          const tier = Math.floor((nextRefineLevel - 2) / 10);
+          const baseSuccessRate = Math.max(1, getRefineBaseSuccessRate() - tier * getRefineDecayRate());
+          const successRate = nextRefineLevel === 1 ? 100 : baseSuccessRate;
+          const isProtected = currentRefineLevel > 0 && currentRefineLevel % 10 === 0;
+
+          const allShopItems = new Set();
+          Object.values(SHOP_STOCKS).forEach(stockList => {
+            stockList.forEach(itemId => allShopItems.add(itemId));
+          });
+
+          const materialCount = getRefineMaterialCount();
+          const materials = [];
+          const inventory = Array.isArray(player.inventory) ? player.inventory.slice() : [];
+          for (const slot of inventory) {
+            if (!slot || !slot.id) continue;
+            const matItem = ITEM_TEMPLATES[slot.id];
+            if (!matItem) continue;
+            if (!isEquipmentItem(matItem)) continue;
+            if (allShopItems.has(slot.id)) continue;
+            const rarity = matItem.rarity || rarityByPrice(matItem);
+            if (!isBelowEpic(rarity)) continue;
+            if (hasSpecialEffects(slot.effects)) continue;
+            const qty = Math.max(0, Number(slot.qty || 0));
+            if (qty <= 0) continue;
+            const takeQty = Math.min(qty, materialCount - materials.length);
+            for (let i = 0; i < takeQty; i++) {
+              materials.push({ slot, item: matItem });
+            }
+            if (materials.length >= materialCount) break;
+          }
+
+          if (materials.length < materialCount) {
+            stopReason = `材料不足（需要${materialCount}件，当前可用${materials.length}件）`;
+            break;
+          }
+
+          materials.forEach(({ slot }) => {
+            if (slot.qty) {
+              slot.qty -= 1;
+            } else {
+              const index = player.inventory.indexOf(slot);
+              if (index > -1) {
+                player.inventory.splice(index, 1);
+              }
+            }
+          });
+          player.inventory = player.inventory.filter((slot) => !slot.qty || slot.qty > 0);
+
+          const success = Math.random() * 100 < successRate;
+          const newRefineLevel = success
+            ? nextRefineLevel
+            : (isProtected ? currentRefineLevel : Math.max(0, currentRefineLevel - 1));
+          player.equipment[mainEquippedSlot].refine_level = newRefineLevel;
+          current = newRefineLevel;
+        }
+        if (!stopReason && current < targetLevel) {
+          stopReason = '达到单次保护上限';
+        }
+        computeDerived(player);
+        player.forceStateRefresh = true;
+        if (current >= targetLevel) {
+          return send(`一键锻造完成：${item.name} 已达到锻造+${current}（目标 +${targetLevel}）。`);
+        }
+        return send(`一键锻造已停止：${item.name} 当前锻造+${current}（目标 +${targetLevel}，原因：${stopReason || '未知'}）。`);
       }
 
       const currentRefineLevel = mainResolved.slot.refine_level || 0;

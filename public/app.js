@@ -4368,12 +4368,13 @@ function showAutoFullBossModal() {
     renderRankModal('warrior');
   }
 
-  function setRankModalPresentation({ title = '玩家排行', showTabs = true } = {}) {
+  function setRankModalPresentation({ title = '玩家排行', showTabs = true, mode = 'player' } = {}) {
     const rankModal = document.getElementById('rank-modal');
     if (!rankModal) return;
     const titleEl = rankModal.querySelector('.modal-title');
     const tabsWrap = rankModal.querySelector('.rank-tabs');
     if (titleEl) titleEl.textContent = title;
+    rankModal.dataset.mode = mode;
     if (tabsWrap) tabsWrap.classList.toggle('hidden', !showTabs);
   }
 
@@ -4381,7 +4382,7 @@ function showAutoFullBossModal() {
     const rankModal = document.getElementById('rank-modal');
     const rankList = document.getElementById('rank-list');
     if (!rankModal || !rankList) return;
-    setRankModalPresentation({ title: label, showTabs: false });
+    setRankModalPresentation({ title: label, showTabs: false, mode: 'activity' });
     rankList.innerHTML = '<div class="modal-text">加载中...</div>';
     rankModal.classList.remove('hidden');
   }
@@ -4390,7 +4391,7 @@ function showAutoFullBossModal() {
     const rankModal = document.getElementById('rank-modal');
     const rankList = document.getElementById('rank-list');
     if (!rankModal || !rankList) return;
-    setRankModalPresentation({ title: '活动排行榜', showTabs: false });
+    setRankModalPresentation({ title: '活动排行榜', showTabs: false, mode: 'activity' });
     rankList.innerHTML = '';
     const sections = Array.isArray(payload?.sections) ? payload.sections : [];
     if (!sections.length) {
@@ -4527,7 +4528,7 @@ function showAutoFullBossModal() {
     const rankList = document.getElementById('rank-list');
     const tabs = document.querySelectorAll('.rank-tab');
 
-    setRankModalPresentation({ title: '玩家排行', showTabs: true });
+    setRankModalPresentation({ title: '玩家排行', showTabs: true, mode: 'player' });
     // Update active tab
     tabs.forEach(tab => tab.classList.remove('active'));
     document.getElementById(`rank-tab-${classType}`).classList.add('active');
@@ -7752,7 +7753,10 @@ function enterGame(name) {
     }
     const rankData = parseRankLine(payload.text);
     if (rankData) {
-      renderRankList(rankData);
+      const rankModal = document.getElementById('rank-modal');
+      if ((rankModal?.dataset?.mode || 'player') !== 'activity') {
+        renderRankList(rankData);
+      }
     }
     if (payload.text.startsWith('\u4ea4\u6613')) {
       appendChatLine(payload);
@@ -8775,6 +8779,8 @@ const rankTabs = document.querySelectorAll('.rank-tab');
 if (rankTabs && rankTabs.length) {
   rankTabs.forEach((tab) => {
     tab.addEventListener('click', () => {
+      const rankModal = document.getElementById('rank-modal');
+      if ((rankModal?.dataset?.mode || 'player') !== 'player') return;
       const classType = tab.id.replace('rank-tab-', '');
       renderRankModal(classType);
     });

@@ -2405,6 +2405,82 @@ body.dark .chat-name-btn.sponsor-player-name:hover {
   background: rgba(255, 255, 255, 0.18);
 }
 
+#prompt-modal.activity-center-prompt .modal-card {
+  width: min(760px, 94vw);
+}
+
+#prompt-modal.activity-center-prompt .modal-text {
+  line-height: 1.55;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.prompt-options.activity-center-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+  align-items: stretch;
+}
+
+.prompt-options.activity-center-options .prompt-option {
+  width: 100%;
+  min-height: 46px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  text-align: center;
+  line-height: 1.25;
+  font-size: 0.92rem;
+  border-color: rgba(255, 255, 255, 0.14);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.04));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 6px 16px rgba(0, 0, 0, 0.18);
+}
+
+.prompt-options.activity-center-options .prompt-option:hover {
+  border-color: rgba(255, 255, 255, 0.26);
+  transform: translateY(-1px);
+}
+
+.prompt-options.activity-center-options .prompt-option.active {
+  border-color: rgba(244, 180, 96, 0.55);
+  background:
+    linear-gradient(180deg, rgba(244, 180, 96, 0.26), rgba(244, 180, 96, 0.12));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    0 8px 20px rgba(218, 132, 36, 0.18);
+}
+
+.prompt-options.activity-center-options .prompt-option.activity-action-primary,
+.prompt-options.activity-center-options .prompt-option.activity-action-shop {
+  font-weight: 600;
+}
+
+.prompt-options.activity-center-options .prompt-option.activity-action-shop {
+  border-color: rgba(244, 180, 96, 0.36);
+  background:
+    linear-gradient(180deg, rgba(244, 180, 96, 0.18), rgba(244, 180, 96, 0.08));
+}
+
+#prompt-modal.activity-center-prompt .modal-actions {
+  margin-top: 12px;
+}
+
+@media (max-width: 640px) {
+  .prompt-options.activity-center-options {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .prompt-options.activity-center-options .prompt-option {
+    min-height: 42px;
+    font-size: 0.88rem;
+    padding: 8px 10px;
+  }
+}
+
 .prompt-label {
   font-size: 0.85rem;
   color: #6b4b2a;

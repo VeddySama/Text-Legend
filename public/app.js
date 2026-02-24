@@ -1913,7 +1913,9 @@ function promptMultiSelectModal({
   onSelect = null,
   closeOnSelect = true,
   hideOk = false,
-  cancelText = null
+  cancelText = null,
+  optionsClassName = '',
+  modalClassName = ''
 }) {
   if (!promptUi.modal || !promptUi.input || !promptUi.options) return Promise.resolve(null);
   return new Promise((resolve) => {
@@ -1960,6 +1962,7 @@ function promptMultiSelectModal({
       }
       if (promptUi.options) {
         promptUi.options.classList.add('hidden');
+        if (optionsClassName) promptUi.options.classList.remove(...String(optionsClassName).split(/\s+/).filter(Boolean));
         promptUi.options.innerHTML = '';
       }
       if (promptUi.extra) {
@@ -1973,6 +1976,9 @@ function promptMultiSelectModal({
       }
       if (promptUi.cancel) {
         promptUi.cancel.textContent = '取消';
+      }
+      if (modalClassName) {
+        promptUi.modal.classList.remove(...String(modalClassName).split(/\s+/).filter(Boolean));
       }
     };
 
@@ -1991,7 +1997,13 @@ function promptMultiSelectModal({
       promptUi.extra.textContent = '';
     }
     promptUi.options.classList.remove('hidden');
+    if (optionsClassName) {
+      promptUi.options.classList.add(...String(optionsClassName).split(/\s+/).filter(Boolean));
+    }
     promptUi.options.innerHTML = '';
+    if (modalClassName) {
+      promptUi.modal.classList.add(...String(modalClassName).split(/\s+/).filter(Boolean));
+    }
     if (promptUi.ok) {
       promptUi.ok.classList.toggle('hidden', !!hideOk);
     }
@@ -2003,6 +2015,9 @@ function promptMultiSelectModal({
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'prompt-option';
+      if (opt.className) {
+        btn.classList.add(...String(opt.className).split(/\s+/).filter(Boolean));
+      }
       btn.textContent = opt.label;
       if (selected.has(opt.value)) {
         btn.classList.add('active');
@@ -4628,10 +4643,10 @@ function showAutoFullBossModal() {
       title: '活动中心',
       text: summaryLines.join('\n'),
       options: [
-        { value: 'refresh', label: '刷新活动状态' },
-        { value: 'claim', label: '领取活动奖励' },
-        { value: 'shop', label: '积分商城' },
-        { value: 'rank_all', label: '查看全部排行榜' },
+        { value: 'refresh', label: '刷新活动状态', className: 'activity-action-primary' },
+        { value: 'claim', label: '领取活动奖励', className: 'activity-action-primary' },
+        { value: 'shop', label: '积分商城', className: 'activity-action-shop' },
+        { value: 'rank_all', label: '查看全部排行榜', className: 'activity-action-rank all-rank' },
         { value: 'rank_double', label: '查看双倍秘境榜' },
         { value: 'rank_bounty', label: '查看悬赏榜' },
         { value: 'rank_pet_carnival', label: '查看宠物狂欢榜' },
@@ -4650,6 +4665,8 @@ function showAutoFullBossModal() {
       closeOnSelect: (value) => String(value || '').startsWith('rank_') || String(value || '') === 'shop',
       hideOk: true,
       cancelText: '关闭',
+      optionsClassName: 'activity-center-options',
+      modalClassName: 'activity-center-prompt',
       onSelect: (value) => runActivityCenterAction(value)
     });
   }

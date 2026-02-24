@@ -6281,6 +6281,14 @@ function normalizeBossName(value) {
     .replace(/[\u00b7:\uff1a-]/g, '');
 }
 
+const AUTO_FULL_BOSS_FILTER_KEYS = {
+  cultivation: normalizeBossName('修真BOSS'),
+  world: normalizeBossName('世界BOSS'),
+  cross: normalizeBossName('跨服BOSS'),
+  special: normalizeBossName('特殊BOSS'),
+  personal: normalizeBossName('个人BOSS')
+};
+
 function getAutoFullBossFilterSet(player) {
   const list = player?.flags?.autoFullBossFilter;
   if (!Array.isArray(list)) return null;
@@ -6289,6 +6297,21 @@ function getAutoFullBossFilterSet(player) {
     .map((name) => normalizeBossName(name))
     .filter(Boolean);
   return new Set(normalized);
+}
+
+function isAutoFullBossCategoryMatch(filterKey, mobTemplate) {
+  if (!mobTemplate || !filterKey) return false;
+  const isPersonalBoss = mobTemplate.id === 'vip_personal_boss' || mobTemplate.id === 'svip_personal_boss';
+  const isCultBoss = isCultivationBoss(mobTemplate);
+  const isCrossBoss = mobTemplate.id === 'cross_world_boss';
+  const isWorldBossOnly = Boolean(mobTemplate.worldBoss) && !isCrossBoss && !isPersonalBoss;
+  const isSpecialBossOnly = Boolean(mobTemplate.specialBoss) && !mobTemplate.worldBoss && !isCultBoss && !isPersonalBoss;
+  if (filterKey === AUTO_FULL_BOSS_FILTER_KEYS.cultivation) return isCultBoss;
+  if (filterKey === AUTO_FULL_BOSS_FILTER_KEYS.world) return isWorldBossOnly;
+  if (filterKey === AUTO_FULL_BOSS_FILTER_KEYS.cross) return isCrossBoss;
+  if (filterKey === AUTO_FULL_BOSS_FILTER_KEYS.special) return isSpecialBossOnly;
+  if (filterKey === AUTO_FULL_BOSS_FILTER_KEYS.personal) return isPersonalBoss;
+  return false;
 }
 
 function getAutoFullSelectedCultivationBossNames(player) {
@@ -6315,13 +6338,23 @@ function isAutoFullOnlySelectedCultivationBosses(player) {
   return true;
 }
 
+function isAutoFullCultivationBossFocused(player) {
+  const filter = getAutoFullBossFilterSet(player);
+  if (filter == null || filter.size === 0) return false;
+  if (filter.has(AUTO_FULL_BOSS_FILTER_KEYS.cultivation)) return true;
+  return isAutoFullOnlySelectedCultivationBosses(player);
+}
+
 function isAutoFullBossAllowed(player, mobTemplate) {
   const filter = getAutoFullBossFilterSet(player);
   if (filter == null) return true;
   if (filter.size === 0) return false;
   const name = normalizeBossName(mobTemplate?.name || '');
-  if (!name) return false;
-  return filter.has(name);
+  if (name && filter.has(name)) return true;
+  for (const key of filter) {
+    if (isAutoFullBossCategoryMatch(key, mobTemplate)) return true;
+  }
+  return false;
 }
 
 function isVipAutoEnabled(player) {
@@ -6674,7 +6707,7 @@ function tryAutoFullBossMove(player) {
     }
   }
   const now = Date.now();
-  if (isAutoFullOnlySelectedCultivationBosses(player)) {
+  if (isAutoFullCultivationBossFocused(player)) {
     const resumeAt = Number(player.flags?.autoFullCultivationBossResumeAt || 0);
     if (resumeAt > now) return null;
   }
@@ -6796,6 +6829,7 @@ function tryAutoFullAction(player, roomMobs) {
     if (tpl && isCultivationBoss(tpl)) {
       player.flags.autoFullCultivationBossResumeAt = null;
     }
+    player.flags.autoFullCultivationFarmRoom = null;
     if (tpl?.id === 'cross_world_boss') {
       player.flags.autoFullCrossBossSeenId = bossMob.id;
       player.flags.autoFullCrossBossAwaitRespawn = false;
@@ -6830,9 +6864,30 @@ function tryAutoFullAction(player, roomMobs) {
       player.flags.autoFullCrossBossAwaitRespawn = true;
       player.flags.autoFullCrossBossBlockedId = player.flags.autoFullCrossBossSeenId || player.flags.autoFullCrossBossBlockedId || null;
     }
-    const targetRoomId = selectLeastPopulatedRoomAuto(best.zoneId, best.roomId, player.realmId || 1);
-    if (player.position.zone !== best.zoneId || player.position.room !== targetRoomId) {
-      if (movePlayerToRoom(player, best.zoneId, targetRoomId)) {
+    let targetZoneId = best.zoneId;
+    let targetRoomId = selectLeastPopulatedRoomAuto(best.zoneId, best.roomId, player.realmId || 1);
+    if (isAutoFullCultivationBossFocused(player)) {
+      const sticky = player.flags.autoFullCultivationFarmRoom;
+      const stickyAt = Number(sticky?.at || 0);
+      const stickyZoneId = String(sticky?.zoneId || '');
+      const stickyRoomId = String(sticky?.roomId || '');
+      const stickyValid = (
+        stickyAt > 0 &&
+        now - stickyAt < 60000 &&
+        stickyZoneId &&
+        stickyRoomId &&
+        WORLD[stickyZoneId]?.rooms?.[stickyRoomId] &&
+        canEnterRoomByCultivation(player, stickyZoneId, stickyRoomId)
+      );
+      if (stickyValid) {
+        targetZoneId = stickyZoneId;
+        targetRoomId = stickyRoomId;
+      } else {
+        player.flags.autoFullCultivationFarmRoom = { zoneId: targetZoneId, roomId: targetRoomId, at: now };
+      }
+    }
+    if (player.position.zone !== targetZoneId || player.position.room !== targetRoomId) {
+      if (movePlayerToRoom(player, targetZoneId, targetRoomId)) {
         player.flags.autoFullLastMoveAt = now;
         return 'moved';
       }

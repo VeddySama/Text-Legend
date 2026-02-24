@@ -226,6 +226,15 @@ const CULTIVATION_BOSS_DROPS = {
   tianxian: makeCultivationBossDrops(11),
 }
 
+CULTIVATION_DROPS.shengwen = makeCultivationDrops(12)
+CULTIVATION_DROPS.yuanjue = makeCultivationDrops(13)
+CULTIVATION_DROPS.pusa = makeCultivationDrops(14)
+CULTIVATION_DROPS.fo = makeCultivationDrops(15)
+CULTIVATION_BOSS_DROPS.shengwen = makeCultivationBossDrops(12)
+CULTIVATION_BOSS_DROPS.yuanjue = makeCultivationBossDrops(13)
+CULTIVATION_BOSS_DROPS.pusa = makeCultivationBossDrops(14)
+CULTIVATION_BOSS_DROPS.fo = makeCultivationBossDrops(15)
+
 
 export const MOB_TEMPLATES = {
   // Basic field
@@ -2204,5 +2213,60 @@ export const MOB_TEMPLATES = {
     summoned: true
   }
 };
+
+const EXTRA_CULTIVATION_TIERS = [
+  { slug: 'shengwen', name: '声闻', levelIndex: 12 },
+  { slug: 'yuanjue', name: '缘觉', levelIndex: 13 },
+  { slug: 'pusa', name: '菩萨', levelIndex: 14 },
+  { slug: 'fo', name: '佛', levelIndex: 15 }
+];
+
+function cloneMobTemplate(template) {
+  return JSON.parse(JSON.stringify(template));
+}
+
+function scaleRange(range, factor) {
+  if (!Array.isArray(range)) return range;
+  return [Math.max(0, Math.floor(Number(range[0] || 0) * factor)), Math.max(0, Math.floor(Number(range[1] || 0) * factor))];
+}
+
+function extendCultivationMobs() {
+  const baseBoss = MOB_TEMPLATES.cultivation_boss_tianxian;
+  if (!baseBoss) return;
+  const baseFields = [1, 2, 3, 4, 5].map((i) => MOB_TEMPLATES[`cultivation_tianxian_${i}`]).filter(Boolean);
+  EXTRA_CULTIVATION_TIERS.forEach((tier, idx) => {
+    const fieldFactor = 1 + (idx + 1) * 0.18;
+    const bossFactor = 1 + (idx + 1) * 0.22;
+    baseFields.forEach((baseField, i) => {
+      const next = cloneMobTemplate(baseField);
+      next.id = `cultivation_${tier.slug}_${i + 1}`;
+      next.name = String(baseField.name || '').replace(/^天仙/, tier.name) || `${tier.name}妖灵`;
+      next.level = Math.max(1, Math.floor(Number(baseField.level || 1) + (idx + 1) * 3));
+      next.hp = Math.max(1, Math.floor(Number(baseField.hp || 1) * fieldFactor));
+      next.atk = Math.max(1, Math.floor(Number(baseField.atk || 1) * (1 + (idx + 1) * 0.12)));
+      next.def = Math.max(0, Math.floor(Number(baseField.def || 0) * (1 + (idx + 1) * 0.1)));
+      next.mdef = Math.max(0, Math.floor(Number(baseField.mdef || 0) * (1 + (idx + 1) * 0.1)));
+      next.exp = Math.max(1, Math.floor(Number(baseField.exp || 1) * fieldFactor));
+      next.gold = scaleRange(baseField.gold, fieldFactor);
+      next.drops = CULTIVATION_DROPS[tier.slug] || baseField.drops || [];
+      MOB_TEMPLATES[next.id] = next;
+    });
+
+    const boss = cloneMobTemplate(baseBoss);
+    boss.id = `cultivation_boss_${tier.slug}`;
+    boss.name = `${tier.name}魔君`;
+    boss.level = Math.max(1, Math.floor(Number(baseBoss.level || 1) + (idx + 1) * 5));
+    boss.hp = Math.max(1, Math.floor(Number(baseBoss.hp || 1) * bossFactor));
+    boss.atk = Math.max(1, Math.floor(Number(baseBoss.atk || 1) * (1 + (idx + 1) * 0.15)));
+    boss.def = Math.max(0, Math.floor(Number(baseBoss.def || 0) * (1 + (idx + 1) * 0.12)));
+    boss.mdef = Math.max(0, Math.floor(Number(baseBoss.mdef || 0) * (1 + (idx + 1) * 0.12)));
+    boss.exp = Math.max(1, Math.floor(Number(baseBoss.exp || 1) * bossFactor));
+    boss.gold = scaleRange(baseBoss.gold, bossFactor);
+    boss.drops = CULTIVATION_BOSS_DROPS[tier.slug] || baseBoss.drops || [];
+    MOB_TEMPLATES[boss.id] = boss;
+  });
+}
+
+extendCultivationMobs();
 
 

@@ -1528,7 +1528,11 @@ private val CULTIVATION_RANKS = listOf(
     "大乘",
     "上仙",
     "真仙",
-    "天仙"
+    "天仙",
+    "声闻",
+    "缘觉",
+    "菩萨",
+    "佛"
 )
 
 private fun cultivationNameByLevel(levelValue: Int): String {

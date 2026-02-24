@@ -1650,6 +1650,76 @@ export const WORLD = {
   }
 };
 
+const EXTRA_CULTIVATION_TIERS = [
+  { slug: 'shengwen', name: '声闻', minLevel: 12 },
+  { slug: 'yuanjue', name: '缘觉', minLevel: 13 },
+  { slug: 'pusa', name: '菩萨', minLevel: 14 },
+  { slug: 'fo', name: '佛', minLevel: 15 }
+];
+
+function cloneRoom(room) {
+  return JSON.parse(JSON.stringify(room));
+}
+
+function replaceTierText(value, slug, name) {
+  if (typeof value !== 'string') return value;
+  return value.replace(/tianxian/g, slug).replace(/天仙/g, name);
+}
+
+function remapRoomContent(room, slug, name, minLevel) {
+  const next = cloneRoom(room);
+  next.id = replaceTierText(next.id, slug, name);
+  next.name = replaceTierText(next.name, slug, name);
+  next.desc = replaceTierText(next.desc, slug, name);
+  next.minCultivationLevel = minLevel;
+  if (next.exits && typeof next.exits === 'object') {
+    Object.keys(next.exits).forEach((dir) => {
+      next.exits[dir] = replaceTierText(next.exits[dir], slug, name);
+    });
+  }
+  if (Array.isArray(next.spawns)) {
+    next.spawns = next.spawns.map((id) => replaceTierText(id, slug, name));
+  }
+  return next;
+}
+
+function extendCultivationWorld() {
+  const zone = WORLD?.cultivation;
+  if (!zone?.rooms) return;
+  const entry = zone.rooms.entry;
+  const baseField = zone.rooms.field_tianxian;
+  const baseBoss = zone.rooms.boss_tianxian;
+  if (!entry || !baseField || !baseBoss) return;
+
+  EXTRA_CULTIVATION_TIERS.forEach((tier) => {
+    const fieldId = `field_${tier.slug}`;
+    const bossId = `boss_${tier.slug}`;
+    if (!zone.rooms[fieldId]) {
+      zone.rooms[fieldId] = remapRoomContent(baseField, tier.slug, tier.name, tier.minLevel);
+    }
+    if (!zone.rooms[bossId]) {
+      zone.rooms[bossId] = remapRoomContent(baseBoss, tier.slug, tier.name, tier.minLevel);
+    }
+    if (!entry.exits) entry.exits = {};
+    entry.exits[fieldId] = fieldId;
+    entry.exits[bossId] = bossId;
+
+    for (let i = 1; i <= ROOM_VARIANT_COUNT; i += 1) {
+      const baseVariant = zone.rooms[`field_tianxian${i}`];
+      if (!baseVariant) continue;
+      const variantId = `field_${tier.slug}${i}`;
+      if (!zone.rooms[variantId]) {
+        zone.rooms[variantId] = remapRoomContent(baseVariant, tier.slug, tier.name, tier.minLevel);
+      }
+      entry.exits[variantId] = variantId;
+      if (!zone.rooms[bossId].exits) zone.rooms[bossId].exits = {};
+      zone.rooms[bossId].exits[`south${i}`] = variantId;
+    }
+  });
+}
+
+extendCultivationWorld();
+
 function formatTowerFloor(value) {
   return String(value).padStart(2, '0');
 }

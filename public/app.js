@@ -386,7 +386,11 @@ const CULTIVATION_RANKS = [
   '大乘',
   '上仙',
   '真仙',
-  '天仙'
+  '天仙',
+  '声闻',
+  '缘觉',
+  '菩萨',
+  '佛'
 ];
 
 function getCultivationInfo(levelValue) {

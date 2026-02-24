@@ -1903,7 +1903,16 @@ function promptDualModal({
   });
 }
 
-function promptMultiSelectModal({ title, text, options, selectedValues, singleSelect = false, submitOnSelect = false }) {
+function promptMultiSelectModal({
+  title,
+  text,
+  options,
+  selectedValues,
+  singleSelect = false,
+  submitOnSelect = false,
+  onSelect = null,
+  closeOnSelect = true
+}) {
   if (!promptUi.modal || !promptUi.input || !promptUi.options) return Promise.resolve(null);
   return new Promise((resolve) => {
     const selected = new Set(Array.isArray(selectedValues) ? selectedValues : []);
@@ -1982,7 +1991,7 @@ function promptMultiSelectModal({ title, text, options, selectedValues, singleSe
       if (selected.has(opt.value)) {
         btn.classList.add('active');
       }
-      btn.addEventListener('click', () => {
+      btn.addEventListener('click', async () => {
         if (singleSelect) {
           selected.clear();
           promptUi.options?.querySelectorAll('.prompt-option.active').forEach((node) => node.classList.remove('active'));
@@ -1994,7 +2003,16 @@ function promptMultiSelectModal({ title, text, options, selectedValues, singleSe
           selected.add(opt.value);
           btn.classList.add('active');
         }
-        if (submitOnSelect) onOk();
+        if (submitOnSelect) {
+          if (typeof onSelect === 'function') {
+            try {
+              await onSelect(opt.value, Array.from(selected));
+            } catch (err) {
+              console.error('[promptMultiSelectModal.onSelect] failed:', err);
+            }
+          }
+          if (closeOnSelect) onOk();
+        }
       });
       promptUi.options.appendChild(btn);
     });
@@ -4328,6 +4346,28 @@ function showAutoFullBossModal() {
     renderRankModal('warrior');
   }
 
+  function runActivityCenterAction(action) {
+    if (!socket) {
+      showToast('未连接服务器');
+      return;
+    }
+    if (action === 'refresh') {
+      if (isStateThrottleActive()) {
+        socket.emit('state_request', { reason: 'activity:center' });
+      } else {
+        socket.emit('cmd', { text: 'state', source: 'ui' });
+      }
+      showToast('已请求刷新活动状态');
+      return;
+    }
+    if (action === 'claim') socket.emit('cmd', { text: '活动 claim', source: 'ui' });
+    if (action === 'rank_all') socket.emit('cmd', { text: '活动 rank', source: 'ui' });
+    if (action === 'rank_demon') socket.emit('cmd', { text: '活动 rank 屠魔', source: 'ui' });
+    if (action === 'rank_cult') socket.emit('cmd', { text: '活动 rank 修真', source: 'ui' });
+    if (action === 'rank_guild') socket.emit('cmd', { text: '活动 rank 行会', source: 'ui' });
+    if (action === 'rank_refine') socket.emit('cmd', { text: '活动 rank 锻造', source: 'ui' });
+  }
+
   async function showActivityCenterModal() {
     const activityState = lastState?.activities || {};
     const activeList = Array.isArray(activityState.active) ? activityState.active : [];
@@ -4343,9 +4383,9 @@ function showAutoFullBossModal() {
       `修真冲关：${Number(cult.kills || 0)} 次`,
       `行会攻坚贡献：${Number(guild.contribution || 0)} 点`,
       `锻造狂欢：${Number(refine.attempts || 0)} 次（+10 ${milestone['10'] ? '已达成' : '未达成'} / +20 ${milestone['20'] ? '已达成' : '未达成'} / +30 ${milestone['30'] ? '已达成' : '未达成'}）`,
-      '点击下方按钮会立即执行'
+      '点击下方按钮会立即执行（不会自动关闭窗口）'
     ];
-    const selected = await promptMultiSelectModal({
+    await promptMultiSelectModal({
       title: '活动中心',
       text: summaryLines.join('\n'),
       options: [
@@ -4359,22 +4399,10 @@ function showAutoFullBossModal() {
       ],
       selectedValues: [],
       singleSelect: true,
-      submitOnSelect: true
+      submitOnSelect: true,
+      closeOnSelect: false,
+      onSelect: (value) => runActivityCenterAction(value)
     });
-    if (!selected || !selected.length) return;
-    if (!socket) {
-      showToast('未连接服务器');
-      return;
-    }
-    if (selected.includes('refresh') && isStateThrottleActive()) {
-      socket.emit('state_request', { reason: 'activity:center' });
-    }
-    if (selected.includes('claim')) socket.emit('cmd', { text: '活动 claim', source: 'ui' });
-    if (selected.includes('rank_all')) socket.emit('cmd', { text: '活动 rank', source: 'ui' });
-    if (selected.includes('rank_demon')) socket.emit('cmd', { text: '活动 rank 屠魔', source: 'ui' });
-    if (selected.includes('rank_cult')) socket.emit('cmd', { text: '活动 rank 修真', source: 'ui' });
-    if (selected.includes('rank_guild')) socket.emit('cmd', { text: '活动 rank 行会', source: 'ui' });
-    if (selected.includes('rank_refine')) socket.emit('cmd', { text: '活动 rank 锻造', source: 'ui' });
   }
 
   function renderRankModal(classType) {

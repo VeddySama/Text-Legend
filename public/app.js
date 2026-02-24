@@ -4623,20 +4623,35 @@ function showAutoFullBossModal() {
     const milestone = refine.milestones || {};
     const ddMeta = meta.double_dungeon || {};
     const bountyMeta = meta.world_boss_bounty || {};
+    const scheduleText = {
+      newbie: '常驻',
+      double: '每日 18:00-24:00',
+      bounty: '每日 全天',
+      petCarnival: '每周五 全天',
+      treasureSprint: '每周六 全天',
+      demon: '每日 20:00-20:30',
+      cult: '周六/周日 全天',
+      guild: '周二/周六 21:00-22:00',
+      cross: '周六 19:30-20:30',
+      treasurePet: '周日 全天',
+      lucky: '周三 19:00-24:00',
+      refine: '周五-周日 全天'
+    };
     const summaryLines = [
       activeList.length ? `当前活动：${activeList.map((a) => a.name).join('、')}` : '当前没有进行中的限时活动',
       `活动积分：${Number(currency.activity_points || 0)}（累计获得 ${Number(currency.activity_points_earned || 0)} / 消费 ${Number(currency.activity_points_spent || 0)}）`,
-      `双倍秘境：${ddMeta.zoneName || doubleDungeon.zoneId || '-'}（击杀 ${Number(doubleDungeon.kills || 0)}）`,
-      `世界BOSS悬赏：${bountyMeta.mobName || bounty.mobId || '-'}（积分 ${Number(bounty.points || 0)} / 击杀 ${Number(bounty.kills || 0)}）`,
-      `宠物狂欢日：${Number(petCarnival.score || 0)} 分（打书 ${Number(petCarnival.petBookUses || 0)} / 合宠 ${Number(petCarnival.petSyntheses || 0)}）`,
-      `法宝冲刺日：${Number(treasureSprint.score || 0)} 分（升级 ${Number(treasureSprint.treasureUpgrades || 0)} / 升段 ${Number(treasureSprint.treasureAdvances || 0)}）`,
-      `屠魔令积分：${Number(demon.points || 0)}（击杀 ${Number(demon.bossKills || 0)}）`,
-      `修真冲关：${Number(cult.kills || 0)} 次`,
-      `行会攻坚贡献：${Number(guild.contribution || 0)} 点`,
-      `跨服猎王：${Number(cross.points || 0)} 分（击杀 ${Number(cross.kills || 0)}）`,
-      `宝藏奇缘：${Number(treasurePet.score || 0)} 点（法宝升${Number(treasurePet.treasureUpgrades || 0)} / 升段${Number(treasurePet.treasureAdvances || 0)} / 打书${Number(treasurePet.petBookUses || 0)} / 合宠${Number(treasurePet.petSyntheses || 0)}）`,
-      `幸运掉落日：${Number(lucky.points || 0)} 分（击杀 ${Number(lucky.bossKills || 0)}）`,
-      `锻造狂欢：${Number(refine.attempts || 0)} 次（+10 ${milestone['10'] ? '已达成' : '未达成'} / +20 ${milestone['20'] ? '已达成' : '未达成'} / +30 ${milestone['30'] ? '已达成' : '未达成'}）`,
+      `新手追赶计划（${scheduleText.newbie}）`,
+      `双倍秘境（${scheduleText.double}）：${ddMeta.zoneName || doubleDungeon.zoneId || '-'}（击杀 ${Number(doubleDungeon.kills || 0)}）`,
+      `世界BOSS悬赏（${scheduleText.bounty}）：${bountyMeta.mobName || bounty.mobId || '-'}（积分 ${Number(bounty.points || 0)} / 击杀 ${Number(bounty.kills || 0)}）`,
+      `宠物狂欢日（${scheduleText.petCarnival}）：${Number(petCarnival.score || 0)} 分（打书 ${Number(petCarnival.petBookUses || 0)} / 合宠 ${Number(petCarnival.petSyntheses || 0)}）`,
+      `法宝冲刺日（${scheduleText.treasureSprint}）：${Number(treasureSprint.score || 0)} 分（升级 ${Number(treasureSprint.treasureUpgrades || 0)} / 升段 ${Number(treasureSprint.treasureAdvances || 0)}）`,
+      `屠魔令（${scheduleText.demon}）：${Number(demon.points || 0)} 分（击杀 ${Number(demon.bossKills || 0)}）`,
+      `修真冲关周（${scheduleText.cult}）：${Number(cult.kills || 0)} 次`,
+      `行会攻坚赛（${scheduleText.guild}）：${Number(guild.contribution || 0)} 点`,
+      `跨服猎王（${scheduleText.cross}）：${Number(cross.points || 0)} 分（击杀 ${Number(cross.kills || 0)}）`,
+      `宝藏奇缘（${scheduleText.treasurePet}）：${Number(treasurePet.score || 0)} 点（法宝升${Number(treasurePet.treasureUpgrades || 0)} / 升段${Number(treasurePet.treasureAdvances || 0)} / 打书${Number(treasurePet.petBookUses || 0)} / 合宠${Number(treasurePet.petSyntheses || 0)}）`,
+      `幸运掉落日（${scheduleText.lucky}）：${Number(lucky.points || 0)} 分（击杀 ${Number(lucky.bossKills || 0)}）`,
+      `锻造狂欢（${scheduleText.refine}）：${Number(refine.attempts || 0)} 次（+10 ${milestone['10'] ? '已达成' : '未达成'} / +20 ${milestone['20'] ? '已达成' : '未达成'} / +30 ${milestone['30'] ? '已达成' : '未达成'}）`,
       '点击下方按钮会立即执行（查看排行榜会切换到榜单窗口）'
     ];
     await promptMultiSelectModal({

@@ -8520,7 +8520,7 @@ function maybePetAssistCleanseOwner(owner, pet) {
       }
     }
   }
-  if (changed && typeof owner.send === 'function') owner.send(`${String(pet.name || 'Pet')} resolve cleanse`);
+  if (changed && typeof owner.send === 'function') owner.send(`${String(pet.name || '宠物')} 净化了你的负面状态。`);
   return changed;
 }
 
@@ -8541,7 +8541,7 @@ function maybePetAssistEmergencyRebirth(owner, pet) {
   const heal = Math.max(1, Math.floor(owner.max_hp * recoverRatio));
   owner.hp = clamp(owner.hp + heal, 1, owner.max_hp);
   owner.flags[cdKey] = now + Math.max(30000, Math.floor((PET_COMBAT_BALANCE.rebirthCooldownMs || 120000) * 0.5));
-  if (typeof owner.send === 'function') owner.send(`${String(pet.name || 'Pet')} rebirth heal ${heal}`);
+  if (typeof owner.send === 'function') owner.send(`${String(pet.name || '宠物')} 触发涅槃，为你恢复 ${heal} 点生命。`);
   return true;
 }
 
@@ -8552,7 +8552,7 @@ function applyPetAssistKillSoul(owner, pet) {
   const mpGain = Math.max(1, Math.floor((owner.max_mp || 1) * ratio));
   owner.hp = clamp((owner.hp || 1) + hpGain, 1, owner.max_hp || 1);
   owner.mp = clamp((owner.mp || 0) + mpGain, 0, owner.max_mp || 0);
-  if (typeof owner.send === 'function') owner.send(`${String(pet.name || 'Pet')} kill soul ${hpGain}/${mpGain}`);
+  if (typeof owner.send === 'function') owner.send(`${String(pet.name || '宠物')} 触发噬魂，恢复 ${hpGain} 生命和 ${mpGain} 法力。`);
   return true;
 }
 
@@ -8956,13 +8956,13 @@ function applyPetAssistAttackToMob(player, mob, roomRealmId, allMobs = null) {
   const dealt = Math.max(0, Number(result?.damageTaken || 0));
   if (dealt <= 0) return null;
   const petName = String(assist.pet?.name || 'Pet');
-  player.send(`${petName} assist ${dealt}${assist.crit ? ' crit' : ''}`);
+  player.send(`${petName} 协战造成 ${dealt} 点伤害${assist.crit ? '（暴击）' : ''}。`);
   maybePetAssistCleanseOwner(player, assist.pet);
   maybePetAssistEmergencyRebirth(player, assist.pet);
   if (assist.typeMods.ownerHealRatio > 0) {
     const heal = Math.max(1, Math.floor(player.max_hp * assist.typeMods.ownerHealRatio));
     player.hp = clamp(player.hp + heal, 1, player.max_hp);
-    player.send(`${petName} guard heal ${heal}`);
+    player.send(`${petName} 护主为你恢复 ${heal} 点生命。`);
   }
   if (assist.typeMods.lifestealRatio > 0) {
     const heal = Math.max(1, Math.floor(dealt * assist.typeMods.lifestealRatio));
@@ -8972,16 +8972,16 @@ function applyPetAssistAttackToMob(player, mob, roomRealmId, allMobs = null) {
   if (assist.typeMods.breakDefChance > 0 && Math.random() <= assist.typeMods.breakDefChance) {
     const debuffs = ensureTargetDebuffs(mob);
     debuffs.armorBreak = { expiresAt: Date.now() + 2500, defMultiplier: assist.typeMods.breakDefMultiplier || 0.85 };
-    player.send(`${petName} guard break ${mob.name}`);
+    player.send(`${petName} 对 ${mob.name} 触发破防。`);
   }
   if (assist.typeMods.breakMdefChance > 0 && Math.random() <= assist.typeMods.breakMdefChance) {
     const debuffs = ensureTargetDebuffs(mob);
     debuffs.petMagicBreak = { mdefMultiplier: assist.typeMods.breakMdefMultiplier || 0.85, expiresAt: Date.now() + 2500 };
-    player.send(`${petName} arcane break ${mob.name}`);
+    player.send(`${petName} 对 ${mob.name} 触发破魔。`);
   }
   if (assist.typeMods.warHornChance > 0 && Math.random() <= assist.typeMods.warHornChance) {
     applyHealBlockDebuff(mob);
-    player.send(`${petName} war horn ${mob.name}`);
+    player.send(`${petName} 对 ${mob.name} 施加禁疗压制。`);
   }
   if (assist.typeMods.sunderChance > 0 && Math.random() <= assist.typeMods.sunderChance) {
     const debuffs = ensureTargetDebuffs(mob);
@@ -8992,7 +8992,7 @@ function applyPetAssistAttackToMob(player, mob, roomRealmId, allMobs = null) {
   if (assist.typeMods.divineGuardChance > 0 && Math.random() <= assist.typeMods.divineGuardChance) {
     const buffs = ensureTargetBuffs(player);
     buffs.protectShield = { expiresAt: Date.now() + 2000, dmgReduction: 1 - (assist.typeMods.divineGuardDamageMul || 0.9) };
-    player.send(`${petName} divine guard`);
+    player.send(`${petName} 触发神佑，给你提供短暂减伤。`);
   }
   if (assist.typeMods.soulChainChance > 0 && Math.random() <= assist.typeMods.soulChainChance) {
     const debuffs = ensureTargetDebuffs(mob);
@@ -9005,12 +9005,12 @@ function applyPetAssistAttackToMob(player, mob, roomRealmId, allMobs = null) {
       expiresAt: Date.now() + 1500,
       dmgReduction: Math.max(Number(buffs.protectShield?.dmgReduction || 0), assist.typeMods.soulChainGuardRatio || 0.01)
     };
-    player.send(`${petName} soul chain ${mob.name}`);
+    player.send(`${petName} 对 ${mob.name} 触发魂链压制。`);
   }
   if (assist.typeMods.dodgeGuardChance > 0 && Math.random() <= assist.typeMods.dodgeGuardChance) {
     const buffs = ensureTargetBuffs(player);
     buffs.protectShield = { expiresAt: Date.now() + 1200, dmgReduction: Math.max(Number(buffs.protectShield?.dmgReduction || 0), 1 - (assist.typeMods.dodgeGuardDamageMul || 0.95)) };
-    player.send(`${petName} dodge guard`);
+    player.send(`${petName} 触发护主闪避减伤。`);
   }
   if (assist.typeMods.splashChance > 0 && Math.random() <= assist.typeMods.splashChance) {
     const pool = (Array.isArray(allMobs) ? allMobs : [])
@@ -9019,7 +9019,7 @@ function applyPetAssistAttackToMob(player, mob, roomRealmId, allMobs = null) {
       const splashTarget = pool[randInt(0, pool.length - 1)];
       const splashResult = applyDamageToMob(splashTarget, Math.max(1, Math.floor(dealt * assist.typeMods.splashRatio)), player.name, roomRealmId);
       const splashDealt = Math.max(0, Number(splashResult?.damageTaken || 0));
-      if (splashDealt > 0) player.send(`${petName} splash ${splashTarget.name} ${splashDealt}`);
+      if (splashDealt > 0) player.send(`${petName} 溅射 ${splashTarget.name}，造成 ${splashDealt} 点伤害。`);
     }
   }
   if (assist.typeMods.aoeChance > 0 && assist.typeMods.aoeTargets > 0 && Math.random() <= assist.typeMods.aoeChance) {
@@ -9051,12 +9051,12 @@ function applyPetAssistAttackToMob(player, mob, roomRealmId, allMobs = null) {
   if (assist.typeMods.arcaneEchoChance > 0 && Math.random() <= assist.typeMods.arcaneEchoChance && mob.hp > 0) {
     const echo = applyDamageToMob(mob, Math.max(1, Math.floor(dealt * (assist.typeMods.arcaneEchoRatio || 0.2))), player.name, roomRealmId);
     const echoDealt = Math.max(0, Number(echo?.damageTaken || 0));
-    if (echoDealt > 0) player.send(`${petName} echo ${echoDealt}`);
+    if (echoDealt > 0) player.send(`${petName} 回响追加 ${echoDealt} 点伤害。`);
   }
   if (assist.typeMods.quickStrikeChance > 0 && Math.random() <= assist.typeMods.quickStrikeChance && mob.hp > 0) {
     const quick = applyDamageToMob(mob, Math.max(1, Math.floor(dealt * (assist.typeMods.quickStrikeRatio || 0.4))), player.name, roomRealmId);
     const quickDealt = Math.max(0, Number(quick?.damageTaken || 0));
-    if (quickDealt > 0) player.send(`${petName} quick ${quickDealt}`);
+    if (quickDealt > 0) player.send(`${petName} 疾袭追加 ${quickDealt} 点伤害。`);
   }
   if (mob.hp > 0) {
     const comboChance = (hasPetSkillOnPet(assist.pet, 'pet_combo_adv') ? 0.09 : hasPetSkillOnPet(assist.pet, 'pet_combo') ? 0.06 : 0)
@@ -9065,13 +9065,13 @@ function applyPetAssistAttackToMob(player, mob, roomRealmId, allMobs = null) {
       const comboRatio = (hasPetSkillOnPet(assist.pet, 'pet_combo_adv') ? 0.9 : 0.6) + (assist.typeMods.comboRatioBonus || 0);
       const comboResult = applyDamageToMob(mob, Math.max(1, Math.floor(dealt * comboRatio)), player.name, roomRealmId);
       const comboDealt = Math.max(0, Number(comboResult?.damageTaken || 0));
-      if (comboDealt > 0) player.send(`${petName} combo ${comboDealt}`);
+      if (comboDealt > 0) player.send(`${petName} 连击追加 ${comboDealt} 点伤害。`);
     }
   }
   if (mob.hp > 0 && assist.typeMods.counterLashChance > 0 && Math.random() <= assist.typeMods.counterLashChance) {
     const lash = applyDamageToMob(mob, Math.max(1, Math.floor(dealt * (assist.typeMods.counterLashRatio || 0.35))), player.name, roomRealmId);
     const lashDealt = Math.max(0, Number(lash?.damageTaken || 0));
-    if (lashDealt > 0) player.send(`${petName} counterlash ${lashDealt}`);
+    if (lashDealt > 0) player.send(`${petName} 反扑追加 ${lashDealt} 点伤害。`);
   }
   if (mob.hp <= 0) {
     applyPetAssistKillSoul(player, assist.pet);
@@ -9256,15 +9256,15 @@ function applyPetAssistAttackToPlayer(attacker, target) {
   const dealt = applyDamageToPlayer(target, assist.damage);
   if (dealt <= 0) return null;
   const petName = String(assist.pet?.name || 'Pet');
-  attacker.send(`${petName} assist ${target.name} ${dealt}${assist.crit ? ' crit' : ''}`);
-  target.send(`${petName} assist hit ${dealt}`);
+  attacker.send(`${petName} 协战攻击 ${target.name}，造成 ${dealt} 点伤害${assist.crit ? '（暴击）' : ''}。`);
+  target.send(`${petName} 协战对你造成 ${dealt} 点伤害。`);
   maybePetAssistCleanseOwner(attacker, assist.pet);
   maybePetAssistEmergencyRebirth(attacker, assist.pet);
 
   if (assist.typeMods.ownerHealRatio > 0) {
     const heal = Math.max(1, Math.floor(attacker.max_hp * assist.typeMods.ownerHealRatio));
     attacker.hp = clamp(attacker.hp + heal, 1, attacker.max_hp);
-    attacker.send(`${petName} guard heal ${heal}`);
+    attacker.send(`${petName} 护主为你恢复 ${heal} 点生命。`);
   }
   if (assist.typeMods.lifestealRatio > 0) {
     const heal = Math.max(1, Math.floor(dealt * assist.typeMods.lifestealRatio));
@@ -9274,18 +9274,18 @@ function applyPetAssistAttackToPlayer(attacker, target) {
   if (assist.typeMods.breakDefChance > 0 && Math.random() <= assist.typeMods.breakDefChance) {
     const debuffs = ensureTargetDebuffs(target);
     debuffs.armorBreak = { expiresAt: Date.now() + 2000, defMultiplier: assist.typeMods.breakDefMultiplier || 0.9 };
-    attacker.send(`${petName} guard break ${target.name}`);
+    attacker.send(`${petName} 对 ${target.name} 触发破防。`);
     target.send('你受到宠物破防影响。');
   }
   if (assist.typeMods.breakMdefChance > 0 && Math.random() <= assist.typeMods.breakMdefChance) {
     const debuffs = ensureTargetDebuffs(target);
     debuffs.petMagicBreak = { mdefMultiplier: assist.typeMods.breakMdefMultiplier || 0.9, expiresAt: Date.now() + 2000 };
-    attacker.send(`${petName} arcane break ${target.name}`);
+    attacker.send(`${petName} 对 ${target.name} 触发破魔。`);
     target.send('你受到宠物破魔影响。');
   }
   if (assist.typeMods.warHornChance > 0 && Math.random() <= assist.typeMods.warHornChance) {
     applyHealBlockDebuff(target);
-    attacker.send(`${petName} war horn ${target.name}`);
+    attacker.send(`${petName} 对 ${target.name} 施加禁疗压制。`);
     target.send('你受到宠物禁疗影响。');
   }
   if (assist.typeMods.sunderChance > 0 && Math.random() <= assist.typeMods.sunderChance) {
@@ -9298,7 +9298,7 @@ function applyPetAssistAttackToPlayer(attacker, target) {
   if (assist.typeMods.divineGuardChance > 0 && Math.random() <= assist.typeMods.divineGuardChance) {
     const buffs = ensureTargetBuffs(attacker);
     buffs.protectShield = { expiresAt: Date.now() + 1600, dmgReduction: 1 - (assist.typeMods.divineGuardDamageMul || 0.9) };
-    attacker.send(`${petName} divine guard`);
+    attacker.send(`${petName} 触发神佑，给你提供短暂减伤。`);
   }
   if (assist.typeMods.soulChainChance > 0 && Math.random() <= assist.typeMods.soulChainChance) {
     const debuffs = ensureTargetDebuffs(target);
@@ -9311,19 +9311,19 @@ function applyPetAssistAttackToPlayer(attacker, target) {
       expiresAt: Date.now() + 1200,
       dmgReduction: Math.max(Number(buffs.protectShield?.dmgReduction || 0), assist.typeMods.soulChainGuardRatio || 0.01)
     };
-    attacker.send(`${petName} soul chain ${target.name}`);
+    attacker.send(`${petName} 对 ${target.name} 触发魂链压制。`);
     target.send('你受到宠物魂链压制。');
   }
   if (assist.typeMods.dodgeGuardChance > 0 && Math.random() <= assist.typeMods.dodgeGuardChance) {
     const buffs = ensureTargetBuffs(attacker);
     buffs.protectShield = { expiresAt: Date.now() + 1000, dmgReduction: Math.max(Number(buffs.protectShield?.dmgReduction || 0), 1 - (assist.typeMods.dodgeGuardDamageMul || 0.96)) };
-    attacker.send(`${petName} dodge guard`);
+    attacker.send(`${petName} 触发护主闪避减伤。`);
   }
   if (assist.typeMods.arcaneEchoChance > 0 && Math.random() <= assist.typeMods.arcaneEchoChance && target.hp > 0) {
     const echoDealt = applyDamageToPlayer(target, Math.max(1, Math.floor(dealt * (assist.typeMods.arcaneEchoRatio || 0.16))));
     if (echoDealt > 0) {
-      attacker.send(`${petName} echo ${target.name} ${echoDealt}`);
-      target.send(`${petName} echo hit ${echoDealt}`);
+      attacker.send(`${petName} 对 ${target.name} 触发回响，追加 ${echoDealt} 点伤害。`);
+      target.send(`${petName} 的回响对你追加造成 ${echoDealt} 点伤害。`);
     }
   }
   if (assist.typeMods.aoeChance > 0 && Math.random() <= assist.typeMods.aoeChance && target.hp > 0) {
@@ -9331,16 +9331,16 @@ function applyPetAssistAttackToPlayer(attacker, target) {
     if (mpUse.ok) {
       const sweepDealt = applyDamageToPlayer(target, Math.max(1, Math.floor(dealt * (assist.typeMods.aoeRatio || 0.18))));
       if (sweepDealt > 0) {
-        attacker.send(`${petName} sweep ${target.name} ${sweepDealt}`);
-        target.send(`${petName} sweep hit ${sweepDealt}`);
+        attacker.send(`${petName} 对 ${target.name} 触发横扫，追加 ${sweepDealt} 点伤害。`);
+        target.send(`${petName} 的横扫对你追加造成 ${sweepDealt} 点伤害。`);
       }
     }
   }
   if (assist.typeMods.quickStrikeChance > 0 && Math.random() <= assist.typeMods.quickStrikeChance && target.hp > 0) {
     const quickDealt = applyDamageToPlayer(target, Math.max(1, Math.floor(dealt * (assist.typeMods.quickStrikeRatio || 0.35))));
     if (quickDealt > 0) {
-      attacker.send(`${petName} quick ${target.name} ${quickDealt}`);
-      target.send(`${petName} quick hit ${quickDealt}`);
+      attacker.send(`${petName} 对 ${target.name} 触发疾袭，追加 ${quickDealt} 点伤害。`);
+      target.send(`${petName} 的疾袭对你追加造成 ${quickDealt} 点伤害。`);
     }
   }
   if (target.hp > 0) {
@@ -9351,16 +9351,16 @@ function applyPetAssistAttackToPlayer(attacker, target) {
       const comboRatio = (hasPetSkillOnPet(assist.pet, 'pet_combo_adv') ? 0.8 : 0.55) + (assist.typeMods.comboRatioBonus || 0);
       const comboDealt = applyDamageToPlayer(target, Math.max(1, Math.floor(dealt * comboRatio)));
       if (comboDealt > 0) {
-        attacker.send(`${petName} combo ${target.name} ${comboDealt}`);
-        target.send(`${petName} combo hit ${comboDealt}`);
+        attacker.send(`${petName} 对 ${target.name} 触发连击，追加 ${comboDealt} 点伤害。`);
+        target.send(`${petName} 的连击对你追加造成 ${comboDealt} 点伤害。`);
       }
     }
   }
   if (target.hp > 0 && assist.typeMods.counterLashChance > 0 && Math.random() <= assist.typeMods.counterLashChance) {
     const lashDealt = applyDamageToPlayer(target, Math.max(1, Math.floor(dealt * (assist.typeMods.counterLashRatio || 0.28))));
     if (lashDealt > 0) {
-      attacker.send(`${petName} counterlash ${target.name} ${lashDealt}`);
-      target.send(`${petName} counterlash hit ${lashDealt}`);
+      attacker.send(`${petName} 对 ${target.name} 触发反扑，追加 ${lashDealt} 点伤害。`);
+      target.send(`${petName} 的反扑对你追加造成 ${lashDealt} 点伤害。`);
     }
   }
   if (target.hp <= 0) {

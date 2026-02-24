@@ -9348,9 +9348,16 @@ async function sendRoomState(zoneId, roomId, realmId = 1) {
   
   // 使用Promise.all并行发送
   const roomState = buildRoomStatePayload(zoneId, roomId, effectiveRealmId);
+  const hasBossRespawnTimer =
+    Number(roomState?.bossRespawn || 0) > 0 ||
+    Number(roomState?.worldBossNextRespawn || 0) > 0;
   players.forEach((p) => {
     if (!p.socket) return;
-    p.socket.volatile.emit('room_state', roomState);
+    if (hasBossRespawnTimer) {
+      p.socket.emit('room_state', roomState);
+    } else {
+      p.socket.volatile.emit('room_state', roomState);
+    }
   });
 }
 

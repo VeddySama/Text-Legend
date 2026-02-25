@@ -1267,6 +1267,13 @@ app.post('/admin/first-recharge-settings/reissue', async (req, res) => {
     await saveOffline();
   } else {
     await savePlayer(player);
+    if (player?.socket) {
+      player.forceStateRefresh = true;
+      await sendState(player);
+      if (typeof player.send === 'function') {
+        player.send('管理员已补发首充礼包，请查看背包/宠物。');
+      }
+    }
   }
   const operator = String(admin?.user?.username || admin?.user?.name || admin?.user?.id || '').trim();
   await markFirstRechargeReissueCharacterIssued(userId, targetName, targetRealmId, { source: 'admin_reissue', operator });
@@ -1369,7 +1376,16 @@ app.post('/admin/first-recharge-settings/reissue-all', async (req, res) => {
         continue;
       }
       if (saveOffline) await saveOffline();
-      else await savePlayer(player);
+      else {
+        await savePlayer(player);
+        if (player?.socket) {
+          player.forceStateRefresh = true;
+          await sendState(player);
+          if (typeof player.send === 'function') {
+            player.send('管理员已补发首充礼包，请查看背包/宠物。');
+          }
+        }
+      }
       const operator = String(admin?.user?.username || admin?.user?.name || admin?.user?.id || '').trim();
       await markFirstRechargeReissueCharacterIssued(userId, targetName, player.realmId || rowRealmId, { source: 'admin_reissue_all', operator });
       await markFirstRechargeRewardIssued(userId, { source: 'admin_reissue_all', operator, charName: targetName });

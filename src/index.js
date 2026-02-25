@@ -1743,6 +1743,21 @@ app.post('/admin/pet-settings/update', async (req, res) => {
   }
 });
 
+app.post('/admin/pet-settings/reset-skill-effects', async (req, res) => {
+  const admin = await requireAdmin(req);
+  if (!admin) return res.status(401).json({ error: '无管理员权限。' });
+  try {
+    const current = getPetSettingsSnapshot();
+    const normalized = await applyPetSettings(
+      { ...current, skillEffects: { ...DEFAULT_PET_SKILL_EFFECTS } },
+      { persist: true }
+    );
+    res.json({ ok: true, settings: normalized });
+  } catch (err) {
+    res.status(400).json({ error: err.message || '重置宠物技能说明失败' });
+  }
+});
+
 // 修炼配置（普通玩家）
 app.get('/api/training-config', async (req, res) => {
   try {
@@ -7925,7 +7940,8 @@ function decoratePetSkillEffectsWithTypeHints(effects) {
   return next;
 }
 
-PET_SKILL_EFFECTS = decoratePetSkillEffectsWithTypeHints(PET_SKILL_EFFECTS);
+const DEFAULT_PET_SKILL_EFFECTS = decoratePetSkillEffectsWithTypeHints({ ...PET_SKILL_EFFECTS });
+PET_SKILL_EFFECTS = { ...DEFAULT_PET_SKILL_EFFECTS };
 let PET_COMBAT_BALANCE = {
   focusHitBonus: 0.0375,
   focusAdvHitBonus: 0.05625,
@@ -8244,7 +8260,7 @@ function getDefaultPetSettings() {
       ultimate: { hp: [6200, 8000], atk: [300, 440], def: [280, 420], mag: [300, 440], agility: [280, 420] }
     },
     skillLibrary: PET_SKILL_LIBRARY.map((entry) => ({ ...entry })),
-    skillEffects: { ...PET_SKILL_EFFECTS },
+    skillEffects: { ...DEFAULT_PET_SKILL_EFFECTS },
     combatBalance: { ...PET_COMBAT_BALANCE },
     availableGradesByRarity: { ...PET_AVAILABLE_GRADES_BY_RARITY },
     openSkillMinByRarity: { ...PET_OPEN_SKILL_MIN_BY_RARITY },

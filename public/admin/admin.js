@@ -131,6 +131,7 @@ const effectResetSaveBtn = document.getElementById('effect-reset-save-btn');
 const petSettingsMsg = document.getElementById('pet-settings-msg');
 const petSettingsRefreshBtn = document.getElementById('pet-settings-refresh');
 const petSettingsSaveBtn = document.getElementById('pet-settings-save');
+const petSettingsResetSkillEffectsBtn = document.getElementById('pet-settings-reset-skill-effects');
 const petMaxOwnedInput = document.getElementById('pet-max-owned');
 const petSynthesisCostInput = document.getElementById('pet-synthesis-cost');
 const petBookUnlockSlot4ChanceInput = document.getElementById('pet-book-unlock-slot4-chance');
@@ -6186,6 +6187,30 @@ if (activityPointShopAddBtn) {
     renderActivityPointShopRows();
   });
 }
+
+async function resetPetSkillEffectsToDefault() {
+  if (!petSettingsMsg) return;
+  const confirmed = await customConfirm('重置宠物技能说明', '仅重置“技能效果/说明”文本为代码默认值，保留其它宠物配置，是否继续？');
+  if (!confirmed) return;
+  petSettingsMsg.textContent = '';
+  try {
+    const data = await api('/admin/pet-settings/reset-skill-effects', 'POST');
+    if (data?.settings) {
+      petSettingsCache = data.settings;
+      applyPetSettingsToForm(petSettingsCache);
+    } else {
+      await loadPetSettings();
+    }
+    petSettingsMsg.textContent = '宠物技能说明已重置为默认值';
+    petSettingsMsg.style.color = 'green';
+    setTimeout(() => {
+      if (petSettingsMsg) petSettingsMsg.textContent = '';
+    }, 1800);
+  } catch (err) {
+    petSettingsMsg.textContent = `重置失败: ${err.message}`;
+    petSettingsMsg.style.color = 'red';
+  }
+}
 if (activityPointShopSaveBtn) activityPointShopSaveBtn.addEventListener('click', saveActivityPointShopConfig);
 if (activityPointShopList) {
   activityPointShopList.addEventListener('click', (e) => {
@@ -6534,6 +6559,9 @@ if (petSettingsRefreshBtn) {
 }
 if (petSettingsSaveBtn) {
   petSettingsSaveBtn.addEventListener('click', savePetSettings);
+}
+if (petSettingsResetSkillEffectsBtn) {
+  petSettingsResetSkillEffectsBtn.addEventListener('click', resetPetSkillEffectsToDefault);
 }
 
 if (adminPwCancel) {

@@ -19,7 +19,7 @@ export const SKILLS = {
     lightning: { id: 'lightning', name: '\u96f7\u7535\u672f', mp: 16, power: 1.45, type: 'spell', effect: '对单体造成145%法术伤害。' },
     flash: { id: 'flash', name: '\u75be\u5149\u7535\u5f71', mp: 18, power: 1.3, type: 'spell', effect: '对单体造成130%法术伤害。' },
     thunder: { id: 'thunder', name: '\u5730\u72f1\u96f7\u5149', mp: 20, power: 1.0, type: 'aoe', effect: '对周围目标造成100%法术伤害。' },
-    thunderstorm: { id: 'thunderstorm', name: '雷霆万钧', mp: 24, power: 2.0, type: 'aoe', powerStat: 'mag', effect: '对周围目标造成200%法术伤害。' },
+    thunderstorm: { id: 'thunderstorm', name: '雷霆万钧', mp: 24, power: 2.5, type: 'aoe', powerStat: 'mag', effect: '对周围目标造成250%法术伤害。' },
     shield: { id: 'shield', name: '\u9b54\u6cd5\u76fe', mp: 22, power: 1.0, type: 'buff_shield', effect: '开启魔法盾，按比例消耗MP抵消伤害。' },
     iceblast: { id: 'iceblast', name: '冰咆哮', mp: 24, power: 1.6, type: 'spell', effect: '对单体造成160%法术伤害。' },
     group_magic_shield: { id: 'group_magic_shield', name: '群体魔法盾', mp: 28, power: 1.0, type: 'buff_magic_shield_group', cooldown: 60000, effect: '为自己与召唤兽施放魔法盾，持续5秒，60秒冷却。' }

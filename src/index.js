@@ -14516,7 +14516,8 @@ async function combatTick() {
             aoeDmg = calcMagicDamage(powerStat, target, skillPower);
           }
           if (hasFalloff && target.id !== mob.id) {
-            aoeDmg = Math.max(1, Math.floor(aoeDmg * 0.5));
+            const falloffRatio = skill.id === 'thunderstorm' ? 0.7 : 0.5;
+            aoeDmg = Math.max(1, Math.floor(aoeDmg * falloffRatio));
           }
           const elementAtk = Math.max(0, Math.floor(player.elementAtk || 0));
           if (elementAtk > 0) {

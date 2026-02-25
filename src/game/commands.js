@@ -1324,14 +1324,14 @@ export function summonStats(player, skill, summonLevelOverride = null) {
   let max_mp;
     const summonFactor = 0.1 + ((level - 1) * (0.9 / 7));
     if (skill.id === 'moon_fairy') {
-      const factor = 3.0;
+      const factor = 2.0;
       max_hp = Math.floor((player.max_hp || 0) * factor);
       max_mp = Math.floor((player.max_mp || 0) * factor);
       atk = Math.floor((player.atk || 0) * factor);
       def = Math.floor((player.def || 0) * factor);
       mdef = Math.floor((player.mdef || 0) * factor);
     } else if (skill.id === 'skeleton' || skill.id === 'summon' || skill.id === 'white_tiger') {
-      const maxRatio = skill.id === 'white_tiger' ? 2.0 : (skill.id === 'summon' ? 1.0 : 0.6);
+      const maxRatio = skill.id === 'white_tiger' ? 1.5 : (skill.id === 'summon' ? 1.0 : 0.6);
       const factor = summonFactor * maxRatio;
       max_hp = Math.floor((player.max_hp || 0) * factor);
       max_mp = Math.floor((player.max_mp || 0) * factor);

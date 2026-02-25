@@ -13106,6 +13106,8 @@ io.on('connection', (socket) => {
     loaded.combat = null;
     loaded.guild = null;
     if (!loaded.flags) loaded.flags = {};
+    const wasOfflineManagedAuto = Boolean(loaded.flags.offlineManagedAuto);
+    const wasOfflineManagedPending = Boolean(loaded.flags.offlineManagedPending);
     delete loaded.flags.offlineManagedAuto;
     delete loaded.flags.offlineManagedAt;
     delete loaded.flags.offlineManagedPending;
@@ -13196,6 +13198,15 @@ io.on('connection', (socket) => {
     socket.join(`realm:${serverId}`);
     applyOfflineRewards(loaded);
     spawnMobs(loaded.position.zone, loaded.position.room, loaded.realmId || 1);
+    if ((wasOfflineManagedAuto || wasOfflineManagedPending) && loaded.flags?.autoFullEnabled && isSvipActive(loaded)) {
+      loaded.combat = null;
+      loaded.flags.autoFullLastMoveAt = 0;
+      const relogRoomMobs = getAliveMobs(loaded.position.zone, loaded.position.room, loaded.realmId || 1);
+      const relogAutoResult = tryAutoFullAction(loaded, relogRoomMobs);
+      if (relogAutoResult === 'moved') {
+        await savePlayer(loaded).catch(() => {});
+      }
+    }
     tryRecoverZhuxianTowerEmptyRoom(loaded);
     await handleSabakEntry(loaded);
     const zone = WORLD[loaded.position.zone];

@@ -2830,14 +2830,13 @@ export async function handleCommand({ player, players, allCharacters, playersByN
           if (!p.status) p.status = {};
           if (!p.status.buffs) p.status.buffs = {};
           p.status.invincible = now + duration * 1000;
-          applyBuff(p, { key: 'spiritBoost', expiresAt: now + duration * 1000, multiplier: 2 });
         });
         if (skill.cooldown) {
           if (!player.status) player.status = {};
           if (!player.status.skillCooldowns) player.status.skillCooldowns = {};
           player.status.skillCooldowns[skill.id] = Date.now();
         }
-        send(`你施放了 ${skill.name}，自己和召唤兽 ${duration} 秒内免疫所有伤害，道术提升100%。`);
+        send(`你施放了 ${skill.name}，自己和召唤兽 ${duration} 秒内免疫所有伤害。`);
         notifyMastery(player, skill);
         return;
       }

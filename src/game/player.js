@@ -15,7 +15,10 @@ function randomEquipBaseRollPct() {
 function normalizeEquipBaseRollPct(item, value, fallback = 100) {
   if (!item?.slot) return null;
   const raw = Number(value);
-  const next = Number.isFinite(raw) ? Math.floor(raw) : Math.floor(Number(fallback) || 100);
+  // Treat 0/negative persisted values as invalid legacy data instead of forcing min roll (50%).
+  const next = (Number.isFinite(raw) && raw > 0)
+    ? Math.floor(raw)
+    : Math.floor(Number(fallback) || 100);
   return clamp(next, EQUIP_BASE_ROLL_MIN_PCT, EQUIP_BASE_ROLL_MAX_PCT);
 }
 

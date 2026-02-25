@@ -11755,7 +11755,7 @@ io.on('connection', (socket) => {
     if (!player) return;
     const { clean } = sanitizePayload(
       payload,
-      ['action', 'petId', 'name', 'bookId', 'qty', 'mainPetId', 'subPetId', 'itemKey', 'slot'],
+      ['action', 'petId', 'name', 'bookId', 'qty', 'mainPetId', 'subPetId', 'itemKey', 'slot', 'attr', 'count'],
       'pet_action'
     );
     const action = String(clean?.action || '').trim().toLowerCase();
@@ -11998,6 +11998,44 @@ io.on('connection', (socket) => {
       const activityMsgs = recordTreasurePetFestivalActivity(player, { petBookUses: 1 });
       activityMsgs.forEach((msg) => player.send?.(msg));
       emitResult(true, `book used: ${book.skillName}${replacedText}${unlockText}`);
+    } else if (action === 'train') {
+      const pet = getPetById(clean?.petId);
+      if (!pet) return fail('pet not found');
+      const attrAliases = {
+        hp: 'hp',
+        mp: 'mp',
+        atk: 'atk',
+        def: 'def',
+        mag: 'mag',
+        mdef: 'mdef',
+        dex: 'dex',
+        生命: 'hp',
+        魔法值: 'mp',
+        攻击: 'atk',
+        防御: 'def',
+        魔法: 'mag',
+        魔御: 'mdef',
+        敏捷: 'dex'
+      };
+      const validKeys = ['hp', 'mp', 'atk', 'def', 'mag', 'mdef', 'dex'];
+      const attrRaw = String(clean?.attr || clean?.slot || '').trim();
+      const key = attrAliases[attrRaw] || attrAliases[attrRaw.toLowerCase?.() ? attrRaw.toLowerCase() : attrRaw];
+      if (!key || !validKeys.includes(key)) return fail('invalid train attr');
+      const reqCount = Math.max(1, Math.floor(Number(clean?.count ?? clean?.qty ?? 1)));
+      pet.training = normalizePetTrainingRecord(pet.training);
+      const curLv = Math.max(0, Math.floor(Number(pet.training[key] || 0)));
+      let totalCost = 0;
+      for (let i = 0; i < reqCount; i += 1) {
+        totalCost += Math.max(1, Math.floor(10000 + (curLv + i) * 2000));
+      }
+      const ownedFruit = Math.max(0, Math.floor(Number((player.inventory || []).find((i) => i?.id === 'pet_training_fruit')?.qty || 0)));
+      if (ownedFruit < reqCount) return fail(`宠物修炼果不足，需要${reqCount}个`);
+      if (player.gold < totalCost) return fail(`金币不足，需要${totalCost}`);
+      if (!removeItem(player, 'pet_training_fruit', reqCount)) return fail('pet training fruit remove failed');
+      player.gold -= totalCost;
+      pet.training[key] = curLv + reqCount;
+      dirty = true;
+      emitResult(true, reqCount > 1 ? `宠物修炼成功：${key} Lv${curLv}->Lv${pet.training[key]}` : `宠物修炼成功：${key} Lv${pet.training[key]}`);
     } else if (action === 'synthesize' || action === 'synthesis') {
       const mainPet = getPetById(clean?.mainPetId);
       const subPet = getPetById(clean?.subPetId);
@@ -12998,7 +13036,6 @@ function tryAutoBuff(player) {
         if (!p.status) p.status = {};
         if (!p.status.buffs) p.status.buffs = {};
         p.status.invincible = now + duration * 1000;
-        applyBuff(p, { key: 'spiritBoost', expiresAt: now + duration * 1000, multiplier: 2 });
         if (p.send && p.name && p.name !== player.name) {
           p.send(`${player.name} 自动为你施放 ${buffSkill.name}。`);
         }
@@ -13008,7 +13045,7 @@ function tryAutoBuff(player) {
       if (buffSkill.cooldown) {
         player.status.skillCooldowns[buffSkill.id] = Date.now();
       }
-      player.send(`自动施放 ${buffSkill.name}，自己和召唤兽 ${duration} 秒内免疫所有伤害，道术提升100%。`);
+      player.send(`自动施放 ${buffSkill.name}，自己和召唤兽 ${duration} 秒内免疫所有伤害。`);
       return true;
     }
     if (buffSkill.type === 'buff_magic_shield_group') {

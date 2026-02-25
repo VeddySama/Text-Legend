@@ -6,7 +6,7 @@ export const SKILLS = {
     attack: { id: 'attack', name: '\u653b\u6740\u5251\u672f', mp: 0, power: 1.3, type: 'attack', effect: '对单体造成130%物理伤害。' },
     assassinate: { id: 'assassinate', name: '\u523a\u6740\u5251\u672f', mp: 0, power: 1.6, type: 'attack', effect: '对单体造成160%物理伤害，并可能波及附近目标。' },
     halfmoon: { id: 'halfmoon', name: '\u534a\u6708\u5f2f\u5200', mp: 12, power: 1.2, type: 'cleave', effect: '对周围目标造成120%物理伤害。' },
-    firestrike: { id: 'firestrike', name: '\u70c8\u706b\u5251\u6cd5', mp: 18, power: 2.2, type: 'attack', cooldown: 5000, effect: '对单体造成220%物理伤害，5秒冷却。' },
+    firestrike: { id: 'firestrike', name: '\u70c8\u706b\u5251\u6cd5', mp: 18, power: 2.5, type: 'attack', effect: '对单体造成250%物理伤害。' },
     savage: { id: 'savage', name: '\u91ce\u86ee\u51b2\u649e', mp: 12, power: 1.4, type: 'aoe', powerStat: 'atk', effect: '对周围目标造成140%物理伤害。' },
     earth_spike: { id: 'earth_spike', name: '彻地钉', mp: 20, power: 2.0, type: 'aoe', powerStat: 'atk', effect: '对周围目标造成200%物理伤害。' },
     tiangang: { id: 'tiangang', name: '先天罡气', mp: 24, power: 1.0, type: 'buff_tiangang', cooldown: 60000, effect: '5秒内攻击×2，防御/魔御×1.5，60秒冷却。' }
@@ -30,7 +30,7 @@ export const SKILLS = {
     poison: { id: 'poison', name: '\u65bd\u6bd2\u672f', mp: 10, power: 0.75, type: 'dot', effect: '施放毒伤，持续掉血并削弱目标。' },
     soul: { id: 'soul', name: '\u7075\u9b42\u706b\u7b26', mp: 14, power: 1.5, type: 'spell', effect: '对单体造成150%法术伤害。' },
     invis: { id: 'invis', name: '\u9690\u8eab\u672f', mp: 14, power: 1.0, type: 'stealth', effect: '隐身90+等级*45秒。' },
-    group_invis: { id: 'group_invis', name: '\u7fa4\u4f53\u9690\u8eab\u672f', mp: 22, power: 1.0, type: 'stealth_group', cooldown: 60000, effect: '自己与召唤兽5秒内免疫伤害，道术提升100%，60秒冷却。' },
+    group_invis: { id: 'group_invis', name: '\u7fa4\u4f53\u9690\u8eab\u672f', mp: 22, power: 1.0, type: 'stealth_group', cooldown: 60000, effect: '自己与召唤兽5秒内免疫伤害，60秒冷却。' },
     armor: { id: 'armor', name: '\u795e\u5723\u6218\u7532\u672f', mp: 18, power: 1.0, type: 'buff_def', effect: '提升防御10%，持续60秒。' },
     ghost: { id: 'ghost', name: '\u5e7d\u7075\u76fe', mp: 18, power: 1.0, type: 'buff_mdef', effect: '提升魔御10%，持续60秒。' },
     skeleton: {

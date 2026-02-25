@@ -420,6 +420,21 @@
               <select id="pet-use-book"></select>
               <button id="pet-use-book-btn">打书</button>
             </div>
+            <div class="modal-text">宠物修炼</div>
+            <div class="pet-inline-actions">
+              <select id="pet-train-attr">
+                <option value="hp">生命</option>
+                <option value="mp">魔法值</option>
+                <option value="atk">攻击</option>
+                <option value="def">防御</option>
+                <option value="mag">魔法</option>
+                <option value="mdef">魔御</option>
+                <option value="dex">敏捷</option>
+              </select>
+              <input id="pet-train-count" type="number" min="1" max="999" value="1" style="width:80px;" />
+              <button id="pet-train-btn">修炼</button>
+            </div>
+            <div id="pet-train-info" class="modal-text" style="color:#aaa;">请选择宠物后进行修炼</div>
             <div class="modal-text">宠物合成</div>
             <div class="pet-inline-actions">
               <select id="pet-synth-main"></select>

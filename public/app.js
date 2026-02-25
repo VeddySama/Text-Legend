@@ -577,6 +577,10 @@ const petUi = {
   bookList: document.getElementById('pet-book-list'),
   useBook: document.getElementById('pet-use-book'),
   useBookBtn: document.getElementById('pet-use-book-btn'),
+  trainAttr: document.getElementById('pet-train-attr'),
+  trainCount: document.getElementById('pet-train-count'),
+  trainBtn: document.getElementById('pet-train-btn'),
+  trainInfo: document.getElementById('pet-train-info'),
   synthMain: document.getElementById('pet-synth-main'),
   synthSub: document.getElementById('pet-synth-sub'),
   synthBtn: document.getElementById('pet-synth-btn'),
@@ -2535,6 +2539,7 @@ function renderPetModal() {
   if (petUi.setRest) petUi.setRest.disabled = !selected;
   if (petUi.rename) petUi.rename.disabled = !selected;
   if (petUi.release) petUi.release.disabled = !selected;
+  if (petUi.trainBtn) petUi.trainBtn.disabled = !selected;
 
   petUi.list.innerHTML = '';
   if (!pets.length) {
@@ -2598,6 +2603,8 @@ function renderPetModal() {
       `成长: ${Number(selected.growth || 1).toFixed(3)}`,
       `资质: HP ${selected.aptitude?.hp || 0} / 攻 ${selected.aptitude?.atk || 0} / 防 ${selected.aptitude?.def || 0} / 法 ${selected.aptitude?.mag || 0} / 速 ${selected.aptitude?.agility || 0}`
     ];
+    const t = selected.training || {};
+    lines.push(`修炼: 生${Number(t.hp || 0)} 魔${Number(t.mp || 0)} 攻${Number(t.atk || 0)} 防${Number(t.def || 0)} 法${Number(t.mag || 0)} 魔御${Number(t.mdef || 0)} 敏${Number(t.dex || 0)}`);
     lines.forEach((text) => {
       const line = document.createElement('div');
       line.textContent = text;
@@ -2627,6 +2634,27 @@ function renderPetModal() {
       });
     }
     petUi.detail.appendChild(skillLine);
+  }
+
+  if (petUi.trainCount) {
+    const rawCount = Math.floor(Number(petUi.trainCount.value || 1));
+    petUi.trainCount.value = String(Math.max(1, Math.min(999, Number.isFinite(rawCount) ? rawCount : 1)));
+  }
+  if (petUi.trainInfo) {
+    const bagItems = Array.isArray(lastState?.items) ? lastState.items : [];
+    const petTrainFruit = bagItems.find((it) => String(it?.id || '') === 'pet_training_fruit');
+    const fruitQty = Math.max(0, Math.floor(Number(petTrainFruit?.qty || 0)));
+    if (!selected) {
+      petUi.trainInfo.textContent = '请选择宠物后进行修炼';
+    } else {
+      const attr = String(petUi.trainAttr?.value || 'atk');
+      const trainCount = Math.max(1, Math.floor(Number(petUi.trainCount?.value || 1)));
+      const level = Math.max(0, Math.floor(Number(selected?.training?.[attr] || 0)));
+      let totalCost = 0;
+      for (let i = 0; i < trainCount; i += 1) totalCost += trainingCost(level + i);
+      const attrLabelMap = { hp: '生命', mp: '魔法值', atk: '攻击', def: '防御', mag: '魔法', mdef: '魔御', dex: '敏捷' };
+      petUi.trainInfo.textContent = `当前${attrLabelMap[attr] || attr}: Lv${level} | 本次${trainCount}次需 ${totalCost} 金 + 宠物修炼果 x${trainCount} | 拥有宠物修炼果 x${fruitQty}`;
+    }
   }
 
   const petEquipSlotLabels = {
@@ -9071,6 +9099,27 @@ if (petUi.useBookBtn) {
     const bookId = String(petUi.useBook?.value || '');
     if (!bookId) return showToast('请选择技能书');
     sendPetAction('use_book', { petId: selectedPetId, bookId });
+  });
+}
+if (petUi.trainAttr) {
+  petUi.trainAttr.addEventListener('change', () => {
+    renderPetModal();
+  });
+}
+if (petUi.trainCount) {
+  petUi.trainCount.addEventListener('input', () => {
+    const next = Math.max(1, Math.min(999, Math.floor(Number(petUi.trainCount.value || 1)) || 1));
+    petUi.trainCount.value = String(next);
+    renderPetModal();
+  });
+}
+if (petUi.trainBtn) {
+  petUi.trainBtn.addEventListener('click', () => {
+    if (!selectedPetId) return showToast('请先选择宠物');
+    const attr = String(petUi.trainAttr?.value || '').trim();
+    const count = Math.max(1, Math.min(999, Math.floor(Number(petUi.trainCount?.value || 1)) || 1));
+    if (!attr) return showToast('请选择修炼属性');
+    sendPetAction('train', { petId: selectedPetId, attr, count });
   });
 }
 if (petUi.synthBtn) {

@@ -13,6 +13,13 @@ let serverTimeLocal = null;
 let serverTimeTimer = null;
 let vipSelfClaimEnabled = true;
 let svipSettings = { prices: { month: 100, quarter: 260, year: 900, permanent: 3000 } };
+let registerInviteCode = '';
+try {
+  const inviteFromUrl = new URLSearchParams(window.location.search || '').get('invite');
+  registerInviteCode = String(inviteFromUrl || '').trim();
+} catch {
+  registerInviteCode = '';
+}
 
 function updateSvipPlanOptions() {
   if (!ui.svipPlan) return;
@@ -347,6 +354,7 @@ const ui = {
   gold: document.getElementById('ui-gold'),
   yuanbao: document.getElementById('ui-yuanbao'),
   recharge: document.getElementById('ui-recharge'),
+  invite: document.getElementById('ui-invite'),
   svipPlan: document.getElementById('ui-svip-plan'),
   cultivation: document.getElementById('ui-cultivation'),
   cultivationUpgrade: document.getElementById('ui-cultivation-upgrade'),
@@ -7759,6 +7767,64 @@ async function apiGet(path, withAuth = false) {
   return data;
 }
 
+async function copyInviteLink() {
+  if (!token) throw new Error('请先登录后再生成邀请链接');
+  const data = await apiGet('/api/invite-link', true);
+  const link = String(data?.link || '').trim();
+  if (!link) throw new Error('邀请链接生成失败');
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(link);
+    } else {
+      throw new Error('clipboard_unavailable');
+    }
+  } catch {
+    const input = document.createElement('input');
+    input.value = link;
+    document.body.appendChild(input);
+    input.select();
+    document.execCommand('copy');
+    document.body.removeChild(input);
+  }
+  return { link, code: String(data?.code || '').trim() };
+}
+
+async function showInviteStatsPanel() {
+  if (!token) throw new Error('请先登录后再查看邀请信息');
+  const data = await apiGet('/api/invite/stats', true);
+  const stats = data?.stats || {};
+  const config = data?.config || {};
+  const ratePct = Math.round((Number(config?.bonusRate || 0) || 0) * 10000) / 100;
+  const recent = Array.isArray(stats?.recentFirstRecharge) ? stats.recentFirstRecharge : [];
+  const recentText = recent.length
+    ? recent.slice(0, 5).map((entry) => {
+        const name = String(entry?.inviteeCharName || '-');
+        const rebate = Math.max(0, Number(entry?.rebateYuanbao || 0));
+        return `${name}(返利${rebate})`;
+      }).join(' / ')
+    : '暂无';
+  const text = [
+    `邀请奖励: ${config?.enabled === false ? '关闭' : `开启（比例 ${ratePct}%）`}`,
+    `已邀请注册: ${Math.max(0, Number(stats?.invitedUsers || 0))}`,
+    `已首充人数: ${Math.max(0, Number(stats?.firstRechargeUsers || 0))}`,
+    `累计返利元宝: ${Math.max(0, Number(stats?.totalRebateYuanbao || 0))}`,
+    `最近返利: ${recentText}`,
+    '可分享下方邀请链接给新玩家注册'
+  ].join('\n');
+  const result = await promptModal({
+    title: '邀请系统',
+    text,
+    placeholder: '邀请链接',
+    value: String(data?.link || ''),
+    allowEmpty: true,
+    extra: { text: '复制链接' }
+  });
+  if (result === '__extra__') {
+    const copied = await copyInviteLink();
+    showToast(`邀请链接已复制 (${copied.code || '邀请码'})`);
+  }
+}
+
 async function login() {
   const username = loginUserInput.value.trim();
   const password = document.getElementById('login-password').value.trim();
@@ -7851,8 +7917,9 @@ async function register() {
   const registerBtn = document.getElementById('register-btn');
   registerBtn.classList.add('btn-loading');
   try {
-    await apiPost('/api/register', { username, password, captchaToken, captchaCode });
+    await apiPost('/api/register', { username, password, captchaToken, captchaCode, inviteCode: registerInviteCode || undefined });
     authMsg.textContent = '注册成功，请登录。';
+    if (registerInviteCode) authMsg.textContent += '（已绑定邀请码）';
     showToast('注册成功');
     refreshCaptcha('register');
   } catch (err) {
@@ -8928,10 +8995,29 @@ if (ui.recharge) {
     const code = await promptModal({
       title: '元宝充值',
       text: '请输入卡密（首次充值可获得首充福利）',
-      placeholder: '卡密'
+      placeholder: '卡密',
+      extra: { text: '复制邀请链接' }
     });
+    if (code === '__extra__') {
+      try {
+        const result = await copyInviteLink();
+        showToast(`邀请链接已复制 (${result.code || '邀请码'})`);
+      } catch (err) {
+        showToast(err?.message || '复制邀请链接失败');
+      }
+      return;
+    }
     if (!code) return;
     socket.emit('cmd', { text: `recharge ${code}` });
+  });
+}
+if (ui.invite) {
+  ui.invite.addEventListener('click', async () => {
+    try {
+      await showInviteStatsPanel();
+    } catch (err) {
+      showToast(err?.message || '加载邀请信息失败');
+    }
   });
 }
 

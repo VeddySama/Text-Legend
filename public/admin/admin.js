@@ -44,6 +44,11 @@ const firstRechargeReissueDivineBeastBtn = document.getElementById('first-rechar
 const firstRechargeReissueDivineBeastAllBtn = document.getElementById('first-recharge-reissue-divine-beast-all-btn');
 const firstRechargeReissueAllBtn = document.getElementById('first-recharge-reissue-all-btn');
 const firstRechargeMsg = document.getElementById('first-recharge-msg');
+const inviteRewardEnabledInput = document.getElementById('invite-reward-enabled');
+const inviteRewardRateInput = document.getElementById('invite-reward-rate');
+const inviteRewardLoadBtn = document.getElementById('invite-reward-load-btn');
+const inviteRewardSaveBtn = document.getElementById('invite-reward-save-btn');
+const inviteRewardMsg = document.getElementById('invite-reward-msg');
 const vipSelfClaimStatus = document.getElementById('vip-self-claim-status');
 const vipSelfClaimMsg = document.getElementById('vip-self-claim-msg');
 const vipSelfClaimToggle = document.getElementById('vip-self-claim-toggle');
@@ -1947,6 +1952,7 @@ async function login() {
       await refreshVipSelfClaimStatus();
       await loadSvipSettings();
       await loadFirstRechargeSettings();
+      await loadInviteRewardSettings();
       await refreshLootLogStatus();
       await refreshStateThrottleStatus();
     await refreshConsignExpireStatus();
@@ -3004,6 +3010,51 @@ async function reissueAllRechargeUsersFirstRechargeWelfare() {
     setFirstRechargeMsg(`批量补发完成：${summary}${failures}`, Number(data?.failed || 0) > 0 ? '#cc7a00' : 'green');
   } catch (err) {
     setFirstRechargeMsg(`批量补发失败: ${err.message}`, 'red');
+  }
+}
+
+function setInviteRewardMsg(text, color = '') {
+  if (!inviteRewardMsg) return;
+  inviteRewardMsg.textContent = text || '';
+  if (color) inviteRewardMsg.style.color = color;
+}
+
+function applyInviteRewardConfigToForm(config) {
+  if (inviteRewardEnabledInput) inviteRewardEnabledInput.checked = config?.enabled !== false;
+  if (inviteRewardRateInput) {
+    const ratePct = (Number(config?.bonusRate || 0) || 0) * 100;
+    inviteRewardRateInput.value = String(Math.max(0, Math.min(100, Math.round(ratePct * 10) / 10)));
+  }
+}
+
+async function loadInviteRewardSettings() {
+  if (!inviteRewardMsg) return;
+  setInviteRewardMsg('');
+  try {
+    const data = await api('/admin/invite-settings', 'GET');
+    applyInviteRewardConfigToForm(data?.config || {});
+    setInviteRewardMsg('邀请配置加载成功', 'green');
+    setTimeout(() => setInviteRewardMsg(''), 1500);
+  } catch (err) {
+    setInviteRewardMsg(`加载失败: ${err.message}`, 'red');
+  }
+}
+
+async function saveInviteRewardSettings() {
+  if (!inviteRewardMsg) return;
+  const ratePct = Math.max(0, Math.min(100, Number(inviteRewardRateInput?.value || 0) || 0));
+  const config = {
+    enabled: !!inviteRewardEnabledInput?.checked,
+    bonusRate: ratePct / 100
+  };
+  setInviteRewardMsg('');
+  try {
+    const data = await api('/admin/invite-settings/update', 'POST', { config });
+    applyInviteRewardConfigToForm(data?.config || config);
+    setInviteRewardMsg('邀请配置保存成功', 'green');
+    setTimeout(() => setInviteRewardMsg(''), 1500);
+  } catch (err) {
+    setInviteRewardMsg(`保存失败: ${err.message}`, 'red');
   }
 }
 
@@ -6329,6 +6380,7 @@ async function initDashboard() {
     loadEventTimeSettings();
     loadActivityPointShopConfig();
     loadFirstRechargeSettings();
+    loadInviteRewardSettings();
     loadClassBonusConfig();
     loadTrainingFruitSettings();
     loadTrainingSettings();
@@ -6553,6 +6605,8 @@ if (firstRechargeReissueBtn) firstRechargeReissueBtn.addEventListener('click', r
 if (firstRechargeReissueDivineBeastBtn) firstRechargeReissueDivineBeastBtn.addEventListener('click', reissueDivineBeastForCharacter);
 if (firstRechargeReissueDivineBeastAllBtn) firstRechargeReissueDivineBeastAllBtn.addEventListener('click', reissueDivineBeastForAllRechargeUsers);
 if (firstRechargeReissueAllBtn) firstRechargeReissueAllBtn.addEventListener('click', reissueAllRechargeUsersFirstRechargeWelfare);
+if (inviteRewardLoadBtn) inviteRewardLoadBtn.addEventListener('click', loadInviteRewardSettings);
+if (inviteRewardSaveBtn) inviteRewardSaveBtn.addEventListener('click', saveInviteRewardSettings);
 if (vipCodesPrev) {
   vipCodesPrev.addEventListener('click', () => {
     vipCodesPageIndex = Math.max(0, vipCodesPageIndex - 1);

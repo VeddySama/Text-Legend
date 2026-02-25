@@ -176,6 +176,8 @@ import {
 
 const ACTIVITY_POINT_SHOP_SETTING_KEY = 'activity_point_shop_config_v1';
 const FIRST_RECHARGE_WELFARE_SETTING_KEY = 'first_recharge_welfare_config_v1';
+const INVITE_REWARD_SETTING_KEY = 'invite_reward_config_v1';
+const INVITE_RECHARGE_BONUS_RATE = 0.2;
 const DEFAULT_FIRST_RECHARGE_WELFARE_CONFIG = Object.freeze({
   enabled: true,
   grantDivineBeast: true,
@@ -188,6 +190,11 @@ const DEFAULT_FIRST_RECHARGE_WELFARE_CONFIG = Object.freeze({
   ]
 });
 let FIRST_RECHARGE_WELFARE_CONFIG = JSON.parse(JSON.stringify(DEFAULT_FIRST_RECHARGE_WELFARE_CONFIG));
+const DEFAULT_INVITE_REWARD_CONFIG = Object.freeze({
+  enabled: true,
+  bonusRate: INVITE_RECHARGE_BONUS_RATE
+});
+let INVITE_REWARD_CONFIG = { ...DEFAULT_INVITE_REWARD_CONFIG };
 
 function normalizeFirstRechargeWelfareConfig(raw) {
   const source = raw && typeof raw === 'object' ? raw : {};
@@ -243,6 +250,45 @@ async function setFirstRechargeWelfareConfig(raw) {
   return normalized;
 }
 
+function normalizeInviteRewardConfig(raw) {
+  const source = raw && typeof raw === 'object' ? raw : {};
+  const parsedRate = Number(source.bonusRate ?? DEFAULT_INVITE_REWARD_CONFIG.bonusRate);
+  const bonusRate = Number.isFinite(parsedRate) ? Math.max(0, Math.min(1, parsedRate)) : DEFAULT_INVITE_REWARD_CONFIG.bonusRate;
+  return {
+    enabled: source.enabled !== false,
+    bonusRate
+  };
+}
+
+function getInviteRewardConfigSnapshot() {
+  return {
+    enabled: INVITE_REWARD_CONFIG.enabled !== false,
+    bonusRate: Math.max(0, Math.min(1, Number(INVITE_REWARD_CONFIG.bonusRate ?? DEFAULT_INVITE_REWARD_CONFIG.bonusRate) || 0))
+  };
+}
+
+async function loadInviteRewardConfig() {
+  try {
+    const raw = await getSetting(INVITE_REWARD_SETTING_KEY, '');
+    if (!raw) {
+      INVITE_REWARD_CONFIG = normalizeInviteRewardConfig(DEFAULT_INVITE_REWARD_CONFIG);
+      return INVITE_REWARD_CONFIG;
+    }
+    INVITE_REWARD_CONFIG = normalizeInviteRewardConfig(JSON.parse(raw));
+  } catch (err) {
+    console.warn('邀请返利配置加载失败，使用默认值:', err?.message || err);
+    INVITE_REWARD_CONFIG = normalizeInviteRewardConfig(DEFAULT_INVITE_REWARD_CONFIG);
+  }
+  return INVITE_REWARD_CONFIG;
+}
+
+async function setInviteRewardConfig(raw) {
+  const normalized = normalizeInviteRewardConfig(raw);
+  await setSetting(INVITE_REWARD_SETTING_KEY, JSON.stringify(normalized));
+  INVITE_REWARD_CONFIG = normalized;
+  return normalized;
+}
+
 function firstRechargeRewardMarkerKey(userId) {
   return `first_recharge_reward_marked_user_${Math.max(0, Math.floor(Number(userId) || 0))}`;
 }
@@ -265,6 +311,218 @@ function divineBeastReissueCharacterMarkerKey(userId, charName, realmId = 1) {
   const rid = Math.max(1, Math.floor(Number(realmId || 1) || 1));
   const name = String(charName || '').trim();
   return `divine_beast_reissue_marked_char_${uid}_${rid}_${name}`;
+}
+
+function buildInviteCode(userId) {
+  const uid = Math.max(0, Math.floor(Number(userId) || 0));
+  if (!uid) return '';
+  return `I${uid.toString(36).toUpperCase()}`;
+}
+
+function parseInviteCode(raw) {
+  const code = String(raw || '').trim().toUpperCase();
+  if (!code) return 0;
+  const normalized = code.startsWith('I') ? code.slice(1) : code;
+  if (!/^[0-9A-Z]+$/.test(normalized)) return 0;
+  const parsed = Number.parseInt(normalized, 36);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+}
+
+function inviteBindingKey(userId) {
+  return `invite_binding_user_${Math.max(0, Math.floor(Number(userId) || 0))}`;
+}
+
+function inviteFirstRechargeProcessedKey(userId) {
+  return `invite_first_recharge_bonus_processed_user_${Math.max(0, Math.floor(Number(userId) || 0))}`;
+}
+
+function inviteRebateIssuedKeyByInviteeUser(userId) {
+  return `invite_rebate_issued_invitee_user_${Math.max(0, Math.floor(Number(userId) || 0))}`;
+}
+
+async function getInviteBindingByUserId(userId) {
+  const uid = Math.max(0, Math.floor(Number(userId) || 0));
+  if (!uid) return null;
+  const raw = await getSetting(inviteBindingKey(uid), '');
+  if (!String(raw || '').trim()) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    const inviterUserId = Math.max(0, Math.floor(Number(parsed?.inviterUserId || 0)));
+    if (!inviterUserId) return null;
+    return {
+      inviterUserId,
+      inviterUsername: String(parsed?.inviterUsername || ''),
+      inviteCode: String(parsed?.inviteCode || ''),
+      at: Number(parsed?.at || 0) || 0
+    };
+  } catch {
+    return null;
+  }
+}
+
+async function bindInviteForUser(userId, inviterUserId, payload = {}) {
+  const uid = Math.max(0, Math.floor(Number(userId) || 0));
+  const inviterUid = Math.max(0, Math.floor(Number(inviterUserId) || 0));
+  if (!uid || !inviterUid || uid === inviterUid) return false;
+  const exists = await getInviteBindingByUserId(uid);
+  if (exists) return false;
+  const data = {
+    at: Date.now(),
+    inviterUserId: inviterUid,
+    inviterUsername: String(payload?.inviterUsername || ''),
+    inviteCode: String(payload?.inviteCode || buildInviteCode(inviterUid)),
+    source: String(payload?.source || 'register')
+  };
+  await setSetting(inviteBindingKey(uid), JSON.stringify(data));
+  return true;
+}
+
+async function hasInviteFirstRechargeProcessed(userId) {
+  const uid = Math.max(0, Math.floor(Number(userId) || 0));
+  if (!uid) return false;
+  const raw = await getSetting(inviteFirstRechargeProcessedKey(uid), '');
+  return Boolean(String(raw || '').trim());
+}
+
+async function getInviteFirstRechargeProcessedRecord(userId) {
+  const uid = Math.max(0, Math.floor(Number(userId) || 0));
+  if (!uid) return null;
+  const raw = await getSetting(inviteFirstRechargeProcessedKey(uid), '');
+  if (!String(raw || '').trim()) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    return {
+      at: Math.max(0, Math.floor(Number(parsed?.at || 0))),
+      inviterUserId: Math.max(0, Math.floor(Number(parsed?.inviterUserId || 0))),
+      inviteeCharName: String(parsed?.inviteeCharName || ''),
+      sourceAmount: Math.max(0, Math.floor(Number(parsed?.sourceAmount || 0))),
+      bonusYuanbao: Math.max(0, Math.floor(Number(parsed?.bonusYuanbao || 0))),
+      rebateYuanbao: Math.max(0, Math.floor(Number(parsed?.rebateYuanbao || 0)))
+    };
+  } catch {
+    return null;
+  }
+}
+
+async function markInviteFirstRechargeProcessed(userId, payload = {}) {
+  const uid = Math.max(0, Math.floor(Number(userId) || 0));
+  if (!uid) return false;
+  const data = {
+    at: Date.now(),
+    inviterUserId: Math.max(0, Math.floor(Number(payload?.inviterUserId || 0))),
+    inviteeCharName: String(payload?.inviteeCharName || ''),
+    sourceAmount: Math.max(0, Math.floor(Number(payload?.sourceAmount || 0))),
+    bonusYuanbao: Math.max(0, Math.floor(Number(payload?.bonusYuanbao || 0))),
+    rebateYuanbao: Math.max(0, Math.floor(Number(payload?.rebateYuanbao || 0)))
+  };
+  await setSetting(inviteFirstRechargeProcessedKey(uid), JSON.stringify(data));
+  return true;
+}
+
+async function hasInviteRebateIssuedForInvitee(userId) {
+  const uid = Math.max(0, Math.floor(Number(userId) || 0));
+  if (!uid) return false;
+  const raw = await getSetting(inviteRebateIssuedKeyByInviteeUser(uid), '');
+  return Boolean(String(raw || '').trim());
+}
+
+async function markInviteRebateIssuedForInvitee(userId, payload = {}) {
+  const uid = Math.max(0, Math.floor(Number(userId) || 0));
+  if (!uid) return false;
+  const data = {
+    at: Date.now(),
+    source: String(payload?.source || 'unknown'),
+    operator: String(payload?.operator || ''),
+    inviterUserId: Math.max(0, Math.floor(Number(payload?.inviterUserId || 0))),
+    inviteeCharName: String(payload?.inviteeCharName || ''),
+    rebateYuanbao: Math.max(0, Math.floor(Number(payload?.rebateYuanbao || 0))),
+    targetName: String(payload?.targetName || ''),
+    realmId: Math.max(0, Math.floor(Number(payload?.realmId || 0)))
+  };
+  await setSetting(inviteRebateIssuedKeyByInviteeUser(uid), JSON.stringify(data));
+  return true;
+}
+
+async function getInviteStatsByInviterUserId(inviterUserId) {
+  const inviterUid = Math.max(0, Math.floor(Number(inviterUserId) || 0));
+  if (!inviterUid) {
+    return { invitedUsers: 0, firstRechargeUsers: 0, totalRebateYuanbao: 0, recentFirstRecharge: [] };
+  }
+  const bindingRows = await knex('game_settings')
+    .where('key', 'like', 'invite_binding_user_%')
+    .select('key', 'value');
+  let invitedUsers = 0;
+  for (const row of bindingRows) {
+    try {
+      const parsed = JSON.parse(row?.value || '{}');
+      const uid = Math.max(0, Math.floor(Number(parsed?.inviterUserId || 0)));
+      if (uid === inviterUid) invitedUsers += 1;
+    } catch {
+      // ignore invalid row
+    }
+  }
+
+  const processedRows = await knex('game_settings')
+    .where('key', 'like', 'invite_first_recharge_bonus_processed_user_%')
+    .select('key', 'value');
+  let firstRechargeUsers = 0;
+  let totalRebateYuanbao = 0;
+  const recentFirstRecharge = [];
+  for (const row of processedRows) {
+    try {
+      const parsed = JSON.parse(row?.value || '{}');
+      const uid = Math.max(0, Math.floor(Number(parsed?.inviterUserId || 0)));
+      if (uid !== inviterUid) continue;
+      firstRechargeUsers += 1;
+      totalRebateYuanbao += Math.max(0, Math.floor(Number(parsed?.rebateYuanbao || 0)));
+      recentFirstRecharge.push({
+        inviteeCharName: String(parsed?.inviteeCharName || ''),
+        sourceAmount: Math.max(0, Math.floor(Number(parsed?.sourceAmount || 0))),
+        rebateYuanbao: Math.max(0, Math.floor(Number(parsed?.rebateYuanbao || 0))),
+        bonusYuanbao: Math.max(0, Math.floor(Number(parsed?.bonusYuanbao || 0))),
+        at: Math.max(0, Math.floor(Number(parsed?.at || 0)))
+      });
+    } catch {
+      // ignore invalid row
+    }
+  }
+  recentFirstRecharge.sort((a, b) => (b.at || 0) - (a.at || 0));
+  return {
+    invitedUsers,
+    firstRechargeUsers,
+    totalRebateYuanbao,
+    recentFirstRecharge: recentFirstRecharge.slice(0, 10)
+  };
+}
+
+async function grantInviteRebateYuanbao(inviterUserId, amount, payload = {}) {
+  const inviterUid = Math.max(0, Math.floor(Number(inviterUserId) || 0));
+  const rebateAmount = Math.max(0, Math.floor(Number(amount || 0)));
+  if (!inviterUid || rebateAmount <= 0) return { ok: false, reason: 'invalid' };
+
+  const onlineTargets = Array.from(players.values()).filter((p) => p && Number(p.userId || 0) === inviterUid);
+  const preferredRealmId = Math.max(1, Math.floor(Number(payload?.preferredRealmId || 1) || 1));
+  const onlineTarget = onlineTargets.find((p) => (p.realmId || 1) === preferredRealmId) || onlineTargets[0];
+  if (onlineTarget) {
+    onlineTarget.yuanbao = Math.max(0, Math.floor(Number(onlineTarget.yuanbao || 0))) + rebateAmount;
+    onlineTarget.forceStateRefresh = true;
+    onlineTarget.send(`邀请返利到账：元宝+${rebateAmount}（被邀请玩家首次充值返利）`);
+    return { ok: true, targetName: onlineTarget.name, realmId: onlineTarget.realmId || preferredRealmId, online: true, amount: rebateAmount };
+  }
+
+  const row = await knex('characters')
+    .where({ user_id: inviterUid })
+    .orderByRaw('CASE WHEN realm_id = ? THEN 0 ELSE 1 END', [preferredRealmId])
+    .orderBy('updated_at', 'desc')
+    .orderBy('id', 'desc')
+    .first();
+  if (!row) return { ok: false, reason: 'no_character' };
+
+  const stored = await loadCharacter(row.user_id, row.name, row.realm_id || 1);
+  if (!stored) return { ok: false, reason: 'load_failed' };
+  stored.yuanbao = Math.max(0, Math.floor(Number(stored.yuanbao || 0))) + rebateAmount;
+  await saveCharacter(row.user_id, stored, row.realm_id || 1);
+  return { ok: true, targetName: row.name, realmId: row.realm_id || 1, online: false, amount: rebateAmount };
 }
 
 async function hasFirstRechargeRewardMarker(userId) {
@@ -552,15 +810,65 @@ app.get('/api/realms', async (req, res) => {
   res.json({ ok: true, count: realms.length, realms });
 });
 
+app.get('/api/invite-link', async (req, res) => {
+  const token = req.headers.authorization?.replace('Bearer ', '');
+  const session = await getSession(token);
+  if (!session) return res.status(401).json({ error: '登录已过期。' });
+  const user = await knex('users').where({ id: session.user_id }).first();
+  if (!user) return res.status(404).json({ error: '账号不存在。' });
+  const code = buildInviteCode(user.id);
+  const origin = `${req.protocol}://${req.get('host')}`;
+  const link = `${origin}/?invite=${encodeURIComponent(code)}`;
+  res.json({ ok: true, code, link, inviter: user.username || '' });
+});
+
+app.get('/api/invite/stats', async (req, res) => {
+  const token = req.headers.authorization?.replace('Bearer ', '');
+  const session = await getSession(token);
+  if (!session) return res.status(401).json({ error: '登录已过期。' });
+  const user = await knex('users').where({ id: session.user_id }).first();
+  if (!user) return res.status(404).json({ error: '账号不存在。' });
+  const code = buildInviteCode(user.id);
+  const origin = `${req.protocol}://${req.get('host')}`;
+  const link = `${origin}/?invite=${encodeURIComponent(code)}`;
+  const config = getInviteRewardConfigSnapshot();
+  const stats = await getInviteStatsByInviterUserId(user.id);
+  res.json({
+    ok: true,
+    code,
+    link,
+    inviter: user.username || '',
+    config: {
+      enabled: config.enabled !== false,
+      bonusRate: config.bonusRate
+    },
+    stats
+  });
+});
+
 app.post('/api/register', async (req, res) => {
-  const { username, password, captchaToken, captchaCode } = req.body || {};
+  const { username, password, captchaToken, captchaCode, inviteCode } = req.body || {};
   if (!username || !password) return res.status(400).json({ error: '账号或密码缺失。' });
   if (!verifyCaptcha(captchaToken, captchaCode)) {
     return res.status(400).json({ error: '验证码错误。' });
   }
   const exists = await knex('users').where({ username }).first();
   if (exists) return res.status(400).json({ error: '账号已存在。' });
-  await createUser(username, password);
+  let inviterUser = null;
+  const parsedInviteUserId = parseInviteCode(inviteCode);
+  if (String(inviteCode || '').trim()) {
+    if (!parsedInviteUserId) return res.status(400).json({ error: '邀请码无效。' });
+    inviterUser = await knex('users').where({ id: parsedInviteUserId }).first();
+    if (!inviterUser) return res.status(400).json({ error: '邀请人不存在。' });
+  }
+  const newUserId = await createUser(username, password);
+  if (inviterUser && inviterUser.id !== newUserId) {
+    await bindInviteForUser(newUserId, inviterUser.id, {
+      inviterUsername: inviterUser.username || '',
+      inviteCode: String(inviteCode || '').trim(),
+      source: 'register'
+    });
+  }
   res.json({ ok: true });
 });
 
@@ -1275,6 +1583,172 @@ app.get('/admin/first-recharge-settings', async (req, res) => {
   const admin = await requireAdmin(req);
   if (!admin) return res.status(401).json({ error: '无管理员权限。' });
   res.json({ ok: true, config: getFirstRechargeWelfareConfigSnapshot() });
+});
+
+app.get('/admin/invite-settings', async (req, res) => {
+  const admin = await requireAdmin(req);
+  if (!admin) return res.status(401).json({ error: '无管理员权限。' });
+  res.json({ ok: true, config: getInviteRewardConfigSnapshot() });
+});
+
+app.post('/admin/invite-settings/update', async (req, res) => {
+  const admin = await requireAdmin(req);
+  if (!admin) return res.status(401).json({ error: '无管理员权限。' });
+  try {
+    const config = await setInviteRewardConfig(req.body?.config || {});
+    res.json({ ok: true, config });
+  } catch (err) {
+    res.status(400).json({ error: err.message || '邀请配置更新失败' });
+  }
+});
+
+app.post('/admin/invite-reward/reissue', async (req, res) => {
+  const admin = await requireAdmin(req);
+  if (!admin) return res.status(401).json({ error: '无管理员权限。' });
+  const charName = String(req.body?.charName || '').trim();
+  const rawRealmId = req.body?.realmId;
+  const force = req.body?.force === true;
+  if (!charName) return res.status(400).json({ error: '请输入角色名。' });
+  let realmInfo = await resolveRealmId(rawRealmId);
+  if (realmInfo.error) {
+    const realms = await listRealms();
+    if (Array.isArray(realms) && realms.length > 0) {
+      realmInfo = { realmId: realms[0].id };
+    } else {
+      return res.status(400).json({ error: realmInfo.error });
+    }
+  }
+  const realmId = realmInfo.realmId;
+  const row = await findCharacterByNameInRealm(charName, realmId);
+  if (!row) return res.status(404).json({ error: '角色不存在。' });
+  const inviteeUserId = Math.max(0, Math.floor(Number(row.user_id || 0)));
+  if (!inviteeUserId) return res.status(400).json({ error: '角色账号信息异常。' });
+  const processed = await getInviteFirstRechargeProcessedRecord(inviteeUserId);
+  if (!processed) return res.status(400).json({ error: '该账号没有邀请首充处理记录。' });
+  if (!processed.inviterUserId || !processed.rebateYuanbao) {
+    return res.status(400).json({ error: '该账号没有可补发的邀请返利记录。' });
+  }
+  if (!force && await hasInviteRebateIssuedForInvitee(inviteeUserId)) {
+    return res.status(400).json({ error: '该账号邀请返利已发放过。' });
+  }
+  const rebateResult = await grantInviteRebateYuanbao(processed.inviterUserId, processed.rebateYuanbao, {
+    preferredRealmId: realmId,
+    inviteeUserId,
+    inviteeName: row.name
+  });
+  if (!rebateResult?.ok) {
+    return res.status(400).json({ error: `返利补发失败：${rebateResult?.reason || '未知原因'}` });
+  }
+  const operator = String(admin?.user?.username || admin?.user?.name || admin?.user?.id || '').trim();
+  await markInviteRebateIssuedForInvitee(inviteeUserId, {
+    source: 'admin_reissue_invite_rebate',
+    operator,
+    inviterUserId: processed.inviterUserId,
+    inviteeCharName: row.name,
+    rebateYuanbao: processed.rebateYuanbao,
+    targetName: String(rebateResult?.targetName || ''),
+    realmId: Math.max(1, Math.floor(Number(rebateResult?.realmId || 1) || 1))
+  });
+  res.json({
+    ok: true,
+    invitee: { userId: inviteeUserId, charName: row.name, realmId },
+    inviter: {
+      userId: processed.inviterUserId,
+      targetName: String(rebateResult?.targetName || ''),
+      realmId: Math.max(1, Math.floor(Number(rebateResult?.realmId || 1) || 1)),
+      online: rebateResult?.online === true
+    },
+    rebateYuanbao: processed.rebateYuanbao
+  });
+});
+
+app.post('/admin/invite-reward/reissue-all-failed', async (req, res) => {
+  const admin = await requireAdmin(req);
+  if (!admin) return res.status(401).json({ error: '无管理员权限。' });
+  const limit = Math.max(1, Math.min(1000, Math.floor(Number(req.body?.limit || 200) || 200)));
+  const preferredRealmIdRaw = req.body?.realmId;
+  let preferredRealmId = 0;
+  if (preferredRealmIdRaw != null && preferredRealmIdRaw !== '') {
+    const realmInfo = await resolveRealmId(preferredRealmIdRaw);
+    if (realmInfo.error) return res.status(400).json({ error: realmInfo.error });
+    preferredRealmId = realmInfo.realmId;
+  }
+  const rows = await knex('game_settings')
+    .where('key', 'like', 'invite_first_recharge_bonus_processed_user_%')
+    .select('key', 'value');
+  const operator = String(admin?.user?.username || admin?.user?.name || admin?.user?.id || '').trim();
+  const stats = { totalProcessed: rows.length, pending: 0, success: 0, alreadyIssued: 0, skippedNoRebate: 0, failed: 0 };
+  const failures = [];
+  for (const row of rows) {
+    if (stats.success + stats.failed >= limit) break;
+    const key = String(row?.key || '');
+    const m = key.match(/^invite_first_recharge_bonus_processed_user_(\d+)$/);
+    if (!m) continue;
+    const inviteeUserId = Math.max(0, Math.floor(Number(m[1] || 0) || 0));
+    if (!inviteeUserId) continue;
+    try {
+      if (await hasInviteRebateIssuedForInvitee(inviteeUserId)) {
+        stats.alreadyIssued += 1;
+        continue;
+      }
+      let processed = null;
+      try {
+        processed = JSON.parse(row?.value || '{}');
+      } catch {
+        processed = null;
+      }
+      const inviterUserId = Math.max(0, Math.floor(Number(processed?.inviterUserId || 0)));
+      const rebateYuanbao = Math.max(0, Math.floor(Number(processed?.rebateYuanbao || 0)));
+      const inviteeCharName = String(processed?.inviteeCharName || '').trim();
+      if (!inviterUserId || rebateYuanbao <= 0) {
+        stats.skippedNoRebate += 1;
+        continue;
+      }
+      stats.pending += 1;
+      let inviteeRow = null;
+      if (preferredRealmId && inviteeCharName) {
+        inviteeRow = await knex('characters').where({ user_id: inviteeUserId, name: inviteeCharName, realm_id: preferredRealmId }).first();
+      }
+      if (!inviteeRow) {
+        inviteeRow = await knex('characters')
+          .where({ user_id: inviteeUserId })
+          .orderByRaw('CASE WHEN name = ? THEN 0 ELSE 1 END', [inviteeCharName || ''])
+          .orderBy('updated_at', 'desc')
+          .orderBy('id', 'desc')
+          .first();
+      }
+      const rebateResult = await grantInviteRebateYuanbao(inviterUserId, rebateYuanbao, {
+        preferredRealmId: preferredRealmId || Number(inviteeRow?.realm_id || 1) || 1,
+        inviteeUserId,
+        inviteeName: inviteeCharName || String(inviteeRow?.name || '')
+      });
+      if (!rebateResult?.ok) {
+        stats.failed += 1;
+        failures.push(`uid=${inviteeUserId}:${rebateResult?.reason || 'grant_failed'}`);
+        continue;
+      }
+      await markInviteRebateIssuedForInvitee(inviteeUserId, {
+        source: 'admin_reissue_invite_rebate_all',
+        operator,
+        inviterUserId,
+        inviteeCharName: inviteeCharName || String(inviteeRow?.name || ''),
+        rebateYuanbao,
+        targetName: String(rebateResult?.targetName || ''),
+        realmId: Math.max(1, Math.floor(Number(rebateResult?.realmId || 1) || 1))
+      });
+      stats.success += 1;
+    } catch (err) {
+      stats.failed += 1;
+      failures.push(`uid=${inviteeUserId}:${err?.message || err}`);
+    }
+  }
+  res.json({
+    ok: true,
+    preferredRealmId: preferredRealmId || null,
+    limit,
+    ...stats,
+    failures: failures.slice(0, 30)
+  });
 });
 
 app.post('/admin/first-recharge-settings/update', async (req, res) => {
@@ -6068,8 +6542,59 @@ const rechargeApi = {
     const playerRealmId = Math.max(1, Math.floor(Number(player?.realmId || 1) || 1));
     const rewardMarkedInRealm = await hasFirstRechargeRewardMarkerByRealm(player.userId, playerRealmId);
     const isFirstRecharge = firstRechargeCfg.enabled !== false && !rewardMarkedInRealm;
-    player.yuanbao = (player.yuanbao || 0) + amount;
+    let inviteBonusMsg = '';
+    const inviteBinding = await getInviteBindingByUserId(player.userId);
+    const inviteBonusAlreadyProcessed = await hasInviteFirstRechargeProcessed(player.userId);
+    const inviteCfg = getInviteRewardConfigSnapshot();
+    const inviteRate = Math.max(0, Math.min(1, Number(inviteCfg.bonusRate || 0)));
+    const canApplyInviteFirstRechargeBonus = Boolean(inviteCfg.enabled !== false && inviteBinding && !inviteBonusAlreadyProcessed);
+    const inviteExtraYuanbao = canApplyInviteFirstRechargeBonus
+      ? Math.max(0, Math.floor(amount * inviteRate))
+      : 0;
+    const inviterRebateYuanbao = canApplyInviteFirstRechargeBonus
+      ? Math.max(0, Math.floor(amount * inviteRate))
+      : 0;
+    player.yuanbao = (player.yuanbao || 0) + amount + inviteExtraYuanbao;
     let firstRechargeMsg = '';
+    if (canApplyInviteFirstRechargeBonus && inviteBinding) {
+      let rebateResult = null;
+      if (inviterRebateYuanbao > 0) {
+        try {
+          rebateResult = await grantInviteRebateYuanbao(inviteBinding.inviterUserId, inviterRebateYuanbao, {
+            preferredRealmId: playerRealmId,
+            inviteeUserId: player.userId,
+            inviteeName: player.name
+          });
+        } catch (err) {
+          console.warn('邀请返利发放失败:', err?.message || err);
+          rebateResult = { ok: false, reason: 'exception' };
+        }
+      }
+      if (rebateResult?.ok && inviterRebateYuanbao > 0) {
+        await markInviteRebateIssuedForInvitee(player.userId, {
+          source: 'auto_recharge',
+          inviterUserId: inviteBinding.inviterUserId,
+          inviteeCharName: player.name,
+          rebateYuanbao: inviterRebateYuanbao,
+          targetName: String(rebateResult?.targetName || ''),
+          realmId: Math.max(1, Math.floor(Number(rebateResult?.realmId || playerRealmId) || playerRealmId))
+        });
+      }
+      await markInviteFirstRechargeProcessed(player.userId, {
+        inviterUserId: inviteBinding.inviterUserId,
+        inviteeCharName: player.name,
+        sourceAmount: amount,
+        bonusYuanbao: inviteExtraYuanbao,
+        rebateYuanbao: inviterRebateYuanbao
+      });
+      const rebateHint = rebateResult?.ok
+        ? `邀请人返利 ${inviterRebateYuanbao} 元宝已发放`
+        : (inviterRebateYuanbao > 0 ? `邀请人返利发放异常（请联系管理员）` : '');
+      const parts = [];
+      if (inviteExtraYuanbao > 0) parts.push(`邀请首充加成 +${inviteExtraYuanbao} 元宝`);
+      if (rebateHint) parts.push(rebateHint);
+      if (parts.length) inviteBonusMsg = `\n${parts.join('，')}。`;
+    }
     if (isFirstRecharge) {
       const grant = grantFirstRechargeWelfareToPlayer(player, firstRechargeCfg);
       const rewardText = Array.isArray(grant.rewardText) ? grant.rewardText : [];
@@ -6081,7 +6606,7 @@ const rechargeApi = {
     }
     await addSponsor(player.name, amount);
     player.forceStateRefresh = true;
-    return { ok: true, msg: `充值成功，获得 ${amount} 元宝。${firstRechargeMsg}`.trim() };
+    return { ok: true, msg: `充值成功，获得 ${amount + inviteExtraYuanbao} 元宝。${inviteBonusMsg}${firstRechargeMsg}`.trim() };
   }
 };
 
@@ -16243,6 +16768,7 @@ async function start() {
   const trainingPerLevelConfig = await getTrainingPerLevelConfigDb();
   setTrainingPerLevelConfigMem(trainingPerLevelConfig);
   await loadFirstRechargeWelfareConfig();
+  await loadInviteRewardConfig();
 
   // 加载职业升级属性配置
   const classLevelConfigs = {

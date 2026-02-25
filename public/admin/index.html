@@ -645,6 +645,24 @@
                   <button id="first-recharge-reissue-all-btn" class="btn-small">补发全部充值玩家</button>
                 </div>
                 <div id="first-recharge-msg" class="msg"></div>
+
+                <div style="border-top: 1px solid #ddd; margin-top: 14px; padding-top: 12px;">
+                  <h4 style="margin: 0 0 10px;">邀请返利配置</h4>
+                  <label class="admin-switch" style="margin-bottom: 8px;">
+                    <input type="checkbox" id="invite-reward-enabled" checked>
+                    <span class="admin-switch-slider" aria-hidden="true"></span>
+                    <span class="admin-switch-label">启用邀请返利</span>
+                  </label>
+                  <div class="input-with-unit">
+                    <input id="invite-reward-rate" type="number" min="0" max="100" step="0.1" value="20">
+                    <span class="unit">返利比例(%)</span>
+                  </div>
+                  <div class="row" style="margin-top: 8px;">
+                    <button id="invite-reward-load-btn" class="btn-small">加载邀请配置</button>
+                    <button id="invite-reward-save-btn" class="btn-small">保存邀请配置</button>
+                  </div>
+                  <div id="invite-reward-msg" class="msg"></div>
+                </div>
               </div>
             </div>
           </div>

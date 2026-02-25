@@ -530,9 +530,13 @@ export function computeDerived(player) {
   let poisonEffectCount = 0;
   let comboEffectCount = 0;
   let healblockEffectCount = 0;
-  // 宠物不再直接影响人物属性；宠物技能与宠物装备仅作用于宠物自身战斗。
+  // 宠物大部分属性加成对人物关闭；仅保留少数明确设计的专属护主技能。
   const petSkills = new Set();
+  const activePetSkills = getActivePetSkillSet(player);
   const petAgilityBonus = 0;
+  if (activePetSkills.has('pet_beast_aegis')) {
+    petDefPct += 0.4; // 神兽专属：人物防御/魔御提升40%
+  }
   if (petSkills.has('pet_bash')) petAtkPct += 0.08;
   if (petSkills.has('pet_guard')) {
     petDefPct += 0.12;

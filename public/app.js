@@ -8773,7 +8773,7 @@ if (ui.recharge) {
     if (!socket) return;
     const code = await promptModal({
       title: '元宝充值',
-      text: '请输入卡密',
+      text: '请输入卡密（首次充值可获得首充福利）',
       placeholder: '卡密'
     });
     if (!code) return;

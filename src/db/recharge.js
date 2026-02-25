@@ -50,3 +50,14 @@ export async function countRechargeCards() {
   const row = await knex('recharge_cards').count({ total: '*' }).first();
   return Number(row?.total || 0);
 }
+
+export async function countUsedRechargeCardsByUser(userId) {
+  const uid = Math.floor(Number(userId || 0));
+  if (!Number.isFinite(uid) || uid <= 0) return 0;
+  const row = await knex('recharge_cards')
+    .where({ used_by_user_id: uid })
+    .whereNotNull('used_at')
+    .count({ total: '*' })
+    .first();
+  return Number(row?.total || 0);
+}

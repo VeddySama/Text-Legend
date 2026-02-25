@@ -599,6 +599,40 @@
                   <tbody id="recharge-codes-list"></tbody>
                 </table>
               </div>
+
+              <div style="border-top: 1px solid #ddd; margin-top: 16px; padding-top: 16px;">
+                <h4 style="margin: 0 0 10px;">首充福利配置</h4>
+                <label class="admin-switch" style="margin-bottom: 8px;">
+                  <input type="checkbox" id="first-recharge-enabled">
+                  <span class="admin-switch-slider" aria-hidden="true"></span>
+                  <span class="admin-switch-label">启用首充福利</span>
+                </label>
+                <div class="input-with-unit">
+                  <input id="first-recharge-yuanbao" type="number" min="0" value="0">
+                  <span class="unit">额外元宝</span>
+                </div>
+                <div class="input-with-unit">
+                  <input id="first-recharge-gold" type="number" min="0" value="200000000">
+                  <span class="unit">额外金币</span>
+                </div>
+                <div class="input-with-unit">
+                  <input id="first-recharge-training-fruit" type="number" min="0" value="200">
+                  <span class="unit">修炼果</span>
+                </div>
+                <div class="input-with-unit">
+                  <input id="first-recharge-pet-training-fruit" type="number" min="0" value="200">
+                  <span class="unit">宠物修炼果</span>
+                </div>
+                <div class="input-with-unit">
+                  <input id="first-recharge-treasure-exp" type="number" min="0" value="200">
+                  <span class="unit">法宝经验丹</span>
+                </div>
+                <div class="row" style="margin-top: 8px;">
+                  <button id="first-recharge-load-btn" class="btn-small">加载首充配置</button>
+                  <button id="first-recharge-save-btn" class="btn-small">保存首充配置</button>
+                </div>
+                <div id="first-recharge-msg" class="msg"></div>
+              </div>
             </div>
           </div>
         </div>

@@ -17,7 +17,7 @@ import { addGuildMember, createGuild, getGuildByName, getGuildByNameInRealm, get
 import { createAdminSession, listUsers, verifyAdminSession, deleteUser } from './db/admin.js';
 import { sendMail, listMail, listSentMail, markMailRead, markMailClaimed, deleteMail } from './db/mail.js';
 import { createVipCodes, listVipCodes, countVipCodes, useVipCode } from './db/vip.js';
-import { createRechargeCards, listRechargeCards, countRechargeCards, useRechargeCard } from './db/recharge.js';
+import { createRechargeCards, listRechargeCards, countRechargeCards, useRechargeCard, countUsedRechargeCardsByUser } from './db/recharge.js';
 import { getSetting, setSetting, getVipSelfClaimEnabled, setVipSelfClaimEnabled, getSvipPrices, setSvipPrices, getLootLogEnabled, setLootLogEnabled, getCrossWorldBossRespawnAt, setCrossWorldBossRespawnAt, getStateThrottleEnabled, setStateThrottleEnabled, getStateThrottleIntervalSec, setStateThrottleIntervalSec, getStateThrottleOverrideServerAllowed, setStateThrottleOverrideServerAllowed, getConsignExpireHours, setConsignExpireHours, getRoomVariantCount, setRoomVariantCount, getSabakStartHour, setSabakStartHour, getSabakStartMinute, setSabakStartMinute, getSabakDurationMinutes, setSabakDurationMinutes, getSabakSiegeMinutes, setSabakSiegeMinutes, getCrossRankStartHour, setCrossRankStartHour, getCrossRankStartMinute, setCrossRankStartMinute, getCrossRankDurationMinutes, setCrossRankDurationMinutes, canUserClaimVip, incrementCharacterVipClaimCount, getWorldBossKillCount, setWorldBossKillCount, getSpecialBossKillCount, setSpecialBossKillCount, getCultivationBossKillCount, setCultivationBossKillCount, getWorldBossDropBonus, setWorldBossDropBonus, getWorldBossBaseHp, setWorldBossBaseHp, getWorldBossBaseAtk, setWorldBossBaseAtk, getWorldBossBaseDef, setWorldBossBaseDef, getWorldBossBaseMdef, setWorldBossBaseMdef, getWorldBossBaseExp, setWorldBossBaseExp, getWorldBossBaseGold, setWorldBossBaseGold, getWorldBossRespawnMinutes, setWorldBossRespawnMinutes, getWorldBossPlayerBonusConfig, setWorldBossPlayerBonusConfig, getClassLevelBonusConfig, setClassLevelBonusConfig, getSpecialBossDropBonus, setSpecialBossDropBonus, getSpecialBossBaseHp, setSpecialBossBaseHp, getSpecialBossBaseAtk, setSpecialBossBaseAtk, getSpecialBossBaseDef, setSpecialBossBaseDef, getSpecialBossBaseMdef, setSpecialBossBaseMdef, getSpecialBossBaseExp, setSpecialBossBaseExp, getSpecialBossBaseGold, setSpecialBossBaseGold, getSpecialBossRespawnMinutes, setSpecialBossRespawnMinutes, getSpecialBossPlayerBonusConfig, setSpecialBossPlayerBonusConfig, getCultivationBossDropBonus, setCultivationBossDropBonus, getCultivationBossPlayerBonusConfig, setCultivationBossPlayerBonusConfig, getCultivationBossBaseHp, setCultivationBossBaseHp, getCultivationBossBaseAtk, setCultivationBossBaseAtk, getCultivationBossBaseDef, setCultivationBossBaseDef, getCultivationBossBaseMdef, setCultivationBossBaseMdef, getCultivationBossBaseExp, setCultivationBossBaseExp, getCultivationBossBaseGold, setCultivationBossBaseGold, getCultivationBossRespawnMinutes, setCultivationBossRespawnMinutes, getTrainingFruitCoefficient as getTrainingFruitCoefficientDb, setTrainingFruitCoefficient as setTrainingFruitCoefficientDb, getTrainingFruitDropRate as getTrainingFruitDropRateDb, setTrainingFruitDropRate as setTrainingFruitDropRateDb, getPetTrainingFruitDropRate as getPetTrainingFruitDropRateDb, setPetTrainingFruitDropRate as setPetTrainingFruitDropRateDb, getTrainingPerLevelConfig as getTrainingPerLevelConfigDb, setTrainingPerLevelConfig as setTrainingPerLevelConfigDb, getRefineBaseSuccessRate as getRefineBaseSuccessRateDb, setRefineBaseSuccessRate as setRefineBaseSuccessRateDb, getRefineDecayRate as getRefineDecayRateDb, setRefineDecayRate as setRefineDecayRateDb, getRefineMaterialCount as getRefineMaterialCountDb, setRefineMaterialCount as setRefineMaterialCountDb, getRefineBonusPerLevel as getRefineBonusPerLevelDb, setRefineBonusPerLevel as setRefineBonusPerLevelDb, getEffectResetSuccessRate as getEffectResetSuccessRateDb, setEffectResetSuccessRate as setEffectResetSuccessRateDb, getEffectResetDoubleRate as getEffectResetDoubleRateDb, setEffectResetDoubleRate as setEffectResetDoubleRateDb, getEffectResetTripleRate as getEffectResetTripleRateDb, setEffectResetTripleRate as setEffectResetTripleRateDb, getEffectResetQuadrupleRate as getEffectResetQuadrupleRateDb, setEffectResetQuadrupleRate as setEffectResetQuadrupleRateDb, getEffectResetQuintupleRate as getEffectResetQuintupleRateDb, setEffectResetQuintupleRate as setEffectResetQuintupleRateDb, getPetSettings, setPetSettings, getEffectDropSingleChance as getEffectDropSingleChanceDb, setEffectDropSingleChance as setEffectDropSingleChanceDb, getEffectDropDoubleChance as getEffectDropDoubleChanceDb, setEffectDropDoubleChance as setEffectDropDoubleChanceDb, getEquipSkillDropChance as getEquipSkillDropChanceDb, setEquipSkillDropChance as setEquipSkillDropChanceDb, getTreasureSlotCount as getTreasureSlotCountDb, setTreasureSlotCount as setTreasureSlotCountDb, getTreasureMaxLevel as getTreasureMaxLevelDb, setTreasureMaxLevel as setTreasureMaxLevelDb, getTreasureUpgradeConsume as getTreasureUpgradeConsumeDb, setTreasureUpgradeConsume as setTreasureUpgradeConsumeDb, getTreasureAdvanceConsume as getTreasureAdvanceConsumeDb, setTreasureAdvanceConsume as setTreasureAdvanceConsumeDb, getTreasureAdvancePerStage as getTreasureAdvancePerStageDb, setTreasureAdvancePerStage as setTreasureAdvancePerStageDb, getTreasureAdvanceEffectBonusPerStack as getTreasureAdvanceEffectBonusPerStackDb, setTreasureAdvanceEffectBonusPerStack as setTreasureAdvanceEffectBonusPerStackDb, getTreasureWorldBossDropMultiplier as getTreasureWorldBossDropMultiplierDb, setTreasureWorldBossDropMultiplier as setTreasureWorldBossDropMultiplierDb, getTreasureCrossWorldBossDropMultiplier as getTreasureCrossWorldBossDropMultiplierDb, setTreasureCrossWorldBossDropMultiplier as setTreasureCrossWorldBossDropMultiplierDb, getTreasureTowerXuanmingDropChance as getTreasureTowerXuanmingDropChanceDb, setTreasureTowerXuanmingDropChance as setTreasureTowerXuanmingDropChanceDb, getCmdRateLimits, setCmdRateLimits, getCmdCooldowns, setCmdCooldowns } from './db/settings.js';
 import { listRealms, getRealmById, updateRealmName, createRealm } from './db/realms.js';
 import {
@@ -175,6 +175,70 @@ import {
 } from './game/treasure.js';
 
 const ACTIVITY_POINT_SHOP_SETTING_KEY = 'activity_point_shop_config_v1';
+const FIRST_RECHARGE_WELFARE_SETTING_KEY = 'first_recharge_welfare_config_v1';
+const DEFAULT_FIRST_RECHARGE_WELFARE_CONFIG = Object.freeze({
+  enabled: true,
+  yuanbao: 0,
+  gold: 200000000,
+  items: [
+    { id: 'training_fruit', qty: 200 },
+    { id: 'pet_training_fruit', qty: 200 },
+    { id: TREASURE_EXP_ITEM_ID, qty: 200 }
+  ]
+});
+let FIRST_RECHARGE_WELFARE_CONFIG = JSON.parse(JSON.stringify(DEFAULT_FIRST_RECHARGE_WELFARE_CONFIG));
+
+function normalizeFirstRechargeWelfareConfig(raw) {
+  const source = raw && typeof raw === 'object' ? raw : {};
+  const hasCustomItems = Array.isArray(source.items);
+  const rawItems = hasCustomItems ? source.items : DEFAULT_FIRST_RECHARGE_WELFARE_CONFIG.items;
+  const items = rawItems
+    .map((entry) => ({
+      id: String(entry?.id || '').trim(),
+      qty: Math.max(0, Math.floor(Number(entry?.qty || 0)))
+    }))
+    .filter((entry) => entry.id && entry.qty > 0);
+  return {
+    enabled: source.enabled !== false,
+    yuanbao: Math.max(0, Math.floor(Number(source.yuanbao ?? DEFAULT_FIRST_RECHARGE_WELFARE_CONFIG.yuanbao) || 0)),
+    gold: Math.max(0, Math.floor(Number(source.gold ?? DEFAULT_FIRST_RECHARGE_WELFARE_CONFIG.gold) || 0)),
+    items: hasCustomItems ? items : DEFAULT_FIRST_RECHARGE_WELFARE_CONFIG.items.map((it) => ({ ...it }))
+  };
+}
+
+function getFirstRechargeWelfareConfigSnapshot() {
+  return {
+    enabled: FIRST_RECHARGE_WELFARE_CONFIG.enabled !== false,
+    yuanbao: Math.max(0, Math.floor(Number(FIRST_RECHARGE_WELFARE_CONFIG.yuanbao || 0))),
+    gold: Math.max(0, Math.floor(Number(FIRST_RECHARGE_WELFARE_CONFIG.gold || 0))),
+    items: Array.isArray(FIRST_RECHARGE_WELFARE_CONFIG.items)
+      ? FIRST_RECHARGE_WELFARE_CONFIG.items.map((it) => ({ id: String(it.id || '').trim(), qty: Math.max(0, Math.floor(Number(it.qty || 0))) })).filter((it) => it.id && it.qty > 0)
+      : []
+  };
+}
+
+async function loadFirstRechargeWelfareConfig() {
+  try {
+    const raw = await getSetting(FIRST_RECHARGE_WELFARE_SETTING_KEY, '');
+    if (!raw) {
+      FIRST_RECHARGE_WELFARE_CONFIG = normalizeFirstRechargeWelfareConfig(DEFAULT_FIRST_RECHARGE_WELFARE_CONFIG);
+      return FIRST_RECHARGE_WELFARE_CONFIG;
+    }
+    const parsed = JSON.parse(raw);
+    FIRST_RECHARGE_WELFARE_CONFIG = normalizeFirstRechargeWelfareConfig(parsed);
+  } catch (err) {
+    console.warn('首充福利配置加载失败，使用默认值:', err?.message || err);
+    FIRST_RECHARGE_WELFARE_CONFIG = normalizeFirstRechargeWelfareConfig(DEFAULT_FIRST_RECHARGE_WELFARE_CONFIG);
+  }
+  return FIRST_RECHARGE_WELFARE_CONFIG;
+}
+
+async function setFirstRechargeWelfareConfig(raw) {
+  const normalized = normalizeFirstRechargeWelfareConfig(raw);
+  await setSetting(FIRST_RECHARGE_WELFARE_SETTING_KEY, JSON.stringify(normalized));
+  FIRST_RECHARGE_WELFARE_CONFIG = normalized;
+  return normalized;
+}
 
 const app = express();
 const server = http.createServer(app);
@@ -1040,6 +1104,23 @@ app.get('/admin/recharge/list', async (req, res) => {
     countRechargeCards()
   ]);
   res.json({ ok: true, codes, total });
+});
+
+app.get('/admin/first-recharge-settings', async (req, res) => {
+  const admin = await requireAdmin(req);
+  if (!admin) return res.status(401).json({ error: '无管理员权限。' });
+  res.json({ ok: true, config: getFirstRechargeWelfareConfigSnapshot() });
+});
+
+app.post('/admin/first-recharge-settings/update', async (req, res) => {
+  const admin = await requireAdmin(req);
+  if (!admin) return res.status(401).json({ error: '无管理员权限。' });
+  try {
+    const config = await setFirstRechargeWelfareConfig(req.body?.config || {});
+    res.json({ ok: true, config });
+  } catch (err) {
+    res.status(400).json({ error: err.message || '首充福利配置更新失败' });
+  }
 });
 
 app.get('/admin/vip/self-claim-status', async (req, res) => {
@@ -5457,10 +5538,42 @@ const rechargeApi = {
     if (!used) return { ok: false, msg: '卡密无效或已使用。' };
     const amount = Math.max(0, Math.floor(Number(used.amount || 0)));
     if (!amount) return { ok: false, msg: '卡密金额异常。' };
+    const firstRechargeCfg = getFirstRechargeWelfareConfigSnapshot();
+    const redeemedCount = await countUsedRechargeCardsByUser(player.userId);
+    const isFirstRecharge = firstRechargeCfg.enabled !== false && redeemedCount === 1;
     player.yuanbao = (player.yuanbao || 0) + amount;
+    let firstRechargeMsg = '';
+    if (isFirstRecharge) {
+      if (!player.flags) player.flags = {};
+      player.flags.firstRechargeRewardClaimed = true;
+      player.flags.firstRechargeRewardAt = Date.now();
+      const extraYuanbao = Math.max(0, Math.floor(Number(firstRechargeCfg.yuanbao || 0)));
+      const extraGold = Math.max(0, Math.floor(Number(firstRechargeCfg.gold || 0)));
+      if (extraYuanbao > 0) player.yuanbao = (player.yuanbao || 0) + extraYuanbao;
+      if (extraGold > 0) player.gold = Math.max(0, Math.floor(Number(player.gold || 0))) + extraGold;
+      (firstRechargeCfg.items || []).forEach((entry) => {
+        const itemId = String(entry?.id || '').trim();
+        const qty = Math.max(0, Math.floor(Number(entry?.qty || 0)));
+        if (!itemId || qty <= 0) return;
+        addItem(player, itemId, qty);
+      });
+      const rewardText = [];
+      if (extraYuanbao > 0) rewardText.push(`元宝+${extraYuanbao}`);
+      if (extraGold > 0) rewardText.push(`金币+${extraGold}`);
+      (firstRechargeCfg.items || []).forEach((entry) => {
+        const itemId = String(entry?.id || '').trim();
+        const qty = Math.max(0, Math.floor(Number(entry?.qty || 0)));
+        if (!itemId || qty <= 0) return;
+        const name = ITEM_TEMPLATES[itemId]?.name || itemId;
+        rewardText.push(`${name}x${qty}`);
+      });
+      if (rewardText.length) {
+        firstRechargeMsg = `\n首充福利已发放：${rewardText.join('、')}。`;
+      }
+    }
     await addSponsor(player.name, amount);
     player.forceStateRefresh = true;
-    return { ok: true, msg: `充值成功，获得 ${amount} 元宝。` };
+    return { ok: true, msg: `充值成功，获得 ${amount} 元宝。${firstRechargeMsg}`.trim() };
   }
 };
 
@@ -7879,6 +7992,7 @@ let PET_RARITY_APTITUDE_RANGE = {
 };
 
 let PET_SKILL_LIBRARY = [
+  { id: 'pet_beast_aegis', name: '神兽护甲', grade: 'exclusive' },
   { id: 'pet_bash', name: '强力', grade: 'normal' },
   { id: 'pet_bash_adv', name: '高级强力', grade: 'advanced' },
   { id: 'pet_crit', name: '会心', grade: 'normal' },
@@ -7929,6 +8043,7 @@ let PET_SKILL_LIBRARY = [
 ];
 
 let PET_SKILL_EFFECTS = {
+  pet_beast_aegis: '被动：出战时提升主人防御与魔御40%（神兽专属）',
   pet_bash: '被动：物理协战伤害提升（约+4%~4.5%）',
   pet_bash_adv: '被动：物理协战伤害提升（约+6%~6.75%）',
   pet_crit: '被动：协战暴击率提升（PVE约+4.5%，PVP约+4%）',
@@ -7979,6 +8094,7 @@ let PET_SKILL_EFFECTS = {
 };
 
 const PET_SKILL_TYPE_HINTS = {
+  pet_beast_aegis: '神兽',
   pet_bash: '物理宠优先',
   pet_bash_adv: '物理宠优先',
   pet_crit: '物理宠/法术宠优先',
@@ -8271,7 +8387,8 @@ let PET_SPECIES_NAME_MAP = {
   AbyssQiongQi: '深渊穷奇',
   SkyTorch: '天焰',
   OriginYingLong: '元初应龙',
-  HongmengCrow: '鸿蒙鸦'
+  HongmengCrow: '鸿蒙鸦',
+  DivineBeast: '马年神兽'
 };
 
 let PET_SPECIES_BY_RARITY = {
@@ -8281,11 +8398,12 @@ let PET_SPECIES_BY_RARITY = {
   epic: ['幽冥虎', '旭日凤凰', '风暴龙', '冰麒麟', '幼玄武', '九尾狐', '战虎机甲', '金翅鹏', '魂蛛', '海鲲'],
   legendary: ['烛龙', '应龙', '白泽', '穷奇', '饕餮', '狴犴', '冥鸟', '青鸾', '毕方', '白虎'],
   supreme: ['太初龙', '混沌麒麟', '不死鸦', '虚空玄武', '万相白泽', '九幽凤凰', '狱獬豸', '天罡猿', '天烛龙', '狂饕餮'],
-  ultimate: ['终源龙', '永恒凤凰', '太虚鹏', '无极白泽', '创世麒麟', '混元玄武', '深渊穷奇', '天焰', '元初应龙', '鸿蒙鸦']
+  ultimate: ['终源龙', '永恒凤凰', '太虚鹏', '无极白泽', '创世麒麟', '混元玄武', '深渊穷奇', '天焰', '元初应龙', '鸿蒙鸦', '马年神兽']
 };
+const PET_NON_DROPPABLE_SPECIES = new Set(['马年神兽']);
 
 function buildPetBookLibrary(skills, priceConfig) {
-  const safeSkills = Array.isArray(skills) ? skills.filter((skill) => skill && skill.id) : [];
+  const safeSkills = Array.isArray(skills) ? skills.filter((skill) => skill && skill.id && skill.grade !== 'exclusive') : [];
   const specialPrice = Math.max(0, Math.floor(Number(priceConfig?.special ?? 280000)));
   const advancedPrice = Math.max(0, Math.floor(Number(priceConfig?.advanced ?? 120000)));
   const normalBase = Math.max(0, Math.floor(Number(priceConfig?.normalBase ?? 60000)));
@@ -8602,6 +8720,12 @@ async function loadPetSettingsFromDb() {
 
 function getPetSkillDef(skillId) {
   return PET_SKILL_LIBRARY.find((skill) => skill.id === skillId) || null;
+}
+
+function isPetLockedSkill(skillId) {
+  const def = getPetSkillDef(skillId);
+  if (!def) return false;
+  return def.grade === 'exclusive' || skillId === 'pet_beast_aegis';
 }
 
 function getPetSkillTier(skillId) {
@@ -9861,30 +9985,59 @@ function getPetDropMaxRarityForBoss(mobTemplate) {
   return 'epic';
 }
 
-function createRandomPet(rarity = 'normal') {
+function createRandomPet(rarity = 'normal', options = {}) {
   const safeRarity = PET_RARITY_ORDER.includes(rarity) ? rarity : 'normal';
-  const speciesPool = PET_SPECIES_BY_RARITY[safeRarity] || PET_SPECIES_BY_RARITY.normal;
+  const excludedSpecies = options?.excludeSpecies instanceof Set ? options.excludeSpecies : null;
+  const rawSpeciesPool = PET_SPECIES_BY_RARITY[safeRarity] || PET_SPECIES_BY_RARITY.normal;
+  const speciesPool = excludedSpecies
+    ? rawSpeciesPool.filter((name) => !excludedSpecies.has(String(name || '').trim()))
+    : rawSpeciesPool;
+  if (!speciesPool.length) return null;
   const role = speciesPool[randInt(0, speciesPool.length - 1)];
   const growthRange = PET_RARITY_GROWTH_RANGE[safeRarity] || PET_RARITY_GROWTH_RANGE.normal;
   const growth = Number((growthRange[0] + Math.random() * (growthRange[1] - growthRange[0])).toFixed(3));
+  const isDivineBeast = String(role) === '马年神兽';
   const availableGrades = new Set(PET_AVAILABLE_GRADES_BY_RARITY[safeRarity] || PET_AVAILABLE_GRADES_BY_RARITY.normal || ['normal']);
   const skillPool = PET_SKILL_LIBRARY.filter((skill) => availableGrades.has(skill.grade));
   const normalSkills = PET_SKILL_LIBRARY.filter((skill) => skill.grade === 'normal');
   const minOpen = Number(PET_OPEN_SKILL_MIN_BY_RARITY[safeRarity] ?? PET_OPEN_SKILL_MIN_BY_RARITY.normal ?? 1);
   const maxOpen = Number(PET_OPEN_SKILL_MAX_BY_RARITY[safeRarity] ?? PET_OPEN_SKILL_MAX_BY_RARITY.normal ?? 3);
-  const openSkillCount = Math.min(PET_BASE_SKILL_SLOTS, randInt(minOpen, maxOpen));
-  const skills = [];
-  while (skills.length < openSkillCount && skillPool.length > 0) {
-    const pick = skillPool[randInt(0, skillPool.length - 1)];
-    if (!skills.includes(pick.id)) skills.push(pick.id);
-  }
-  if (skills.length === 0 && normalSkills.length > 0) {
-    skills.push(normalSkills[randInt(0, normalSkills.length - 1)].id);
+  let skillSlots = PET_BASE_SKILL_SLOTS;
+  let skills = [];
+  if (isDivineBeast) {
+    skillSlots = Math.max(6, PET_BASE_SKILL_SLOTS);
+    skills = [
+      'pet_beast_aegis',
+      'pet_guard_adv',
+      'pet_tough_skin_adv',
+      'pet_fury_adv',
+      'pet_crit_adv',
+      'pet_bloodline_adv'
+    ].filter((id) => Boolean(getPetSkillDef(id)));
+  } else {
+    const openSkillCount = Math.min(PET_BASE_SKILL_SLOTS, randInt(minOpen, maxOpen));
+    skills = [];
+    while (skills.length < openSkillCount && skillPool.length > 0) {
+      const pick = skillPool[randInt(0, skillPool.length - 1)];
+      if (!skills.includes(pick.id)) skills.push(pick.id);
+    }
+    if (skills.length === 0 && normalSkills.length > 0) {
+      skills.push(normalSkills[randInt(0, normalSkills.length - 1)].id);
+    }
   }
   const aptRange = PET_RARITY_APTITUDE_RANGE[safeRarity] || PET_RARITY_APTITUDE_RANGE.normal;
   const battleTypes = ['physical', 'magic', 'tank'];
-  const battleType = battleTypes[randInt(0, battleTypes.length - 1)];
-  const aptitude = rollPetAptitudeByBattleType(aptRange, battleType);
+  const battleType = isDivineBeast ? 'tank' : battleTypes[randInt(0, battleTypes.length - 1)];
+  let aptitude = rollPetAptitudeByBattleType(aptRange, battleType);
+  if (isDivineBeast) {
+    aptitude = {
+      hp: Math.floor(Number(aptRange.hp?.[1] || aptitude.hp || 0)),
+      atk: Math.floor(Number(aptRange.atk?.[1] || aptitude.atk || 0)),
+      def: Math.floor(Number(aptRange.def?.[1] || aptitude.def || 0)),
+      mag: Math.floor(Number(aptRange.mag?.[1] || aptitude.mag || 0)),
+      agility: Math.floor(Number(aptRange.agility?.[1] || aptitude.agility || 0))
+    };
+  }
   return {
     id: `pet_${Date.now()}_${randInt(100, 999)}`,
     rarity: safeRarity,
@@ -9895,7 +10048,7 @@ function createRandomPet(rarity = 'normal') {
     battleType,
     growth,
     aptitude,
-    skillSlots: PET_BASE_SKILL_SLOTS,
+    skillSlots,
     skills
   };
 }
@@ -9907,7 +10060,7 @@ function rollPetDropForBoss(mobTemplate, bonus = 1) {
   const chance = Math.max(0, Math.min(PET_DROP_MAX_CHANCE, baseChance * Math.max(PET_DROP_BONUS_MIN, Number(bonus || 1))));
   if (Math.random() > chance) return null;
   const rarity = pickPetDropRarity(maxRarity);
-  return rarity ? createRandomPet(rarity) : null;
+  return rarity ? createRandomPet(rarity, { excludeSpecies: PET_NON_DROPPABLE_SPECIES }) : null;
 }
 
 function rollWillowDewDropForBoss(mobTemplate, bonus = 1) {
@@ -9987,7 +10140,12 @@ function learnPetSkill(pet, skillId, allowReplace = true) {
     return { ok: true, replaced: null };
   }
   if (!allowReplace || skills.length === 0) return { ok: false, reason: 'full' };
-  const idx = randInt(0, skills.length - 1);
+  const replaceableIndices = skills
+    .map((id, idx) => ({ id, idx }))
+    .filter((entry) => !isPetLockedSkill(entry.id))
+    .map((entry) => entry.idx);
+  if (!replaceableIndices.length) return { ok: false, reason: 'locked_only' };
+  const idx = replaceableIndices[randInt(0, replaceableIndices.length - 1)];
   const replaced = skills[idx];
   const next = skills.slice();
   next[idx] = skillId;
@@ -11931,9 +12089,11 @@ io.on('connection', (socket) => {
 
       const mainSkills = Array.isArray(basePet.skills) ? basePet.skills : [];
       const subSkills = Array.isArray(feedPet.skills) ? feedPet.skills : [];
+      const mainSkillSet = new Set(mainSkills.map((id) => String(id || '').trim()).filter(Boolean));
       const skillPool = Array.from(new Set([...mainSkills, ...subSkills]
         .map((id) => String(id || '').trim())
-        .filter((id) => id && getPetSkillDef(id))));
+        .filter((id) => id && getPetSkillDef(id))
+        .filter((id) => !isPetLockedSkill(id) || mainSkillSet.has(id))));
 
       const mainSlots = Math.max(PET_BASE_SKILL_SLOTS, Math.floor(Number(basePet.skillSlots || PET_BASE_SKILL_SLOTS)));
       const subSlots = Math.max(PET_BASE_SKILL_SLOTS, Math.floor(Number(feedPet.skillSlots || PET_BASE_SKILL_SLOTS)));
@@ -11942,7 +12102,9 @@ io.on('connection', (socket) => {
       let nextSkillSlots = randInt(parentMinSlots, parentMaxSlots);
       if (Math.random() < 0.35) nextSkillSlots += 1;
       if (Math.random() < 0.10) nextSkillSlots += 1;
+      const lockedMainSkills = mainSkills.filter((id) => isPetLockedSkill(id));
       nextSkillSlots = Math.max(PET_BASE_SKILL_SLOTS, Math.min(PET_MAX_SKILL_SLOTS, nextSkillSlots));
+      nextSkillSlots = Math.max(nextSkillSlots, lockedMainSkills.length);
       const slotDelta = nextSkillSlots - mainSlots;
       basePet.skillSlots = nextSkillSlots;
 
@@ -11952,9 +12114,20 @@ io.on('connection', (socket) => {
       inheritCount = skillPool.length <= 0 ? 0 : Math.max(1, Math.min(inheritCount, nextSkillSlots, skillPool.length));
       const remainingPool = skillPool.slice();
       const nextSkills = [];
+      lockedMainSkills.forEach((id) => {
+        if (nextSkills.length < nextSkillSlots && !nextSkills.includes(id)) nextSkills.push(id);
+      });
       while (remainingPool.length > 0 && nextSkills.length < inheritCount) {
         const idx = randInt(0, remainingPool.length - 1);
-        nextSkills.push(remainingPool.splice(idx, 1)[0]);
+        const picked = remainingPool.splice(idx, 1)[0];
+        if (!picked || nextSkills.includes(picked)) continue;
+        nextSkills.push(picked);
+      }
+      while (remainingPool.length > 0 && nextSkills.length < Math.min(nextSkillSlots, inheritCount)) {
+        const idx = randInt(0, remainingPool.length - 1);
+        const picked = remainingPool.splice(idx, 1)[0];
+        if (!picked || nextSkills.includes(picked)) continue;
+        nextSkills.push(picked);
       }
       basePet.skills = nextSkills;
 
@@ -15530,6 +15703,7 @@ async function start() {
   // 加载修炼系统配置
   const trainingPerLevelConfig = await getTrainingPerLevelConfigDb();
   setTrainingPerLevelConfigMem(trainingPerLevelConfig);
+  await loadFirstRechargeWelfareConfig();
 
   // 加载职业升级属性配置
   const classLevelConfigs = {

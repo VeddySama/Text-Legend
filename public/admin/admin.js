@@ -28,6 +28,15 @@ const rechargeCodesTableContainer = document.getElementById('recharge-codes-tabl
 const rechargeCodesPrev = document.getElementById('recharge-codes-prev');
 const rechargeCodesNext = document.getElementById('recharge-codes-next');
 const rechargeCodesPage = document.getElementById('recharge-codes-page');
+const firstRechargeEnabledInput = document.getElementById('first-recharge-enabled');
+const firstRechargeYuanbaoInput = document.getElementById('first-recharge-yuanbao');
+const firstRechargeGoldInput = document.getElementById('first-recharge-gold');
+const firstRechargeTrainingFruitInput = document.getElementById('first-recharge-training-fruit');
+const firstRechargePetTrainingFruitInput = document.getElementById('first-recharge-pet-training-fruit');
+const firstRechargeTreasureExpInput = document.getElementById('first-recharge-treasure-exp');
+const firstRechargeLoadBtn = document.getElementById('first-recharge-load-btn');
+const firstRechargeSaveBtn = document.getElementById('first-recharge-save-btn');
+const firstRechargeMsg = document.getElementById('first-recharge-msg');
 const vipSelfClaimStatus = document.getElementById('vip-self-claim-status');
 const vipSelfClaimMsg = document.getElementById('vip-self-claim-msg');
 const vipSelfClaimToggle = document.getElementById('vip-self-claim-toggle');
@@ -1930,6 +1939,7 @@ async function login() {
       await refreshUsers();
       await refreshVipSelfClaimStatus();
       await loadSvipSettings();
+      await loadFirstRechargeSettings();
       await refreshLootLogStatus();
       await refreshStateThrottleStatus();
     await refreshConsignExpireStatus();
@@ -2839,6 +2849,60 @@ async function listRechargeCodes() {
     });
   } catch (err) {
     rechargeCodesResult.textContent = err.message;
+  }
+}
+
+function setFirstRechargeMsg(text, color = '') {
+  if (!firstRechargeMsg) return;
+  firstRechargeMsg.textContent = text || '';
+  if (color) firstRechargeMsg.style.color = color;
+}
+
+function applyFirstRechargeConfigToForm(config) {
+  const items = Array.isArray(config?.items) ? config.items : [];
+  const qtyById = new Map(items.map((it) => [String(it?.id || '').trim(), Math.max(0, Math.floor(Number(it?.qty || 0)))]));
+  if (firstRechargeEnabledInput) firstRechargeEnabledInput.checked = config?.enabled !== false;
+  if (firstRechargeYuanbaoInput) firstRechargeYuanbaoInput.value = Math.max(0, Math.floor(Number(config?.yuanbao || 0)));
+  if (firstRechargeGoldInput) firstRechargeGoldInput.value = Math.max(0, Math.floor(Number(config?.gold || 0)));
+  if (firstRechargeTrainingFruitInput) firstRechargeTrainingFruitInput.value = qtyById.get('training_fruit') || 0;
+  if (firstRechargePetTrainingFruitInput) firstRechargePetTrainingFruitInput.value = qtyById.get('pet_training_fruit') || 0;
+  if (firstRechargeTreasureExpInput) firstRechargeTreasureExpInput.value = qtyById.get('treasure_exp_material') || 0;
+}
+
+async function loadFirstRechargeSettings() {
+  if (!firstRechargeMsg) return;
+  setFirstRechargeMsg('');
+  try {
+    const data = await api('/admin/first-recharge-settings', 'GET');
+    applyFirstRechargeConfigToForm(data?.config || {});
+    setFirstRechargeMsg('首充配置加载成功', 'green');
+    setTimeout(() => setFirstRechargeMsg(''), 1500);
+  } catch (err) {
+    setFirstRechargeMsg(`加载失败: ${err.message}`, 'red');
+  }
+}
+
+async function saveFirstRechargeSettings() {
+  if (!firstRechargeMsg) return;
+  const toInt = (el, fallback = 0) => Math.max(0, Math.floor(Number(el?.value ?? fallback) || 0));
+  const config = {
+    enabled: !!firstRechargeEnabledInput?.checked,
+    yuanbao: toInt(firstRechargeYuanbaoInput, 0),
+    gold: toInt(firstRechargeGoldInput, 0),
+    items: [
+      { id: 'training_fruit', qty: toInt(firstRechargeTrainingFruitInput, 0) },
+      { id: 'pet_training_fruit', qty: toInt(firstRechargePetTrainingFruitInput, 0) },
+      { id: 'treasure_exp_material', qty: toInt(firstRechargeTreasureExpInput, 0) }
+    ].filter((it) => it.qty > 0)
+  };
+  setFirstRechargeMsg('');
+  try {
+    const data = await api('/admin/first-recharge-settings/update', 'POST', { config });
+    applyFirstRechargeConfigToForm(data?.config || config);
+    setFirstRechargeMsg('首充配置保存成功', 'green');
+    setTimeout(() => setFirstRechargeMsg(''), 1500);
+  } catch (err) {
+    setFirstRechargeMsg(`保存失败: ${err.message}`, 'red');
   }
 }
 
@@ -6163,6 +6227,7 @@ async function initDashboard() {
     loadPersonalBossSettings();
     loadEventTimeSettings();
     loadActivityPointShopConfig();
+    loadFirstRechargeSettings();
     loadClassBonusConfig();
     loadTrainingFruitSettings();
     loadTrainingSettings();
@@ -6381,6 +6446,8 @@ document.getElementById('vip-create-btn').addEventListener('click', createVipCod
 document.getElementById('vip-list-btn').addEventListener('click', listVipCodes);
 document.getElementById('recharge-create-btn').addEventListener('click', createRechargeCodes);
 document.getElementById('recharge-list-btn').addEventListener('click', listRechargeCodes);
+if (firstRechargeLoadBtn) firstRechargeLoadBtn.addEventListener('click', loadFirstRechargeSettings);
+if (firstRechargeSaveBtn) firstRechargeSaveBtn.addEventListener('click', saveFirstRechargeSettings);
 if (vipCodesPrev) {
   vipCodesPrev.addEventListener('click', () => {
     vipCodesPageIndex = Math.max(0, vipCodesPageIndex - 1);

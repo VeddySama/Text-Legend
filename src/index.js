@@ -3345,7 +3345,7 @@ app.post('/admin/realms/merge', async (req, res) => {
       if ((player.realmId || 1) !== sourceId && (player.realmId || 1) !== targetId) continue;
       try {
         player.send('GM正在执行合区操作，已强制下线。');
-        player.socket.disconnect();
+        player.socket?.disconnect?.();
       } catch {}
     }
 
@@ -4525,6 +4525,10 @@ function listOnlinePlayers(realmId = null) {
   return list.filter((p) => p.realmId === realmId);
 }
 
+function isManagedHostedPlayer(player) {
+  return Boolean(player && !player.socket && (player.flags?.offlineManagedAuto || player.flags?.offlineManagedPending));
+}
+
 function listSabakMembersOnline(realmId) {
   const state = getRealmState(realmId);
   if (!state.sabakState.ownerGuildId) return [];
@@ -4536,6 +4540,7 @@ function getSabakState(realmId) {
 }
 
 function sendTo(player, message) {
+  if (!player?.socket?.emit) return;
   player.socket.emit('output', { text: message });
 }
 
@@ -6050,6 +6055,7 @@ function playersByName(name, realmId = null) {
 }
 
 const CHARACTER_MIGRATE_YUANBAO_COST = 10;
+const SVIP_AUTO_MANAGED_START_DELAY_MS = 5 * 60 * 1000;
 
 async function renameCharacterEverywhere({ userId, realmId = 1, oldName, newName }) {
   const uid = Math.max(0, Math.floor(Number(userId) || 0));
@@ -6582,7 +6588,7 @@ const consignApi = {
         currency: row.currency || 'gold',
         item: buildItemView(row.item_id, parseJson(row.effects_json), row.durability, row.max_durability, row.refine_level ?? 0)
       }));
-      player.socket.emit('consign_list', { type: 'market', items });
+      player.socket?.emit?.('consign_list', { type: 'market', items });
       return items;
     },
     async listMine(player) {
@@ -6596,7 +6602,7 @@ const consignApi = {
         currency: row.currency || 'gold',
         item: buildItemView(row.item_id, parseJson(row.effects_json), row.durability, row.max_durability, row.refine_level ?? 0)
       }));
-      player.socket.emit('consign_list', { type: 'mine', items });
+      player.socket?.emit?.('consign_list', { type: 'mine', items });
       return items;
     },
     async sell(player, invSlot, qty, price, effects = null, currency = 'gold') {
@@ -6761,7 +6767,7 @@ const consignApi = {
       item: buildItemView(row.item_id, parseJson(row.effects_json), row.durability, row.max_durability, row.refine_level ?? 0),
       soldAt: row.sold_at
     }));
-    player.socket.emit('consign_history', { items });
+    player.socket?.emit?.('consign_history', { items });
     return items;
   }
 };
@@ -8707,9 +8713,13 @@ function applyOfflineRewards(player) {
   if (!player.flags) player.flags = {};
   const offlineAt = player.flags.offlineAt;
   if (!offlineAt) return;
-  if (!isVipActive(player)) {
+  const vipActive = isVipActive(player);
+  const svipActive = isSvipActive(player);
+  const vipLikeActive = vipActive || svipActive;
+  const offlineSmartManaged = Boolean(svipActive && player.flags?.autoFullEnabled);
+  if (!vipLikeActive) {
     player.flags.offlineAt = null;
-    player.send('离线挂机仅VIP可用。');
+    player.send('离线挂机仅VIP/SVIP可用。');
     return;
   }
   const maxHours = 24;
@@ -8718,8 +8728,8 @@ function applyOfflineRewards(player) {
   const offlineMultiplier = 2;
   const cultivationMult = cultivationRewardMultiplier(player);
   const rewardMult = totalRewardMultiplier({
-    vipActive: isVipActive(player),
-    svipActive: isSvipActive(player),
+    vipActive,
+    svipActive,
     guildActive: Boolean(player.guild),
     cultivationMult,
     partyMult: 1,
@@ -8749,13 +8759,14 @@ function applyOfflineRewards(player) {
     addItem(player, 'pet_training_fruit', petFruitGain);
   }
   player.flags.offlineAt = null;
+  const offlineLabel = offlineSmartManaged ? '离线托管（智能挂机）收益' : '离线挂机收益';
   if (fruitGain > 0 || petFruitGain > 0) {
     const extraParts = [];
     if (fruitGain > 0) extraParts.push(`修炼果 x${fruitGain}`);
     if (petFruitGain > 0) extraParts.push(`宠物修炼果 x${petFruitGain}`);
-    player.send(`离线挂机收益: ${expGain} 经验, ${goldGain} 金币, ${extraParts.join('，')}。`);
+    player.send(`${offlineLabel}: ${expGain} 经验, ${goldGain} 金币, ${extraParts.join('，')}。`);
   } else {
-    player.send(`离线挂机收益: ${expGain} 经验, ${goldGain} 金币。`);
+    player.send(`${offlineLabel}: ${expGain} 经验, ${goldGain} 金币。`);
   }
   if (petExpResult?.leveled > 0) {
     player.send(`出战宠物升级 +${petExpResult.leveled}。`);
@@ -11659,7 +11670,8 @@ async function buildState(player) {
   const partyMembers = party
     ? party.members.map((name) => ({
         name,
-        online: Boolean(playersByName(name, realmId))
+        online: Boolean(playersByName(name, realmId)),
+        managed: isManagedHostedPlayer(playersByName(name, realmId))
       }))
     : null;
   const guildBonus = Boolean(player.guild);
@@ -13071,7 +13083,7 @@ io.on('connection', (socket) => {
         // 保存并移除之前的会话
         await savePlayer(existingPlayer);
         // 断开旧连接
-        existingPlayer.socket.disconnect();
+        existingPlayer.socket?.disconnect?.();
         // 移除旧的玩家数据
         players.delete(existingSocketId);
         // 从队伍中移除
@@ -13094,6 +13106,10 @@ io.on('connection', (socket) => {
     loaded.combat = null;
     loaded.guild = null;
     if (!loaded.flags) loaded.flags = {};
+    delete loaded.flags.offlineManagedAuto;
+    delete loaded.flags.offlineManagedAt;
+    delete loaded.flags.offlineManagedPending;
+    delete loaded.flags.offlineManagedStartAt;
     loaded.stateThrottleOverride = socket.data?.stateThrottleOverride === true;
     if (!socket.data.antiKey) {
       socket.data.antiKey = crypto.randomBytes(16).toString('hex');
@@ -14104,6 +14120,7 @@ io.on('connection', (socket) => {
       name: m.char_name,
       role: m.role,
       online: online.some((p) => p.name === m.char_name),
+      managed: online.some((p) => p.name === m.char_name && isManagedHostedPlayer(p)),
       level: m.level || 1,
       classId: m.class_id || ''
     }));
@@ -14380,14 +14397,42 @@ io.on('connection', (socket) => {
       if (player) {
         console.log(`[disconnect] ${player.name} (${player.userId || 'unknown'}) reason=${reason || 'unknown'}`);
         if (!player.flags) player.flags = {};
-        player.flags.offlineAt = Date.now();
+        const oldDeviceKey = player.deviceKey;
+        const svipActive = Boolean(isSvipActive(player));
+        const shouldKeepManagedAuto = Boolean(svipActive && player.flags.autoFullEnabled);
+        const shouldKeepManagedPending = Boolean(svipActive && !player.flags.autoFullEnabled);
+        if (!shouldKeepManagedAuto && !shouldKeepManagedPending) {
+          player.flags.offlineAt = Date.now();
+          if (player.flags.offlineManagedAuto) delete player.flags.offlineManagedAuto;
+          if (player.flags.offlineManagedAt) delete player.flags.offlineManagedAt;
+          if (player.flags.offlineManagedPending) delete player.flags.offlineManagedPending;
+          if (player.flags.offlineManagedStartAt) delete player.flags.offlineManagedStartAt;
+        } else {
+          player.flags.offlineAt = null;
+          if (shouldKeepManagedAuto) {
+            player.flags.offlineManagedAuto = true;
+            player.flags.offlineManagedAt = Date.now();
+            if (player.flags.offlineManagedPending) delete player.flags.offlineManagedPending;
+            if (player.flags.offlineManagedStartAt) delete player.flags.offlineManagedStartAt;
+          } else {
+            if (player.flags.offlineManagedAuto) delete player.flags.offlineManagedAuto;
+            player.flags.offlineManagedPending = true;
+            player.flags.offlineManagedStartAt = Date.now() + SVIP_AUTO_MANAGED_START_DELAY_MS;
+            if (player.flags.offlineManagedAt) delete player.flags.offlineManagedAt;
+          }
+          player.socket = null;
+          player.deviceKey = null;
+          player.send = () => {};
+        }
     const lookup = getTradeByPlayerAny(player.name, player.realmId || 1);
     const trade = lookup.trade;
     if (trade) {
       clearTrade(trade, `交易已取消（${player.name} 离线）。`, trade.realmId ?? lookup.realmId ?? (player.realmId || 1));
     }
       await savePlayer(player);
-      getRealmState(player.realmId || 1).lastSaveTime.delete(player.name); // 清理保存时间记录
+      if (!shouldKeepManagedAuto && !shouldKeepManagedPending) {
+        getRealmState(player.realmId || 1).lastSaveTime.delete(player.name); // 清理保存时间记录
+      }
       const throttleKey = getStateThrottleKey(player, socket);
       if (throttleKey) {
         stateThrottleLastSent.delete(throttleKey);
@@ -14395,12 +14440,16 @@ io.on('connection', (socket) => {
         stateThrottleLastRoom.delete(throttleKey);
         stateThrottleLastInBoss.delete(throttleKey);
       }
-      // 从在线玩家称号Map中移除
-      onlinePlayerRankTitles.delete(player.name);
-      if (player.deviceKey && deviceOnlineMap.get(player.deviceKey) === socket.id) {
-        deviceOnlineMap.delete(player.deviceKey);
+      if (!shouldKeepManagedAuto && !shouldKeepManagedPending) {
+        // 从在线玩家称号Map中移除
+        onlinePlayerRankTitles.delete(player.name);
       }
-      players.delete(socket.id);
+      if (oldDeviceKey && deviceOnlineMap.get(oldDeviceKey) === socket.id) {
+        deviceOnlineMap.delete(oldDeviceKey);
+      }
+      if (!shouldKeepManagedAuto && !shouldKeepManagedPending) {
+        players.delete(socket.id);
+      }
     }
   });
 });
@@ -15629,6 +15678,29 @@ async function combatTick() {
   updateSpecialBossStatsBasedOnPlayers();
 
   for (const player of online) {
+    if (!player?.socket && player?.flags?.offlineManagedPending) {
+      const now = Date.now();
+      const startAt = Number(player.flags.offlineManagedStartAt || 0);
+      if (!isSvipActive(player)) {
+        delete player.flags.offlineManagedPending;
+        delete player.flags.offlineManagedStartAt;
+        player.flags.offlineAt = now;
+        continue;
+      }
+      if (startAt > now) {
+        continue;
+      }
+      player.flags.autoFullEnabled = true;
+      player.flags.autoFullManualDowngraded = false;
+      player.flags.autoFullManualMoveAt = null;
+      player.flags.autoFullManualRestoreAt = null;
+      player.flags.offlineManagedAuto = true;
+      player.flags.offlineManagedAt = now;
+      delete player.flags.offlineManagedPending;
+      delete player.flags.offlineManagedStartAt;
+      savePlayer(player).catch(() => {});
+      continue;
+    }
     if (player.hp <= 0) {
       handleDeath(player);
       continue;

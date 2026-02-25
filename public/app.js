@@ -6026,7 +6026,7 @@ function renderGuildModal() {
       const row = document.createElement('div');
       row.className = 'guild-member';
       const name = document.createElement('div');
-      const online = member.online ? '在线' : '离线';
+      const online = member.managed ? '托管' : (member.online ? '在线' : '离线');
       name.textContent = `${member.name} (${online})`;
       row.appendChild(name);
       const roleLabel = member.role === 'leader' ? '会长' : (member.role === 'vice_leader' ? '副会长' : '成员');
@@ -6237,7 +6237,7 @@ function renderPartyModal() {
     partyUi.inviteAllFollow.classList.toggle('hidden', !isLeader || onlineMemberCount === 0);
   }
   if (partyUi.followLeader) {
-    const leaderOnline = party?.members?.some(m => m.name === party.leader && m.online);
+    const leaderOnline = party?.members?.some(m => m.name === party.leader && m.online && !m.managed);
     partyUi.followLeader.classList.toggle('hidden', isLeader || !leaderOnline);
   }
 
@@ -6250,7 +6250,7 @@ function renderPartyModal() {
       const row = document.createElement('div');
       row.className = 'guild-member';
       const name = document.createElement('div');
-      const online = member.online ? '在线' : '离线';
+      const online = member.managed ? '托管' : (member.online ? '在线' : '离线');
       const isLeaderName = member.name === party.leader;
       const role = isLeaderName ? '队长' : '队员';
       name.textContent = `${member.name} (${role}/${online})`;
@@ -6262,7 +6262,7 @@ function renderPartyModal() {
       row.appendChild(tag);
 
       // 队长可以邀请在线队员跟随
-      if (isLeader && !isLeaderName && member.online) {
+      if (isLeader && !isLeaderName && member.online && !member.managed) {
         const followBtn = document.createElement('button');
         followBtn.textContent = '邀请跟随';
         followBtn.addEventListener('click', () => {
@@ -6746,7 +6746,7 @@ function renderState(state) {
     }
     if (ui.party) {
       if (state.party && Array.isArray(state.party.members) && state.party.members.length) {
-        const names = state.party.members.map((m) => m.online ? m.name : `${m.name}(离线)`);
+        const names = state.party.members.map((m) => m.managed ? `${m.name}(托管)` : (m.online ? m.name : `${m.name}(离线)`));
         ui.party.textContent = names.join('、');
         ui.party.style.cursor = 'pointer';
         ui.party.style.color = '#4a90e2';

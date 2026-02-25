@@ -36,6 +36,19 @@ let stateThrottleOverrideServerAllowed = true;
 let antiKey = '';
 let antiSeq = 0;
 let pendingCmds = [];
+const CLIENT_DEBUG_LOG = false;
+function dlog(...args) {
+  if (CLIENT_DEBUG_LOG) console.log(...args);
+}
+const uiRenderThrottleCache = new Map();
+function shouldRenderUiSection(key, minIntervalMs = 0) {
+  if (!minIntervalMs || minIntervalMs <= 0) return true;
+  const now = Date.now();
+  const last = Number(uiRenderThrottleCache.get(key) || 0);
+  if (now - last < minIntervalMs) return false;
+  uiRenderThrottleCache.set(key, now);
+  return true;
+}
 
 async function signCmdWeb(key, seq, text) {
   try {
@@ -1327,14 +1340,14 @@ function updateServerTimeDisplay() {
 
 function appendChatLine(payload) {
   if (!chat.log) return;
-  console.log('appendChatLine called with payload:', payload);
+  dlog('appendChatLine called with payload:', payload);
   const p = buildLine(payload);
   const loc = parseLocationMessage(normalizePayload(payload).text);
   const data = normalizePayload(payload);
   const staticLoc = parseStaticLocationLink(data.text);
-  console.log('Parsed - loc:', loc, 'data.location:', data.location, 'staticLoc:', staticLoc);
+  dlog('Parsed - loc:', loc, 'data.location:', data.location, 'staticLoc:', staticLoc);
   if (data.location && socket) {
-    console.log('Location data:', data.location);
+    dlog('Location data:', data.location);
     // 修改位置文字，只保留"我在"部分
     const textSpan = p.querySelector('.line-text');
     if (textSpan) {
@@ -1351,19 +1364,19 @@ function appendChatLine(payload) {
     labelBtn.textContent = data.location.label || '世界BOSS领域 - 炎龙巢穴';
     labelBtn.addEventListener('click', () => {
       const cmd = `goto_room ${data.location.zoneId}:${data.location.roomId}`;
-      console.log('Sending command:', cmd);
+      dlog('Sending command:', cmd);
       socket.emit('cmd', { text: cmd });
     });
     p.appendChild(labelBtn);
   }
   if (staticLoc && socket && !data.location) {
-    console.log('Static location found:', staticLoc);
+    dlog('Static location found:', staticLoc);
     const btn = document.createElement('button');
     btn.className = 'chat-link-tag';
     btn.textContent = staticLoc.label;
     btn.addEventListener('click', () => {
       const cmd = `goto_room ${staticLoc.zoneId}:${staticLoc.roomId}`;
-      console.log('Sending command:', cmd);
+      dlog('Sending command:', cmd);
       socket.emit('cmd', { text: cmd });
     });
     p.appendChild(btn);
@@ -3603,8 +3616,8 @@ function showTreasureModal() {
 let selectedTrainingType = null;
 
 function openTrainingBatchModal(trainingId) {
-  console.log('[openTrainingBatchModal] called with trainingId:', trainingId);
-  console.log('[openTrainingBatchModal] lastState:', lastState);
+  dlog('[openTrainingBatchModal] called with trainingId:', trainingId);
+  dlog('[openTrainingBatchModal] lastState:', lastState);
   if (!trainingBatchUi.modal) return;
   hideItemTooltip();
   selectedTrainingType = trainingId;
@@ -3633,23 +3646,23 @@ function openTrainingBatchModal(trainingId) {
 
   // 强制检查按钮状态（确保按钮被正确启用）
   setTimeout(() => {
-    console.log('[openTrainingBatchModal] setTimeout check - confirm.disabled:', trainingBatchUi.confirm.disabled);
+    dlog('[openTrainingBatchModal] setTimeout check - confirm.disabled:', trainingBatchUi.confirm.disabled);
     if (!lastState) {
       console.warn('[openTrainingBatchModal] lastState is still null after delay');
     } else {
-      console.log('[openTrainingBatchModal] setTimeout check - lastState.stats.gold:', lastState.stats?.gold);
+      dlog('[openTrainingBatchModal] setTimeout check - lastState.stats.gold:', lastState.stats?.gold);
     }
   }, 100);
 }
 
 function updateTrainingBatchCost() {
-  console.log('[updateTrainingBatchCost] called');
-  console.log('[updateTrainingBatchCost] trainingBatchUi.costDisplay:', trainingBatchUi.costDisplay);
-  console.log('[updateTrainingBatchCost] selectedTrainingType:', selectedTrainingType);
-  console.log('[updateTrainingBatchCost] lastState:', lastState);
+  dlog('[updateTrainingBatchCost] called');
+  dlog('[updateTrainingBatchCost] trainingBatchUi.costDisplay:', trainingBatchUi.costDisplay);
+  dlog('[updateTrainingBatchCost] selectedTrainingType:', selectedTrainingType);
+  dlog('[updateTrainingBatchCost] lastState:', lastState);
 
   if (!trainingBatchUi.costDisplay || !selectedTrainingType) {
-    console.log('[updateTrainingBatchCost] Early return: missing required elements');
+    dlog('[updateTrainingBatchCost] Early return: missing required elements');
     return;
   }
 
@@ -3691,24 +3704,24 @@ function updateTrainingBatchCost() {
 
   // 检查金币是否足够
   const playerGold = lastState?.stats?.gold || 0;
-  console.log('[updateTrainingBatchCost] playerGold:', playerGold, 'totalCost:', totalCost);
+  dlog('[updateTrainingBatchCost] playerGold:', playerGold, 'totalCost:', totalCost);
   trainingBatchUi.confirm.disabled = playerGold < totalCost || fruitOwned < totalFruitNeed;
-  console.log('[updateTrainingBatchCost] confirm.disabled:', trainingBatchUi.confirm.disabled);
+  dlog('[updateTrainingBatchCost] confirm.disabled:', trainingBatchUi.confirm.disabled);
 }
 
 function executeBatchTraining() {
-  console.log('[DEBUG] executeBatchTraining called');
-  console.log('[DEBUG] selectedTrainingType:', selectedTrainingType);
-  console.log('[DEBUG] trainingBatchUi.countInput:', trainingBatchUi.countInput);
-  console.log('[DEBUG] trainingBatchUi.confirm.disabled:', trainingBatchUi.confirm.disabled);
+  dlog('[DEBUG] executeBatchTraining called');
+  dlog('[DEBUG] selectedTrainingType:', selectedTrainingType);
+  dlog('[DEBUG] trainingBatchUi.countInput:', trainingBatchUi.countInput);
+  dlog('[DEBUG] trainingBatchUi.confirm.disabled:', trainingBatchUi.confirm.disabled);
 
   if (!selectedTrainingType || !trainingBatchUi.countInput) {
-    console.log('[DEBUG] Early return: missing selectedTrainingType or countInput');
+    dlog('[DEBUG] Early return: missing selectedTrainingType or countInput');
     return;
   }
 
   const count = parseInt(trainingBatchUi.countInput.value) || 1;
-  console.log('[DEBUG] count:', count);
+  dlog('[DEBUG] count:', count);
 
   if (count < 1 || count > 100) {
     alert('修炼次数必须在1-100之间');
@@ -3718,11 +3731,11 @@ function executeBatchTraining() {
   // 检查按钮是否被禁用
   if (trainingBatchUi.confirm.disabled) {
     alert('金币或修炼果不足，无法修炼');
-    console.log('[DEBUG] Button is disabled, returning');
+    dlog('[DEBUG] Button is disabled, returning');
     return;
   }
 
-  console.log('[DEBUG] Sending command: train ' + selectedTrainingType + ' ' + count);
+  dlog('[DEBUG] Sending command: train ' + selectedTrainingType + ' ' + count);
 
   // 发送批量修炼命令
   socket.emit('cmd', { text: `train ${selectedTrainingType} ${count}` });
@@ -6468,7 +6481,7 @@ function renderState(state) {
         localStorage.setItem(key, String(realm.id));
       }
     }
-    console.log(`renderState: currentRealmId=${currentRealmId}, realmList=${JSON.stringify(realmList.map(r => ({id: r.id, name: r.name})))}, realmName=${realmName}`);
+    dlog(`renderState: currentRealmId=${currentRealmId}, realmList=${JSON.stringify(realmList.map(r => ({id: r.id, name: r.name})))}, realmName=${realmName}`);
     if (ui.realm) ui.realm.textContent = realmName;
     ui.name.textContent = state.player.name || '-';
     const classLabel = classNames[state.player.classId] || state.player.classId || '-';
@@ -7346,13 +7359,15 @@ function renderState(state) {
   const inlineItems = displayChips.length > BAG_PAGE_SIZE
     ? displayChips.slice(0, BAG_PAGE_SIZE).concat([{ id: 'bag-more', label: '更多...', raw: null }])
     : displayChips;
-  renderChips(ui.items, inlineItems, (i) => {
-    if (i.id === 'bag-more') {
-      renderBagModal();
-      return;
-    }
-    handleItemAction(i.raw);
-  });
+  if (shouldRenderUiSection('ui.items.inline', 120)) {
+    renderChips(ui.items, inlineItems, (i) => {
+      if (i.id === 'bag-more') {
+        renderBagModal();
+        return;
+      }
+      handleItemAction(i.raw);
+    });
+  }
   if (shopUi.modal && !shopUi.modal.classList.contains('hidden')) {
     renderShopSellList(state.items || []);
   }
@@ -7360,25 +7375,25 @@ function renderState(state) {
     refreshMailItemOptions();
   }
   if (consignUi.modal && !consignUi.modal.classList.contains('hidden')) {
-    renderConsignInventory(state.items || []);
+    if (shouldRenderUiSection('modal.consign.inventory', 180)) renderConsignInventory(state.items || []);
   }
   if (bagUi.modal && !bagUi.modal.classList.contains('hidden')) {
-    renderBagModal();
+    if (shouldRenderUiSection('modal.bag', 180)) renderBagModal();
   }
   if (warehouseUi.modal && !warehouseUi.modal.classList.contains('hidden')) {
-    renderWarehouseModal();
+    if (shouldRenderUiSection('modal.warehouse', 180)) renderWarehouseModal();
   }
   if (repairUi.modal && !repairUi.modal.classList.contains('hidden')) {
-    renderRepairList(state.equipment || []);
+    if (shouldRenderUiSection('modal.repair', 180)) renderRepairList(state.equipment || []);
   }
   if (petUi.modal && !petUi.modal.classList.contains('hidden')) {
-    renderPetModal();
+    if (shouldRenderUiSection('modal.pet', 250)) renderPetModal();
   }
   if (statsUi.modal && !statsUi.modal.classList.contains('hidden')) {
-    renderStatsModal();
+    if (shouldRenderUiSection('modal.stats', 220)) renderStatsModal();
   }
   if (treasureUi.modal && !treasureUi.modal.classList.contains('hidden')) {
-    renderTreasureModal();
+    if (shouldRenderUiSection('modal.treasure', 220)) renderTreasureModal();
   }
 
   if (ui.training) {
@@ -7396,12 +7411,14 @@ function renderState(state) {
         raw: { id: opt.id }
       };
     });
-    renderChips(ui.training, trainingButtons, (opt) => {
-      openTrainingBatchModal(opt.raw.id);
-    });
+    if (shouldRenderUiSection('ui.training', 200)) {
+      renderChips(ui.training, trainingButtons, (opt) => {
+        openTrainingBatchModal(opt.raw.id);
+      });
+    }
   }
   if (tradeUi.itemSelect && !tradeUi.modal.classList.contains('hidden')) {
-    refreshTradeItemOptions(allItems);
+    if (shouldRenderUiSection('modal.trade.items', 180)) refreshTradeItemOptions(allItems);
   }
 
   const actions = [
@@ -8148,7 +8165,7 @@ function enterGame(name) {
     if (from) handleTradeInvite(from);
   });
   socket.on('output', (payload) => {
-    console.log('Received output:', payload);
+    dlog('Received output:', payload);
     appendLine(payload);
     if (effectBatchTask.active && payload && typeof payload.text === 'string') {
       const text = payload.text;
@@ -8358,7 +8375,7 @@ function enterGame(name) {
     }
   });
   socket.on('state', (payload) => {
-    console.log('Received state payload:', payload);
+    dlog('Received state payload:', payload);
     handleIncomingState(mergeStatePayloadWithLast(payload));
   });
   socket.on('room_state', (payload) => {
@@ -9056,20 +9073,11 @@ if (trainingBatchUi.close) {
   });
 }
 if (trainingBatchUi.confirm) {
-  console.log('[INIT] trainingBatchUi.confirm found:', trainingBatchUi.confirm);
-  console.log('[INIT] Adding click listener to trainingBatchUi.confirm');
-
-  // 方式1：使用 addEventListener
-  trainingBatchUi.confirm.addEventListener('click', (e) => {
-    console.log('[trainingBatchUi.confirm click] Event triggered via addEventListener');
-    console.log('[trainingBatchUi.confirm click] e.target:', e.target);
-    executeBatchTraining();
-  });
-
-  // 方式2：使用 onclick 属性（备用）
+  dlog('[INIT] trainingBatchUi.confirm found:', trainingBatchUi.confirm);
+  dlog('[INIT] Adding click listener to trainingBatchUi.confirm');
   trainingBatchUi.confirm.onclick = (e) => {
-    console.log('[trainingBatchUi.confirm click] Event triggered via onclick');
-    console.log('[trainingBatchUi.confirm click] e.target:', e.target);
+    dlog('[trainingBatchUi.confirm click] Event triggered');
+    dlog('[trainingBatchUi.confirm click] e.target:', e.target);
     executeBatchTraining();
   };
 } else {

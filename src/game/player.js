@@ -838,7 +838,7 @@ export function computeDerived(player) {
   player.dex = Math.floor((stats.dex + trainingBonus.dex + trainingFruitBonus.dex + bonusDex) * (1 + petDexPct));
   player.mag = Math.floor((stats.int + trainingBonus.mag + trainingFruitBonus.mag + bonusMag) * (1 + petMagPct));
   player.spirit = Math.floor((stats.spirit + trainingBonus.spirit + trainingFruitBonus.spirit + bonusSpirit) * (1 + petSpiritPct));
-  player.mdef = Math.floor((stats.spirit + trainingBonus.mdef + trainingFruitBonus.mdef + mdefBonus + bonusMdef) * (1 + petDefPct));
+  player.mdef = Math.floor((trainingBonus.mdef + trainingFruitBonus.mdef + mdefBonus + bonusMdef) * (1 + petDefPct));
   player.max_hp = Math.floor(player.max_hp * (1 + petMaxHpPct));
   player.max_mp = Math.floor(player.max_mp * (1 + petMaxMpPct));
   player.elementAtk = elementAtk;

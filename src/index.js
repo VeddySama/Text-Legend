@@ -12768,7 +12768,7 @@ function applyMoonFairyAura(player, online) {
   const now = Date.now();
   targets.forEach((target) => {
     if (!target || target.hp <= 0) return;
-    const heal = Math.max(1, Math.floor((target.max_hp || 0) * 0.1));
+    const heal = Math.max(1, Math.floor((target.max_hp || 0) * 0.01));
     applyHealing(target, heal);
     applyBuff(target, { key: 'defBuff', expiresAt: now + 1500, defMultiplier: 1.2 });
     applyBuff(target, { key: 'mdefBuff', expiresAt: now + 1500, mdefMultiplier: 1.2 });

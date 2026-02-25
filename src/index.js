@@ -7641,7 +7641,8 @@ function isAutoFullOnlySelectedCultivationBosses(player) {
 function isAutoFullCultivationBossFocused(player) {
   const filter = getAutoFullBossFilterSet(player);
   if (filter == null || filter.size === 0) return false;
-  if (filter.has(AUTO_FULL_BOSS_FILTER_KEYS.cultivation)) return true;
+  // 仅当玩家明确只选择了具体修真BOSS名称时，才在修真秘境内蹲守。
+  // 勾选“修真BOSS”分类应表现为：有BOSS打BOSS，无BOSS回普通经验房。
   return isAutoFullOnlySelectedCultivationBosses(player);
 }
 

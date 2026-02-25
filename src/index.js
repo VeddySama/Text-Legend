@@ -8409,6 +8409,9 @@ let PET_SKILL_LIBRARY = [
   { id: 'pet_rebirth', name: '涅槃', grade: 'normal' },
   { id: 'pet_rebirth_adv', name: '高级涅槃', grade: 'advanced' }
 ];
+const REQUIRED_PET_SKILL_LIBRARY_ENTRIES = [
+  { id: 'pet_beast_aegis', name: '神兽护甲', grade: 'exclusive' }
+];
 
 let PET_SKILL_EFFECTS = {
   pet_beast_aegis: '被动：出战时提升主人防御与魔御40%（神兽专属）',
@@ -9007,6 +9010,11 @@ function applyPetSettings(raw, options = {}) {
   PET_RARITY_GROWTH_RANGE = { ...normalized.rarityGrowthRange };
   PET_RARITY_APTITUDE_RANGE = { ...normalized.rarityAptitudeRange };
   PET_SKILL_LIBRARY = normalized.skillLibrary.map((entry) => ({ ...entry }));
+  REQUIRED_PET_SKILL_LIBRARY_ENTRIES.forEach((required) => {
+    const idx = PET_SKILL_LIBRARY.findIndex((entry) => String(entry?.id || '') === required.id);
+    if (idx >= 0) PET_SKILL_LIBRARY[idx] = { ...PET_SKILL_LIBRARY[idx], ...required };
+    else PET_SKILL_LIBRARY.push({ ...required });
+  });
   PET_SKILL_EFFECTS = decoratePetSkillEffectsWithTypeHints({ ...normalized.skillEffects });
   PET_COMBAT_BALANCE = { ...normalized.combatBalance };
   PET_AVAILABLE_GRADES_BY_RARITY = { ...normalized.availableGradesByRarity };
@@ -10280,9 +10288,18 @@ function normalizePetState(player) {
       const battleType = normalizePetBattleType(pet, aptitude);
       const skillSlots = Math.max(PET_BASE_SKILL_SLOTS, Math.min(PET_MAX_SKILL_SLOTS, Math.floor(Number(pet.skillSlots || PET_BASE_SKILL_SLOTS))));
       const rawSkills = Array.isArray(pet.skills) ? pet.skills : [];
-      const skills = Array.from(new Set(rawSkills.map((idValue) => String(idValue || '').trim()).filter(Boolean)))
+      let skills = Array.from(new Set(rawSkills.map((idValue) => String(idValue || '').trim()).filter(Boolean)))
         .filter((skillId) => Boolean(getPetSkillDef(skillId)))
         .slice(0, skillSlots);
+      if (mappedRole === '马年神兽' && Boolean(getPetSkillDef('pet_beast_aegis')) && !skills.includes('pet_beast_aegis')) {
+        const nextSkills = ['pet_beast_aegis', ...skills.filter((id) => id !== 'pet_beast_aegis')];
+        while (nextSkills.length > skillSlots) {
+          const removableIndex = nextSkills.findIndex((id, idx) => idx > 0 && !isPetLockedSkill(id));
+          if (removableIndex > 0) nextSkills.splice(removableIndex, 1);
+          else nextSkills.pop();
+        }
+        skills = nextSkills;
+      }
       const equipment = normalizePetEquipmentState(pet.equipment);
       const training = normalizePetTrainingRecord(pet.training);
       const levelRaw = Math.floor(Number(pet.level || playerLevel));

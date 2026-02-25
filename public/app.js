@@ -2809,7 +2809,9 @@ function renderPetModal() {
     petUi.bagEquipList.innerHTML = '';
     const equipables = (Array.isArray(lastState?.items) ? lastState.items : [])
       .filter((item) => item && item.slot)
-      .filter((item) => Number(item.qty || 0) > 0);
+      .filter((item) => Number(item.qty || 0) > 0)
+      .slice()
+      .sort(sortPetBagEquipByQualityDesc);
     if (!selected) {
       const empty = document.createElement('div');
       empty.className = 'pet-book-entry';
@@ -2847,7 +2849,9 @@ function renderPetModal() {
     petUi.equipItem.appendChild(emptyOpt);
     const equipables = (Array.isArray(lastState?.items) ? lastState.items : [])
       .filter((item) => item && item.slot)
-      .filter((item) => Number(item.qty || 0) > 0);
+      .filter((item) => Number(item.qty || 0) > 0)
+      .slice()
+      .sort(sortPetBagEquipByQualityDesc);
     equipables.forEach((item) => {
       const opt = document.createElement('option');
       opt.value = item.key || item.id;
@@ -4046,12 +4050,13 @@ function renderMailDetail(mail) {
   if (mail.items && mail.items.length) {
     const itemsLine = document.createElement('div');
     itemsLine.append('\u9644\u4EF6: ');
-    mail.items.forEach((item, idx) => {
+    const sortedMailItems = mail.items.slice().sort(sortPetBagEquipByQualityDesc);
+    sortedMailItems.forEach((item, idx) => {
       const span = document.createElement('span');
       span.textContent = `${formatItemName(item)} x${item.qty || 1}`;
       applyRarityClass(span, item);
       itemsLine.appendChild(span);
-      if (idx < mail.items.length - 1) {
+      if (idx < sortedMailItems.length - 1) {
         itemsLine.append(', ');
       }
     });
@@ -4119,7 +4124,10 @@ function refreshMailItemOptions() {
   empty.value = '';
   empty.textContent = '\u4E0D\u8D60\u9001\u9644\u4EF6';
   mailUi.item.appendChild(empty);
-  const items = (lastState?.items || []).filter((item) => item.type !== 'currency');
+  const items = (lastState?.items || [])
+    .filter((item) => item.type !== 'currency')
+    .slice()
+    .sort(sortPetBagEquipByQualityDesc);
   items.forEach((item) => {
     const opt = document.createElement('option');
     opt.value = item.key || item.id;
@@ -4182,7 +4190,10 @@ function renderMailAttachmentList() {
     mailUi.attachList.appendChild(empty);
     return;
   }
-  mailAttachments.forEach((entry, index) => {
+  const sortedAttachments = mailAttachments
+    .map((entry, index) => ({ entry, index }))
+    .sort((a, b) => sortPetBagEquipByQualityDesc(a.entry?.item, b.entry?.item));
+  sortedAttachments.forEach(({ entry, index }) => {
     const btn = document.createElement('div');
     btn.className = 'mail-attach-item';
     applyRarityClass(btn, entry.item);
@@ -5808,6 +5819,24 @@ function sortByRarityDesc(a, b) {
   const nameA = a?.name || '';
   const nameB = b?.name || '';
   return nameA.localeCompare(nameB, 'zh-Hans-CN');
+}
+
+function sortPetBagEquipByQualityDesc(a, b) {
+  const rarityDiff = rarityRank(b) - rarityRank(a);
+  if (rarityDiff !== 0) return rarityDiff;
+  const qualityA = Math.floor(Number(a?.base_roll_pct ?? 100) || 100);
+  const qualityB = Math.floor(Number(b?.base_roll_pct ?? 100) || 100);
+  const qualityDiff = qualityB - qualityA;
+  if (qualityDiff !== 0) return qualityDiff;
+  const refineA = Math.floor(Number(a?.refine_level ?? 0) || 0);
+  const refineB = Math.floor(Number(b?.refine_level ?? 0) || 0);
+  const refineDiff = refineB - refineA;
+  if (refineDiff !== 0) return refineDiff;
+  const qtyA = Math.floor(Number(a?.qty ?? 0) || 0);
+  const qtyB = Math.floor(Number(b?.qty ?? 0) || 0);
+  const qtyDiff = qtyB - qtyA;
+  if (qtyDiff !== 0) return qtyDiff;
+  return sortByRarityDesc(a, b);
 }
 
   function repairMultiplier(rarity) {

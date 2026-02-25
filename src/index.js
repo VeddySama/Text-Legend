@@ -9472,12 +9472,12 @@ function resolvePetEquipSlotForItem(pet, itemTpl) {
   if (rawSlot === 'ring') {
     if (!pet.equipment.ring_left) return 'ring_left';
     if (!pet.equipment.ring_right) return 'ring_right';
-    return null;
+    return 'ring_left';
   }
   if (rawSlot === 'bracelet') {
     if (!pet.equipment.bracelet_left) return 'bracelet_left';
     if (!pet.equipment.bracelet_right) return 'bracelet_right';
-    return null;
+    return 'bracelet_left';
   }
   if (PET_EQUIP_SLOT_KEYS.includes(rawSlot)) return rawSlot;
   return null;
@@ -11845,7 +11845,6 @@ io.on('connection', (socket) => {
         if (String(itemTpl.slot) === 'bracelet') return fail('pet bracelet slots are full');
         return fail('unsupported or occupied pet equip slot');
       }
-      if (pet.equipment[slotKey]) return fail('pet slot already occupied');
 
       const equipEntry = {
         id: String(inv.id),
@@ -11856,6 +11855,19 @@ io.on('connection', (socket) => {
         refine_level: Math.max(0, Math.floor(Number(inv.refine_level || 0))),
         base_roll_pct: inv.base_roll_pct == null ? null : Math.max(50, Math.min(150, Math.floor(Number(inv.base_roll_pct || 100))))
       };
+      const replaced = pet.equipment[slotKey] && pet.equipment[slotKey].id ? { ...pet.equipment[slotKey] } : null;
+      if (replaced) {
+        addItem(
+          player,
+          replaced.id,
+          1,
+          replaced.effects || null,
+          replaced.durability ?? null,
+          replaced.max_durability ?? null,
+          replaced.refine_level ?? 0,
+          replaced.base_roll_pct ?? null
+        );
+      }
       if (Number(inv.qty || 1) > 1) {
         inv.qty = Math.max(0, Math.floor(Number(inv.qty || 1)) - 1);
         if (inv.qty <= 0) player.inventory.splice(invIndex, 1);
@@ -11865,7 +11877,7 @@ io.on('connection', (socket) => {
       pet.equipment[slotKey] = equipEntry;
       normalizeInventory(player);
       dirty = true;
-      emitResult(true, `pet equipped: ${itemTpl.name} -> ${slotKey}`);
+      emitResult(true, replaced ? `pet equipped: ${itemTpl.name} -> ${slotKey} (replaced)` : `pet equipped: ${itemTpl.name} -> ${slotKey}`);
     } else if (action === 'unequip_item') {
       const pet = getPetById(clean?.petId);
       if (!pet) return fail('pet not found');

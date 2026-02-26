@@ -4676,6 +4676,7 @@ const ITEM_POOLS = (() => {
   Object.values(ITEM_TEMPLATES).forEach((item) => {
     if (item.type === 'currency') return;
     if (!['weapon', 'armor', 'accessory', 'book', 'material', 'consumable'].includes(item.type)) return;
+    if (item.noDrop) return;
     const rarity = rarityByPrice(item);
     pools[rarity].push(item.id);
   });
@@ -5938,6 +5939,7 @@ function dropLoot(mobTemplate, bonus = 1) {
   if (mobTemplate.drops) {
     mobTemplate.drops.forEach((drop) => {
       const dropItem = ITEM_TEMPLATES[drop.id];
+      if (dropItem?.noDrop) return;
       if (isBlockedCommonCharacterSkillBookDrop(drop.id)) return;
       if (dropItem?.bossOnly && !isBossMob(mobTemplate)) return;
       if (dropItem?.worldBossOnly && !isWorldBossDropMob(mobTemplate)) return;
@@ -7184,6 +7186,7 @@ function distributeLootWithBonus(party, partyMembers, mobTemplate, bonusResolver
   if (mobTemplate.drops) {
     mobTemplate.drops.forEach((drop) => {
       const dropItem = ITEM_TEMPLATES[drop.id];
+      if (dropItem?.noDrop) return;
       if (dropItem?.bossOnly && !isBossMob(mobTemplate)) return;
       if (dropItem?.worldBossOnly && !isWorldBossDropMob(mobTemplate)) return;
       if (dropItem?.crossWorldBossOnly && !allowUltimateDrop) return;

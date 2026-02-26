@@ -77,6 +77,16 @@ function scaledStats(tpl, realmId = 1, zoneId, roomId) {
     };
   }
 
+  // 个人专属BOSS：使用模板基础值，不参与击杀成长，也不套通用BOSS放大。
+  if (isPersonalBoss) {
+    return {
+      hp: Math.floor(tpl.hp || 0),
+      atk: Math.floor(tpl.atk || 0),
+      def: Math.floor(tpl.def || 0),
+      mdef: Math.floor(tpl.mdef || 0)
+    };
+  }
+
   // 普通怪物
   if (!isBossTemplate(tpl)) {
     let cultivationLevelScale = 1;

@@ -12144,7 +12144,6 @@ async function sendState(player) {
   }
   if (!forceSend) {
     // 房间动态数据优先走 room_state，避免与 state 重复下发
-    delete state.mobs;
     delete state.players;
     delete state.bossRespawn;
     delete state.worldBossRank;

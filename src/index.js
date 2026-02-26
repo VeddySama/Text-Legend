@@ -14248,10 +14248,20 @@ io.on('connection', (socket) => {
         player.forceStateRefresh = true;
         await sendState(player);
         await savePlayer(player);
-        socket.emit('character_action_result', { ok: true, msg: `角色改名成功：${oldName} -> ${finalName}` });
+        socket.emit('character_action_result', {
+          ok: true,
+          action: 'rename',
+          oldName,
+          newName: finalName,
+          msg: `角色改名成功：${oldName} -> ${finalName}`
+        });
       } catch (err) {
         addItem(player, 'rename_card', 1);
-        socket.emit('character_action_result', { ok: false, msg: String(err?.message || '改名失败。') });
+        socket.emit('character_action_result', {
+          ok: false,
+          action: 'rename',
+          msg: String(err?.message || '改名失败。')
+        });
       }
       return;
     }

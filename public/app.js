@@ -8490,6 +8490,17 @@ function enterGame(name) {
       pendingRenameFallbackName = '';
     }
     const ok = Boolean(payload?.ok);
+    if (ok && String(payload?.action || '') === 'rename') {
+      const nextName = String(payload?.newName || '').trim();
+      const oldName = String(payload?.oldName || '').trim();
+      if (nextName) {
+        if (lastState?.player) lastState.player.name = nextName;
+        if (ui.name) ui.name.textContent = nextName;
+        if (activeChar && (!oldName || activeChar === oldName)) {
+          activeChar = nextName;
+        }
+      }
+    }
     const msg = String(payload?.msg || (ok ? '角色操作成功。' : '角色操作失败。'));
     showToast(msg, ok ? 2200 : 2600);
   });

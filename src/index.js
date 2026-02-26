@@ -8981,6 +8981,7 @@ const roomStatePatchMetaCache = new Map();
 let roomStateLastUpdate = 0;
 let roomStateCachedData = null;
 const ROOM_STATE_TTL = 100; // 100ms缓存时间
+const ROOM_STATE_MOBS_TTL = 250;
 const ROOM_STATE_PLAYERS_TTL = 1000;
 const ROOM_STATE_RANK_TTL = 1000;
 const STATE_DYNAMIC_AUX_TTL = 5000;
@@ -12140,6 +12141,26 @@ async function sendState(player) {
     delete state.refine_config;
     delete state.effect_reset_config;
   }
+  if (!forceSend) {
+    // 房间动态数据优先走 room_state，避免与 state 重复下发
+    delete state.mobs;
+    delete state.players;
+    delete state.bossRespawn;
+    delete state.worldBossRank;
+    delete state.worldBossClassRank;
+    delete state.worldBossNextRespawn;
+  }
+  if (!player._stateServerTimeAt) player._stateServerTimeAt = 0;
+  if (!forceSend) {
+    const nowMs = Date.now();
+    if (nowMs - Number(player._stateServerTimeAt || 0) < 1000) {
+      delete state.server_time;
+    } else {
+      player._stateServerTimeAt = nowMs;
+    }
+  } else {
+    player._stateServerTimeAt = Date.now();
+  }
   const diffableObjects = ['player', 'stats', 'room'];
   if (!player._stateObjectSnapshots) player._stateObjectSnapshots = {};
   const objectSnapshots = player._stateObjectSnapshots;
@@ -12157,7 +12178,26 @@ async function sendState(player) {
     }
     state[field] = diff;
   });
-  const dedupeFields = ['items', 'warehouse', 'equipment', 'skills', 'treasure', 'pet', 'trade'];
+  const dedupeFields = [
+    'items',
+    'warehouse',
+    'equipment',
+    'skills',
+    'treasure',
+    'pet',
+    'trade',
+    'mobs',
+    'players',
+    'exits',
+    'summon',
+    'summons',
+    'party',
+    'activities',
+    'training',
+    'zhuxian_tower',
+    'online',
+    'sabak'
+  ];
   if (!player._stateFieldHashes) player._stateFieldHashes = {};
   const fieldHashes = player._stateFieldHashes;
   dedupeFields.forEach((field) => {
@@ -12188,11 +12228,17 @@ function buildRoomStatePayload(zoneId, roomId, realmId = 1) {
   const cacheKey = `${effectiveRealmId}:${zoneId}:${roomId}`;
   const now = Date.now();
   const meta = roomStatePatchMetaCache.get(cacheKey) || {
+    mobsHash: null,
+    lastMobsAt: 0,
     playersHash: null,
     rankHash: null,
     lastPlayersAt: 0,
     lastRankAt: 0
   };
+  const mobsHash = JSON.stringify({
+    mobs: cached.mobs || [],
+    bossRespawn: cached.nextRespawn || null
+  });
   const playersHash = JSON.stringify((cached.roomPlayers || []).map((p) => [
     p.name,
     p.classId,
@@ -12206,8 +12252,13 @@ function buildRoomStatePayload(zoneId, roomId, realmId = 1) {
     classRank: cached.bossClassRank || null,
     next: cached.bossNextRespawn || null
   });
+  const includeMobs = mobsHash !== meta.mobsHash || (now - meta.lastMobsAt >= ROOM_STATE_MOBS_TTL);
   const includePlayers = playersHash !== meta.playersHash || (now - meta.lastPlayersAt >= ROOM_STATE_PLAYERS_TTL);
   const includeRank = rankHash !== meta.rankHash || (now - meta.lastRankAt >= ROOM_STATE_RANK_TTL);
+  if (includeMobs) {
+    meta.mobsHash = mobsHash;
+    meta.lastMobsAt = now;
+  }
   if (includePlayers) {
     meta.playersHash = playersHash;
     meta.lastPlayersAt = now;
@@ -12225,10 +12276,12 @@ function buildRoomStatePayload(zoneId, roomId, realmId = 1) {
       zoneId,
       roomId
     },
-    mobs: cached.mobs,
-    bossRespawn: cached.nextRespawn,
     server_time: now
   };
+  if (includeMobs) {
+    payload.mobs = cached.mobs;
+    payload.bossRespawn = cached.nextRespawn;
+  }
   if (includePlayers) {
     payload.players = cached.roomPlayers;
   }

@@ -14203,8 +14203,58 @@ io.on('connection', (socket) => {
   socket.on('character_action', async (payload) => {
     const player = players.get(socket.id);
     if (!player) return;
-    const { clean } = sanitizePayload(payload, ['action', 'targetUsername', 'targetPassword'], 'character_action');
+    const { clean } = sanitizePayload(payload, ['action', 'targetUsername', 'targetPassword', 'newName'], 'character_action');
     const action = String(clean?.action || '').trim().toLowerCase();
+    if (action === 'rename') {
+      const oldName = String(player.name || '').trim();
+      const targetName = String(clean?.newName || '').trim();
+      const nameResult = validatePlayerName(targetName);
+      if (!nameResult.ok) {
+        socket.emit('character_action_result', { ok: false, msg: nameResult.error || '角色名不合法。' });
+        return;
+      }
+      const finalName = String(nameResult.value || '').trim();
+      if (!finalName || finalName === oldName) {
+        socket.emit('character_action_result', { ok: false, msg: '新角色名不能与当前相同。' });
+        return;
+      }
+      if (getTradeByPlayerAny(oldName, player.realmId || 1).trade) {
+        socket.emit('character_action_result', { ok: false, msg: '交易状态中无法改名，请先取消交易。' });
+        return;
+      }
+      if (!removeItem(player, 'rename_card', 1)) {
+        socket.emit('character_action_result', { ok: false, msg: '改名需要改名卡 x1。' });
+        return;
+      }
+      try {
+        if (playersByName(finalName, player.realmId || 1)) {
+          addItem(player, 'rename_card', 1);
+          socket.emit('character_action_result', { ok: false, msg: '该角色名已在线。' });
+          return;
+        }
+        const existed = await findCharacterByName(finalName);
+        if (existed) {
+          addItem(player, 'rename_card', 1);
+          socket.emit('character_action_result', { ok: false, msg: '该角色名已存在。' });
+          return;
+        }
+        await renameCharacterEverywhere({
+          userId: player.userId,
+          realmId: player.realmId || 1,
+          oldName,
+          newName: finalName
+        });
+        await applyOnlineCharacterRename(player, finalName);
+        player.forceStateRefresh = true;
+        await sendState(player);
+        await savePlayer(player);
+        socket.emit('character_action_result', { ok: true, msg: `角色改名成功：${oldName} -> ${finalName}` });
+      } catch (err) {
+        addItem(player, 'rename_card', 1);
+        socket.emit('character_action_result', { ok: false, msg: String(err?.message || '改名失败。') });
+      }
+      return;
+    }
     if (action !== 'migrate') {
       socket.emit('character_action_result', { ok: false, msg: '未知角色操作。' });
       return;

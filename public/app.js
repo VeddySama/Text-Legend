@@ -9128,7 +9128,10 @@ if (ui.name) {
       showToast('新角色名不能与当前相同');
       return;
     }
-    socket.emit('cmd', { text: `rename ${finalName}`, source: 'ui' });
+    socket.emit('character_action', {
+      action: 'rename',
+      newName: finalName
+    });
   });
 }
 

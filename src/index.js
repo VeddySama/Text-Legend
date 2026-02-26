@@ -1303,15 +1303,31 @@ app.post('/admin/characters/migrate', async (req, res) => {
   if (!targetUser) return res.status(404).json({ error: '目标账号不存在。' });
 
   try {
+    const onlinePlayer = playersByName(charName, realmId);
     const result = await migrateCharacterToUser({
       realmId,
       charName,
-      targetUserId: targetUser.id
+      targetUserId: targetUser.id,
+      allowOnline: Boolean(onlinePlayer)
     });
+    if (onlinePlayer) {
+      onlinePlayer.userId = Number(targetUser.id || 0);
+      onlinePlayer.forceStateRefresh = true;
+      await savePlayer(onlinePlayer).catch(() => {});
+      if (typeof onlinePlayer.send === 'function') {
+        onlinePlayer.send(`管理员已将角色迁移至账号【${targetUsername}】，即将强制下线，请使用目标账号登录。`);
+      }
+      setTimeout(() => {
+        try {
+          onlinePlayer.socket?.disconnect?.(true);
+        } catch {}
+      }, 300);
+    }
     return res.json({
       ok: true,
       ...result,
-      targetUsername: targetUser.username || targetUsername
+      targetUsername: targetUser.username || targetUsername,
+      forcedOffline: Boolean(onlinePlayer)
     });
   } catch (err) {
     return res.status(400).json({ error: String(err?.message || err || '迁移失败') });

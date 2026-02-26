@@ -53,8 +53,8 @@ function scaledStats(tpl, realmId = 1, zoneId, roomId) {
     };
   }
 
-  // 世界BOSS：仅应用击杀次数成长。
-  if (tpl.worldBoss) {
+  // 世界BOSS：仅应用击杀次数成长（个人专属BOSS不参与）。
+  if (tpl.worldBoss && !isPersonalBoss) {
     const count = worldBossKillCounts.get(realmId) || 0;
     const growth = 1 + Math.floor(count / BOSS_KILL_GROWTH_STEP) * 0.01;
     return {

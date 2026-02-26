@@ -8445,6 +8445,7 @@ function tryAutoFullAction(player, roomMobs) {
   const hasRoomMobs = Array.isArray(roomMobs) && roomMobs.length > 0;
   const lastMoveAt = Number(player.flags.autoFullLastMoveAt || 0);
   const canMove = now - lastMoveAt >= AUTO_FULL_MOVE_COOLDOWN_MS;
+  const shouldRepathAfterDeath = Boolean(player.flags?.autoFullRepathAfterDeath);
   const bossMove = tryAutoFullBossMove(player);
   if (bossMove === 'moved') return 'moved';
   const bossMob = findBossInRoom(roomMobs, player);
@@ -8467,6 +8468,19 @@ function tryAutoFullAction(player, roomMobs) {
     }
     player.combat = { targetId: bossMob.id, targetType: 'mob', skillId: null };
     return 'engaged';
+  }
+  if (shouldRepathAfterDeath && canMove) {
+    const bestAfterDeath = getAutoFullBestRoom(player);
+    if (bestAfterDeath) {
+      const targetZoneId = bestAfterDeath.zoneId;
+      const targetRoomId = selectLeastPopulatedRoomAuto(bestAfterDeath.zoneId, bestAfterDeath.roomId, player.realmId || 1);
+      if (movePlayerToRoom(player, targetZoneId, targetRoomId)) {
+        player.flags.autoFullLastMoveAt = now;
+        player.flags.autoFullRepathAfterDeath = false;
+        return 'moved';
+      }
+    }
+    player.flags.autoFullRepathAfterDeath = false;
   }
   // 固定当前房间：只有在当前房间没有怪物时才允许移动
   if (hasRoomMobs) {
@@ -15129,6 +15143,7 @@ function handleDeath(player) {
     const now = Date.now();
     player.flags.autoFullPausedUntil = now + 1000;
     player.flags.autoFullLastMoveAt = now;
+    player.flags.autoFullRepathAfterDeath = true;
   }
   player.hp = Math.floor(player.max_hp * 0.5);
   player.mp = Math.floor(player.max_mp * 0.3);

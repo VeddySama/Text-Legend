@@ -9041,7 +9041,27 @@ if (ui.invite) {
 }
 if (ui.name) {
   ui.name.style.cursor = 'pointer';
-  ui.name.title = '点击角色操作（改名/迁移）';
+  ui.name.title = '左键角色操作（改名/迁移），右键复制角色名';
+  ui.name.addEventListener('contextmenu', async (e) => {
+    e.preventDefault();
+    const currentName = String(lastState?.player?.name || ui.name.textContent || '').trim();
+    if (!currentName || currentName === '-') return;
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(currentName);
+      } else {
+        const input = document.createElement('input');
+        input.value = currentName;
+        document.body.appendChild(input);
+        input.select();
+        document.execCommand('copy');
+        document.body.removeChild(input);
+      }
+      showToast(`已复制角色名：${currentName}`);
+    } catch {
+      showToast('复制角色名失败');
+    }
+  });
   ui.name.addEventListener('click', async () => {
     if (!socket || !lastState?.player) return;
     const currentName = String(lastState.player.name || ui.name.textContent || '').trim();

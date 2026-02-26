@@ -9167,7 +9167,8 @@ if (ui.name) {
       const fallbackName = pendingRenameFallbackName;
       pendingRenameFallbackTimer = null;
       pendingRenameFallbackName = '';
-      socket.emit('cmd', { text: `rename ${fallbackName}`, source: 'ui-fallback' });
+      showToast('改名请求超时，正在重试…', 1500);
+      socket.emit('cmd', { text: `rename ${fallbackName}`, source: 'ui' });
     }, 1200);
   });
 }

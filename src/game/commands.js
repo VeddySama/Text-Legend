@@ -1476,7 +1476,7 @@ export async function handleCommand({ player, players, allCharacters, playersByN
       player.forceStateRefresh = true;
     }
   }
-  if (source !== 'ui' && cmd !== 'say') return;
+  if (source !== 'ui' && source !== 'ui-fallback' && cmd !== 'say') return;
 
   switch (cmd) {
     case 'help': {

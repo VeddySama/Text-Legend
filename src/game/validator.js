@@ -51,7 +51,7 @@ export function validateItemId(itemId) {
 /**
  * 验证物品数量
  */
-export function validateItemQty(qty, maxQty = 9999) {
+export function validateItemQty(qty, maxQty = 99999) {
   return validateNumber(qty, 1, maxQty);
 }
 

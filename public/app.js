@@ -2273,7 +2273,7 @@ function showShopModal(items) {
           value: '1'
         });
         if (!qtyText) return;
-        const qty = Math.max(1, Number(qtyText || 1));
+        const qty = Math.max(1, Math.min(99999, Math.floor(Number(qtyText || 1))));
         if (Number.isNaN(qty) || qty <= 0) return;
         if (socket) socket.emit('cmd', { text: `buy ${item.name} ${qty}` });
       });
